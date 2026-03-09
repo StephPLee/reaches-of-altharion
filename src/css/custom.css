@@ -1,0 +1,238 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap");
+
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+    --ifm-color-primary: #b88df7;
+    --ifm-color-primary-dark: #a772f2;
+    --ifm-color-primary-darker: #9f65f0;
+    --ifm-color-primary-darkest: #8238e9;
+    --ifm-color-primary-light: #c9a8fc;
+    --ifm-color-primary-lighter: #d1b5ff;
+    --ifm-color-primary-lightest: #e7d9ff;
+    --ifm-code-font-size: 95%;
+    --docusaurus-highlighted-code-line-bg: rgba(7, 5, 20, 0.25);
+    --ifm-font-family-base: "Georgia", "Times New Roman", serif;
+    --ifm-heading-font-family:
+        "Garamond", "Baskerville", "Times New Roman", serif;
+    --ifm-navbar-height: 4.5rem;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme="dark"] {
+    --ifm-color-primary: #ccb2ff;
+    --ifm-color-primary-dark: #b996ff;
+    --ifm-color-primary-darker: #ae86ff;
+    --ifm-color-primary-darkest: #8f5cff;
+    --ifm-color-primary-light: #dfceff;
+    --ifm-color-primary-lighter: #e9dcff;
+    --ifm-color-primary-lightest: #f5edff;
+    --docusaurus-highlighted-code-line-bg: rgba(4, 3, 15, 0.45);
+}
+
+.navbar {
+    position: fixed;
+    width: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(9, 8, 28, 0.84),
+        rgba(9, 8, 28, 0.18)
+    );
+    border-bottom: 1px solid rgba(180, 164, 255, 0.2);
+    box-shadow: none;
+    backdrop-filter: blur(4px);
+}
+
+.navbar__brand,
+.navbar__link {
+    color: #ece2ff;
+}
+
+.navbar__link:hover,
+.navbar__brand:hover {
+    color: #ffffff;
+}
+
+/* Keep page content clear of the fixed navbar. */
+.main-wrapper {
+    padding-top: var(--ifm-navbar-height);
+}
+
+/* Wiki styling (docs pages) */
+.docs-wrapper {
+    background:
+        radial-gradient(
+            circle at 12% 20%,
+            rgba(72, 122, 204, 0.15),
+            transparent 34%
+        ),
+        radial-gradient(
+            circle at 82% 0%,
+            rgba(126, 82, 204, 0.12),
+            transparent 28%
+        ),
+        linear-gradient(180deg, #050814 0%, #070c1d 100%);
+}
+
+[data-theme="dark"] .main-wrapper {
+    background:
+        radial-gradient(
+            circle at 12% 20%,
+            rgba(72, 122, 204, 0.15),
+            transparent 34%
+        ),
+        radial-gradient(
+            circle at 82% 0%,
+            rgba(126, 82, 204, 0.12),
+            transparent 28%
+        ),
+        linear-gradient(180deg, #050814 0%, #070c1d 100%);
+}
+
+[data-theme="dark"] .theme-doc-markdown {
+    padding: 2rem 2.2rem;
+    border: 1px solid rgba(205, 219, 255, 0.2);
+    border-radius: 1rem;
+    background: rgba(11, 16, 38, 0.8);
+    box-shadow:
+        0 12px 30px rgba(2, 5, 18, 0.5),
+        0 1px 0 rgba(212, 224, 255, 0.12) inset;
+}
+
+[data-theme="dark"] .theme-doc-markdown h1,
+[data-theme="dark"] .theme-doc-markdown h2,
+[data-theme="dark"] .theme-doc-markdown h3 {
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    letter-spacing: 0.03em;
+}
+
+[data-theme="dark"] .theme-doc-markdown h1 {
+    color: #f4ecff;
+    margin-bottom: 1.2rem;
+}
+
+[data-theme="dark"] .theme-doc-markdown h2 {
+    margin-top: 2.2rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(203, 218, 255, 0.16);
+    color: #e4d6ff;
+}
+
+[data-theme="dark"] .theme-doc-markdown p,
+[data-theme="dark"] .theme-doc-markdown li {
+    color: #d7def2;
+    line-height: 1.7;
+}
+
+[data-theme="dark"] .theme-doc-markdown a {
+    color: #caa8ff;
+    text-decoration-color: rgba(202, 168, 255, 0.55);
+}
+
+[data-theme="dark"] .theme-doc-markdown a:hover {
+    color: #e4d1ff;
+    text-decoration-color: rgba(228, 209, 255, 0.95);
+}
+
+[data-theme="dark"] .theme-doc-markdown :not(pre) > code {
+    border: 1px solid rgba(204, 221, 255, 0.16);
+    background: rgba(23, 32, 66, 0.75);
+    color: #e8efff;
+}
+
+[data-theme="dark"] .theme-doc-markdown pre {
+    border: 1px solid rgba(196, 215, 255, 0.2);
+    border-radius: 0.8rem;
+    box-shadow: 0 10px 22px rgba(3, 7, 22, 0.52);
+}
+
+[data-theme="dark"] .theme-doc-markdown blockquote {
+    border-left: 3px solid rgba(196, 171, 255, 0.7);
+    background: rgba(23, 18, 56, 0.45);
+    border-radius: 0.35rem;
+    padding: 0.6rem 1rem;
+}
+
+[data-theme="dark"] .theme-doc-markdown table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid rgba(199, 214, 247, 0.2);
+    border-radius: 0.75rem;
+}
+
+[data-theme="dark"] .theme-doc-markdown th {
+    background: rgba(24, 35, 73, 0.86);
+    color: #ebf2ff;
+}
+
+[data-theme="dark"] .theme-doc-markdown td {
+    background: rgba(12, 19, 45, 0.72);
+    color: #dbe5fd;
+}
+
+[data-theme="dark"] .menu {
+    background: rgba(7, 12, 30, 0.78);
+    border-right: 1px solid rgba(194, 214, 255, 0.16);
+}
+
+[data-theme="dark"] .menu__link {
+    border-radius: 0.45rem;
+}
+
+[data-theme="dark"] .menu__link--active {
+    background: linear-gradient(
+        90deg,
+        rgba(109, 93, 179, 0.32),
+        rgba(90, 124, 199, 0.26)
+    );
+    color: #f2ecff;
+}
+
+[data-theme="dark"] .table-of-contents {
+    border-left: 1px solid rgba(196, 212, 247, 0.2);
+    padding-left: 0.9rem;
+}
+
+[data-theme="dark"] .theme-doc-toc-desktop .table-of-contents__link--active {
+    color: #dbc4ff;
+}
+
+[data-theme="dark"] .theme-doc-footer .pagination-nav__link {
+    border: 1px solid rgba(198, 214, 255, 0.2);
+    background: rgba(11, 17, 41, 0.75);
+    border-radius: 0.8rem;
+}
+
+@media screen and (max-width: 996px) {
+    [data-theme="dark"] .theme-doc-markdown {
+        padding: 1.2rem 1rem;
+        border-radius: 0.7rem;
+    }
+}
+
+.docs-wrapper::after {
+    content: "\00A9 2026 Reaches of Altharion";
+    position: fixed;
+    right: 0.9rem;
+    bottom: 0.65rem;
+    font-size: 0.73rem;
+    letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.82);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    z-index: 30;
+}
+
+@media screen and (max-width: 996px) {
+    .docs-wrapper::after {
+        right: 0.55rem;
+        bottom: 0.45rem;
+        font-size: 0.66rem;
+    }
+}
