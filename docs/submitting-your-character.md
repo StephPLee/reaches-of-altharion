@@ -8,6 +8,7 @@ After finishing your character, you can submit it on WestMarches.games and it wi
 
 Please include the following information in your Description or Player Notes to GM section when submitting:
 
+- DnD Beyond username (if using DnD Beyond)
 - Age
 - Starting level
 - Backstory

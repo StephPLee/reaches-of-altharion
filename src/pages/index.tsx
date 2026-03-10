@@ -48,7 +48,7 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
   {
     id: "thaloryn",
     label: "DM Rules",
-    to: "/docs/tutorial-basics/create-a-document",
+    to: "/docs/dm-rules",
     image: "/img/Thaloryn.png",
     x: 54.6,
     y: 36,
@@ -185,4 +185,3 @@ export default function Home(): ReactNode {
     </Layout>
   );
 }
-

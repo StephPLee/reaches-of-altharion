@@ -83,7 +83,7 @@ const config: Config = {
           position: "right",
         },
         {
-          to: "/docs/tutorial-basics/create-a-document",
+          to: "/docs/dm-rules",
           label: "DM Rules",
           position: "right",
         },
