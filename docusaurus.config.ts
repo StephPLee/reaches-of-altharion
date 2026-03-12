@@ -7,7 +7,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 const config: Config = {
   title: "Reaches of Altharion",
   tagline: "D&D 5.5e Westmarch Server",
-  favicon: "img/favicon.ico",
+  favicon: "img/altharion_logo_white.ico",
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -73,7 +73,7 @@ const config: Config = {
       title: "Reaches of Altharion",
       logo: {
         alt: "Reaches of Altharion Logo",
-        src: "img/logo.svg",
+        src: "img/altharion_logo_white.png",
       },
       items: [
         { to: "/", label: "Home", position: "right" },
@@ -93,8 +93,8 @@ const config: Config = {
           position: "right",
         },
         {
-          to: "/docs/tutorial-extras/manage-docs-versions",
-          label: "Server Lore",
+          to: "/?view=world",
+          label: "The World of Altharion",
           position: "right",
         },
       ],
