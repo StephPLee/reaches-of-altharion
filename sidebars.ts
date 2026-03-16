@@ -6,21 +6,19 @@ const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     {
       type: "category",
-      label: "Character Creation",
+      label: "Player Information",
       collapsible: true,
       collapsed: false,
-      items: [
-        "getting-set-up",
-        "creating-your-character",
-        "submitting-your-character",
-      ],
+      items: ["getting-set-up", "sourcebooks", "transformations"],
     },
+    "dm-rules",
+    "rp-rules",
     {
       type: "category",
-      label: "DM Rules",
+      label: "Homebrew",
       collapsible: true,
       collapsed: false,
-      items: ["dm-rules"],
+      items: ["homebrew/starting-graces", "homebrew/boons", "homebrew/guilds"],
     },
   ],
 };

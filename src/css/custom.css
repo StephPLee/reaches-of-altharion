@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&display=swap");
 
 /**
  * Any CSS included here will be global. The classic template
@@ -58,6 +58,10 @@
     color: #ffffff;
 }
 
+[class*="colorModeToggle"] {
+    display: none !important;
+}
+
 /* Keep page content clear of the fixed navbar. */
 .main-wrapper {
     padding-top: var(--ifm-navbar-height);
@@ -109,6 +113,47 @@
     padding-top: 0.5rem;
     border-top: 1px solid rgba(203, 218, 255, 0.16);
     color: #e4d6ff;
+    font-size: clamp(1.6rem, 2.5vw, 2.35rem);
+    line-height: 1.08;
+}
+
+[data-theme="dark"] .theme-doc-markdown h2[class*="sectionHeading"] {
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: clamp(1.15rem, 1.75vw, 1.7rem);
+    line-height: 1.05;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0.8rem;
+    padding-bottom: 0.6rem;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    font-variant: normal;
+}
+
+[data-theme="dark"] .theme-doc-markdown .anchorWithStickyNavbar {
+    text-decoration: none;
+}
+
+[data-theme="dark"] .theme-doc-markdown .anchorWithStickyNavbar::after,
+[data-theme="dark"] .theme-doc-markdown .hash-link {
+    display: none !important;
+}
+
+[data-theme="dark"] .theme-doc-markdown h3 {
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    margin-top: 1.35rem;
+    margin-bottom: 0.35rem;
+    font-size: clamp(1.05rem, 1.35vw, 1.35rem);
+    line-height: 1.12;
+    color: #f0ebff;
+    letter-spacing: 0.01em;
+    text-transform: none;
+}
+
+[data-theme="dark"] .theme-doc-markdown h3 + p,
+[data-theme="dark"] .theme-doc-markdown h3 + ul,
+[data-theme="dark"] .theme-doc-markdown h3 + ol {
+    margin-top: 0.35rem;
 }
 
 [data-theme="dark"] .theme-doc-markdown p,
@@ -146,12 +191,27 @@
     padding: 0.6rem 1rem;
 }
 
-[data-theme="dark"] .theme-doc-markdown table {
-    display: block;
+[data-theme="dark"] .theme-doc-markdown .table-wrapper {
     width: 100%;
     overflow-x: auto;
-    border: 1px solid rgba(199, 214, 247, 0.2);
+    border: 1px solid rgba(199, 214, 247, 0.38);
     border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(10, 14, 32, 0.35);
+}
+
+[data-theme="dark"] .theme-doc-markdown table {
+    display: table !important;
+    width: 100%;
+    table-layout: fixed;
+    margin: 0;
+    min-width: 100%;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid rgba(199, 214, 247, 0.38);
+    box-shadow: inset 0 0 0 1px rgba(199, 214, 247, 0.18);
 }
 
 [data-theme="dark"] .theme-doc-markdown th {
@@ -162,6 +222,21 @@
 [data-theme="dark"] .theme-doc-markdown td {
     background: rgba(12, 19, 45, 0.72);
     color: #dbe5fd;
+}
+
+[data-theme="dark"] .theme-doc-markdown table th,
+[data-theme="dark"] .theme-doc-markdown table td {
+    border-right: 1px solid rgba(199, 214, 247, 0.2);
+    border-bottom: 1px solid rgba(199, 214, 247, 0.2);
+}
+
+[data-theme="dark"] .theme-doc-markdown table th:last-child,
+[data-theme="dark"] .theme-doc-markdown table td:last-child {
+    border-right: 0;
+}
+
+[data-theme="dark"] .theme-doc-markdown table tr:last-child td {
+    border-bottom: 0;
 }
 
 [data-theme="dark"] .menu {
@@ -197,6 +272,45 @@
     border-radius: 0.8rem;
 }
 
+[data-theme="dark"] .section-contents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 0.65rem 1.4rem;
+    margin-top: 1rem;
+}
+
+[data-theme="dark"] .section-contents-card {
+    display: inline-flex;
+    align-items: center;
+    min-height: 0;
+    padding: 0.1rem 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-decoration: none;
+    transition:
+        transform 0.18s ease,
+        opacity 0.18s ease;
+}
+
+[data-theme="dark"] .section-contents-card:hover,
+[data-theme="dark"] .section-contents-card:focus-visible {
+    opacity: 1;
+    transform: translateX(4px);
+    text-decoration: none;
+}
+
+[data-theme="dark"] .section-contents-title {
+    color: #e4d1ff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: clamp(1.15rem, 1.45vw, 1.45rem);
+    letter-spacing: 0.025em;
+    line-height: 1.08;
+    text-transform: uppercase;
+    opacity: 0.92;
+}
+
 @media screen and (max-width: 996px) {
     .docs-wrapper,
     [data-theme="dark"] .main-wrapper {
@@ -207,12 +321,17 @@
         padding: 1.2rem 1rem;
         border-radius: 0.7rem;
     }
+
+    [data-theme="dark"] .section-contents-grid {
+        grid-template-columns: 1fr;
+        gap: 0.45rem;
+    }
 }
 
 .docs-wrapper::after {
     content: "\00A9 2026 Reaches of Altharion";
     position: fixed;
-    right: 0.9rem;
+    left: 0.9rem;
     bottom: 0.65rem;
     font-size: 0.73rem;
     letter-spacing: 0.03em;
@@ -224,7 +343,7 @@
 
 @media screen and (max-width: 996px) {
     .docs-wrapper::after {
-        right: 0.55rem;
+        left: 0.55rem;
         bottom: 0.45rem;
         font-size: 0.66rem;
     }

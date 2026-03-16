@@ -15,7 +15,7 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: "https://your-docusaurus-site.example.com",
+  url: "https://reachesofaltharion.com",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: "/",
@@ -41,22 +41,9 @@ const config: Config = {
       {
         docs: {
           sidebarPath: "./sidebars.ts",
+          breadcrumbs: false,
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ["rss", "atom"],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
-          // Useful options to enforce blogging best practices
-          onInlineTags: "warn",
-          onInlineAuthors: "warn",
-          onUntruncatedBlogPosts: "warn",
-        },
+        blog: false,
         theme: {
           customCss: "./src/css/custom.css",
         },
@@ -67,19 +54,22 @@ const config: Config = {
   themeConfig: {
     image: "img/altharion-no-frame.png",
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: "dark",
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: "Reaches of Altharion",
       logo: {
         alt: "Reaches of Altharion Logo",
         src: "img/altharion_logo_white.png",
+        href: "/?view=map",
       },
       items: [
-        { to: "/", label: "Home", position: "right" },
+        { to: "/?view=map", label: "Home", position: "right" },
         {
           to: "/docs/getting-set-up",
-          label: "Character Creation",
+          label: "Player Information",
           position: "right",
         },
         {
@@ -88,8 +78,13 @@ const config: Config = {
           position: "right",
         },
         {
-          to: "/docs/tutorial-basics/markdown-features",
+          to: "/docs/rp-rules",
           label: "RP Rules",
+          position: "right",
+        },
+        {
+          to: "/docs/homebrew/starting-graces",
+          label: "Homebrew",
           position: "right",
         },
         {

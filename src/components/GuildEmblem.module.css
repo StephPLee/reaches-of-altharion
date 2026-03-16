@@ -1,0 +1,56 @@
+.emblemFrame {
+    float: right;
+    width: min(8.5rem, 32vw);
+    aspect-ratio: 1;
+    margin: 0.15rem 0 1rem 1.25rem;
+    border: 1px solid rgba(181, 194, 230, 0.28);
+    border-radius: 1rem;
+    background: linear-gradient(
+        180deg,
+        rgba(17, 22, 39, 0.9) 0%,
+        rgba(10, 14, 28, 0.82) 100%
+    );
+    box-shadow:
+        0 14px 28px rgba(3, 6, 20, 0.28),
+        inset 0 0 0 1px rgba(235, 240, 255, 0.04);
+    overflow: hidden;
+}
+
+.emblemImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.emblemPlaceholder {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    color: rgba(222, 230, 255, 0.72);
+}
+
+.emblemFrame:global(.doc-section-kept-collapsed) {
+    float: none;
+    flex: 0 0 auto;
+    width: min(3.15rem, 8vw);
+    margin: 0 0 0 1rem;
+}
+
+@media screen and (max-width: 996px) {
+    .emblemFrame {
+        float: none;
+        width: min(6.75rem, 48vw);
+        margin: 0.4rem 0 1rem;
+    }
+
+    .emblemFrame:global(.doc-section-kept-collapsed) {
+        width: min(3rem, 18vw);
+        margin: 0 0 0 0.75rem;
+    }
+}
