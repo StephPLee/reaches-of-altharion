@@ -71,7 +71,7 @@
     z-index: -1;
     pointer-events: none;
     will-change: opacity;
-    transition: opacity 0.7s ease;
+    transition: opacity 0.45s ease;
 }
 
 .worldFrame {
@@ -86,13 +86,8 @@
     position: relative;
     width: min(1200px, 92vw);
     aspect-ratio: 1768 / 1335;
-    transition: transform 0.8s cubic-bezier(0.22, 0.7, 0.2, 1);
     transform-origin: 50% 48%;
     will-change: transform;
-}
-
-.worldSceneFocused {
-    transform: translateZ(0) scale(1.16) translateY(1%);
 }
 
 .mapForeground {
@@ -103,7 +98,7 @@
     user-select: none;
     pointer-events: none;
     transform: translateZ(0);
-    transition: opacity 0.55s ease;
+    transition: opacity 0.35s ease;
 }
 
 .mapForegroundHidden {
@@ -117,12 +112,15 @@
 
 .islandHotspot {
     position: absolute;
-    transform: translate(-50%, -50%) scale(0.93);
-    opacity: 0;
+    transform: translate(-50%, -50%);
     pointer-events: none;
-    transition:
-        transform 0.35s ease,
-        opacity 0.35s ease;
+}
+
+.islandHotspotBody {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    will-change: transform, opacity;
 }
 
 .islandHitbox {
@@ -159,8 +157,8 @@
     user-select: none;
     pointer-events: none;
     transition:
-        transform 0.25s ease,
-        filter 0.25s ease;
+        transform 0.18s ease,
+        filter 0.18s ease;
 }
 
 .islandLabel {
@@ -191,19 +189,34 @@
         0 6px 12px rgba(3, 6, 20, 0.42);
     z-index: 2;
     pointer-events: none;
-    transition:
-        opacity 0.18s ease,
-        transform 0.24s ease;
 }
 
-.islandLabelHidden {
+.islandHoverCard {
+    position: absolute;
+    left: 50%;
+    bottom: calc(50% + 2.1rem);
+    transform: translate(-50%, -0.45rem);
+    width: min(15rem, 32vw);
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(214, 226, 255, 0.24);
+    border-radius: 0.9rem;
+    background: rgba(8, 12, 38, 0.92);
+    color: rgba(240, 244, 255, 0.92);
+    font-size: 0.74rem;
+    line-height: 1.45;
+    text-align: center;
+    box-shadow:
+        0 14px 28px rgba(4, 7, 24, 0.4),
+        0 0 0 1px rgba(125, 150, 231, 0.08) inset;
     opacity: 0;
-    transform: translate(-50%, -54%);
+    pointer-events: none;
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease;
+    z-index: 3;
 }
 
 .islandHotspotDimmed {
-    opacity: 0.12 !important;
-    transform: translate(-50%, -50%) scale(0.8) !important;
 }
 
 .islandHotspotDimmed .islandHitbox,
@@ -213,7 +226,6 @@
 
 .islandHotspotSelected {
     z-index: 6;
-    transform: translate(-50%, -50%) scale(1.55) !important;
 }
 
 .islandHotspotSelected .islandHitbox,
@@ -239,7 +251,6 @@
     align-items: center;
     gap: 0.28rem;
     pointer-events: none;
-    animation: landmarkPinIn 0.28s ease both;
 }
 
 .landmarkPinDot {
@@ -303,7 +314,6 @@
     color: #eff2ff;
     text-align: left;
     overflow: hidden;
-    animation: detailCardIn 0.28s ease both;
 }
 
 .islandDetailClose {
@@ -480,7 +490,6 @@
 }
 
 .isMapMode .worldScene {
-    transform: translateZ(0) scale(1.2) translateY(-2.5%);
 }
 
 .isMapMode .sceneBackdrop {
@@ -492,15 +501,11 @@
 }
 
 .isMapMode .heroContent {
-    opacity: 0;
-    transform: translateY(-20px);
     pointer-events: none;
 }
 
 .isMapMode .islandHotspot {
-    opacity: 1;
     pointer-events: none;
-    animation: fadeInUp 0.45s ease both;
 }
 
 .isMapMode .islandHitbox:hover ~ .islandImage,
@@ -512,37 +517,12 @@
         drop-shadow(0 0 18px rgba(145, 184, 255, 0.32));
 }
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -46%) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
-}
-
-@keyframes detailCardIn {
-    from {
-        opacity: 0;
-        transform: translate(18px, -12px);
-    }
-    to {
-        opacity: 1;
-        transform: translate(0, 0);
-    }
-}
-
-@keyframes landmarkPinIn {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -88%);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, -100%);
-    }
+.isMapMode .islandHitbox:hover ~ .islandHoverCard,
+.isMapMode .islandHitbox:focus-visible ~ .islandHoverCard,
+.isMapMode .islandHitboxButton:hover ~ .islandHoverCard,
+.isMapMode .islandHitboxButton:focus-visible ~ .islandHoverCard {
+    opacity: 1;
+    transform: translate(-50%, 0);
 }
 
 @media screen and (max-width: 996px) {
@@ -552,14 +532,6 @@
 
     .worldScene {
         width: 125vw;
-    }
-
-    .isMapMode .worldScene {
-        transform: translateZ(0) scale(1.14) translateY(-1%);
-    }
-
-    .worldSceneFocused {
-        transform: translateZ(0) scale(1.04) translateY(4%);
     }
 
     .islandLabel {
@@ -572,6 +544,10 @@
     .landmarkPinLabel {
         font-size: 0.56rem;
         letter-spacing: 0.1em;
+    }
+
+    .islandHoverCard {
+        display: none;
     }
 
     .islandDetailCard {

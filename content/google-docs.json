@@ -1,0 +1,16 @@
+[
+  {
+    "sourceUrl": "https://docs.google.com/document/d/1lVQVDKXfBXgyFvcd7_gQpEED-WXhA9y1s2126HYIfIs/edit?tab=t.0",
+    "outputPath": "docs/homebrew/boons.md",
+    "sidebar_label": "Boons",
+    "strip_thematic_breaks": true,
+    "sidebar_position": 2
+  },
+  {
+    "sourceUrl": "https://docs.google.com/document/d/14c8yFCXazY1Y4KrTJmGRmByoKkfGwL8SyG1A-iwdDfg/edit?tab=t.0",
+    "outputPath": "docs/getting-set-up.md",
+    "sidebar_label": "Character Creation Guide",
+    "title_override": "Character Creation Guide",
+    "sidebar_position": 1
+  }
+]
