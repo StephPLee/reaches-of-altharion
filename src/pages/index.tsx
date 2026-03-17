@@ -38,6 +38,10 @@ type IslandHotspot = {
   height: number;
   hitWidth: number;
   hitHeight: number;
+  labelX?: number;
+  labelY?: number;
+  mobileLabelX?: number;
+  mobileLabelY?: number;
 };
 
 const ISLAND_HOTSPOTS: IslandHotspot[] = [
@@ -67,6 +71,9 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     height: 38.5,
     hitWidth: 40,
     hitHeight: 38.5,
+    labelX: 47,
+    mobileLabelX: 42,
+    mobileLabelY: 48,
   },
   {
     id: "verdalis",
@@ -94,6 +101,8 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     height: 41.5,
     hitWidth: 30,
     hitHeight: 40,
+    mobileLabelX: 50,
+    mobileLabelY: 50,
   },
   {
     id: "thaloryn",
@@ -121,6 +130,9 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     height: 30,
     hitWidth: 12,
     hitHeight: 20,
+    labelX: 53,
+    mobileLabelX: 53,
+    mobileLabelY: 52,
   },
   {
     id: "tenebryn",
@@ -140,6 +152,8 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     height: 43,
     hitWidth: 30,
     hitHeight: 40,
+    mobileLabelX: 49,
+    mobileLabelY: 48,
   },
   {
     id: "iskralith",
@@ -167,6 +181,8 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     height: 30,
     hitWidth: 18,
     hitHeight: 30,
+    mobileLabelX: 50,
+    mobileLabelY: 44,
   },
 ];
 
@@ -187,6 +203,7 @@ function HomepageHeader() {
   const showMapMenu = view === "map";
   const showIslandNames = view === "world";
   const isWorldMapMode = hasEnteredMapMode || showMapMenu || showIslandNames;
+  const showMapNavigation = hasEnteredMapMode || showMapMenu;
   const selectedIsland =
     ISLAND_HOTSPOTS.find((island) => island.id === selectedIslandId) ?? null;
 
@@ -259,10 +276,106 @@ function HomepageHeader() {
     setSelectedIslandId(islandId);
   };
 
+  const renderIslandDetailCard = (mobile: boolean) => {
+    if (!selectedIsland) {
+      return null;
+    }
+
+    const cardClassName = mobile
+      ? `${styles.islandDetailCard} ${styles.islandDetailCardMobile}`
+      : `${styles.islandDetailCard} ${styles.islandDetailCardDesktop}`;
+
+    return (
+      <m.div
+        key={`${selectedIsland.id}-${mobile ? "mobile" : "desktop"}`}
+        className={cardClassName}
+        initial={
+          shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 18, y: -12 }
+        }
+        animate={{ opacity: 1, x: 0, y: 0 }}
+        exit={
+          shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 10, y: -8 }
+        }
+        transition={{ duration: shouldReduceMotion ? 0 : 0.24 }}
+      >
+        <button
+          type="button"
+          className={styles.islandDetailClose}
+          onClick={() => setSelectedIslandId(null)}
+          aria-label="Close island lore"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <div
+          className={styles.islandDetailScroll}
+          ref={mobile ? undefined : detailScrollRef}
+        >
+          <div className={styles.islandDetailMeta}>
+            <p className={styles.islandDetailEyebrow}>Island Profile</p>
+            <Heading as="h2" className={styles.islandDetailTitle}>
+              {selectedIsland.islandName}
+            </Heading>
+            <p className={styles.islandDetailRegion}>
+              {selectedIsland.regionType}
+            </p>
+          </div>
+          <div className={styles.islandDetailSection}>
+            <p className={styles.islandDetailSectionLabel}>Overview</p>
+            <p className={styles.islandDetailText}>
+              {selectedIsland.description}
+            </p>
+          </div>
+          {selectedIsland.landmarks.length > 0 ? (
+            <>
+              <div className={styles.islandDetailSection}>
+                <p className={styles.islandDetailSectionLabel}>Landmarks</p>
+                <p className={styles.islandDetailText}>
+                  {selectedIsland.landmarks
+                    .map((landmark) => landmark.name)
+                    .join(", ")}
+                </p>
+              </div>
+              {selectedIsland.landmarks
+                .filter((landmark) => landmark.description)
+                .map((landmark) => (
+                  <div
+                    key={landmark.name}
+                    className={styles.islandDetailSection}
+                  >
+                    <p className={styles.islandDetailSectionLabel}>
+                      {landmark.name}
+                    </p>
+                    <p className={styles.islandDetailText}>
+                      {landmark.description}
+                    </p>
+                  </div>
+                ))}
+            </>
+          ) : null}
+        </div>
+        {!mobile && detailScrollbar.isVisible ? (
+          <div
+            ref={detailScrollbarTrackRef}
+            className={styles.islandDetailScrollbar}
+            aria-hidden="true"
+          >
+            <div
+              className={styles.islandDetailScrollbarThumb}
+              style={{
+                height: `${detailScrollbar.thumbHeight}px`,
+                transform: `translateY(${detailScrollbar.thumbTop}px)`,
+              }}
+            />
+          </div>
+        ) : null}
+      </m.div>
+    );
+  };
+
   return (
     <LazyMotion features={domAnimation}>
       <header
-        className={`${styles.heroBanner} ${isWorldMapMode ? styles.isMapMode : ""}`}
+        className={`${styles.heroBanner} ${isWorldMapMode ? styles.isMapMode : ""} ${showMapNavigation ? styles.isMenuView : ""}`}
       >
         {!showMapMenu && !showIslandNames ? (
           <Link
@@ -319,101 +432,7 @@ function HomepageHeader() {
             />
 
             <AnimatePresence mode="wait">
-              {selectedIsland ? (
-                <m.div
-                  key={selectedIsland.id}
-                  className={styles.islandDetailCard}
-                  initial={
-                    shouldReduceMotion
-                      ? { opacity: 0 }
-                      : { opacity: 0, x: 18, y: -12 }
-                  }
-                  animate={{ opacity: 1, x: 0, y: 0 }}
-                  exit={
-                    shouldReduceMotion
-                      ? { opacity: 0 }
-                      : { opacity: 0, x: 10, y: -8 }
-                  }
-                  transition={{ duration: shouldReduceMotion ? 0 : 0.24 }}
-                >
-                  <button
-                    type="button"
-                    className={styles.islandDetailClose}
-                    onClick={() => setSelectedIslandId(null)}
-                    aria-label="Close island lore"
-                  >
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                  <div
-                    className={styles.islandDetailScroll}
-                    ref={detailScrollRef}
-                  >
-                    <div className={styles.islandDetailMeta}>
-                      <p className={styles.islandDetailEyebrow}>
-                        Island Profile
-                      </p>
-                      <Heading as="h2" className={styles.islandDetailTitle}>
-                        {selectedIsland.islandName}
-                      </Heading>
-                      <p className={styles.islandDetailRegion}>
-                        {selectedIsland.regionType}
-                      </p>
-                    </div>
-                    <div className={styles.islandDetailSection}>
-                      <p className={styles.islandDetailSectionLabel}>
-                        Overview
-                      </p>
-                      <p className={styles.islandDetailText}>
-                        {selectedIsland.description}
-                      </p>
-                    </div>
-                    {selectedIsland.landmarks.length > 0 ? (
-                      <>
-                        <div className={styles.islandDetailSection}>
-                          <p className={styles.islandDetailSectionLabel}>
-                            Landmarks
-                          </p>
-                          <p className={styles.islandDetailText}>
-                            {selectedIsland.landmarks
-                              .map((landmark) => landmark.name)
-                              .join(", ")}
-                          </p>
-                        </div>
-                        {selectedIsland.landmarks
-                          .filter((landmark) => landmark.description)
-                          .map((landmark) => (
-                            <div
-                              key={landmark.name}
-                              className={styles.islandDetailSection}
-                            >
-                              <p className={styles.islandDetailSectionLabel}>
-                                {landmark.name}
-                              </p>
-                              <p className={styles.islandDetailText}>
-                                {landmark.description}
-                              </p>
-                            </div>
-                          ))}
-                      </>
-                    ) : null}
-                  </div>
-                  {detailScrollbar.isVisible ? (
-                    <div
-                      ref={detailScrollbarTrackRef}
-                      className={styles.islandDetailScrollbar}
-                      aria-hidden="true"
-                    >
-                      <div
-                        className={styles.islandDetailScrollbarThumb}
-                        style={{
-                          height: `${detailScrollbar.thumbHeight}px`,
-                          transform: `translateY(${detailScrollbar.thumbTop}px)`,
-                        }}
-                      />
-                    </div>
-                  ) : null}
-                </m.div>
-              ) : null}
+              {renderIslandDetailCard(false)}
             </AnimatePresence>
 
             <div className={styles.hotspotLayer}>
@@ -439,6 +458,12 @@ function HomepageHeader() {
                 const islandClassName = `${styles.islandHotspot} ${
                   isDimmed ? styles.islandHotspotDimmed : ""
                 } ${isSelected ? styles.islandHotspotSelected : ""}`;
+                const labelStyle = {
+                  "--label-x": `${island.labelX ?? 50}%`,
+                  "--label-y": `${island.labelY ?? 50}%`,
+                  "--label-mobile-x": `${island.mobileLabelX ?? island.labelX ?? 50}%`,
+                  "--label-mobile-y": `${island.mobileLabelY ?? island.labelY ?? 50}%`,
+                } as CSSProperties;
 
                 return (
                   <m.div
@@ -530,6 +555,7 @@ function HomepageHeader() {
                           <m.span
                             key={visibleLabel}
                             className={styles.islandLabel}
+                            style={labelStyle}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -553,6 +579,24 @@ function HomepageHeader() {
             </div>
           </m.div>
         </div>
+
+        <AnimatePresence mode="wait">
+          {renderIslandDetailCard(true)}
+        </AnimatePresence>
+
+        {showMapNavigation ? (
+          <div className={styles.mobileMapNav} aria-label="Wiki sections">
+            {ISLAND_HOTSPOTS.map((island) => (
+              <Link
+                key={island.id}
+                to={island.to}
+                className={styles.mobileMapNavLink}
+              >
+                {island.label}
+              </Link>
+            ))}
+          </div>
+        ) : null}
 
         <m.div
           className={styles.heroContent}

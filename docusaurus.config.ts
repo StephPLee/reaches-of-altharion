@@ -66,31 +66,57 @@ const config: Config = {
         href: "/?view=map",
       },
       items: [
-        { to: "/?view=map", label: "Home", position: "right" },
+        { to: "/?view=map", label: "Home", position: "left" },
         {
-          to: "/docs/getting-set-up",
           label: "Player Information",
-          position: "right",
+          position: "left",
+          items: [
+            {
+              to: "/docs/getting-set-up",
+              label: "Character Creation",
+            },
+            {
+              to: "/docs/sourcebooks",
+              label: "Sourcebooks",
+            },
+            {
+              to: "/docs/transformations",
+              label: "Transformations",
+            },
+          ],
         },
         {
           to: "/docs/dm-rules",
           label: "DM Rules",
-          position: "right",
+          position: "left",
         },
         {
           to: "/docs/rp-rules",
           label: "RP Rules",
-          position: "right",
+          position: "left",
         },
         {
-          to: "/docs/homebrew/starting-graces",
           label: "Homebrew",
-          position: "right",
+          position: "left",
+          items: [
+            {
+              to: "/docs/homebrew/starting-graces",
+              label: "Starting Graces",
+            },
+            {
+              to: "/docs/homebrew/boons",
+              label: "Boons",
+            },
+            {
+              to: "/docs/homebrew/guilds",
+              label: "Guilds",
+            },
+          ],
         },
         {
           to: "/?view=world",
           label: "The World of Altharion",
-          position: "right",
+          position: "left",
         },
       ],
     },
