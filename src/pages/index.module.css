@@ -1,10 +1,10 @@
 .homepage {
-    min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .heroBanner {
     position: relative;
-    min-height: 100vh;
+    min-height: 100dvh;
     padding: 7rem 1.5rem 2.5rem;
     display: grid;
     place-items: center;
@@ -79,12 +79,15 @@
     inset: 0;
     display: grid;
     place-items: center;
+    padding: clamp(4.6rem, 8vh, 6rem) 1rem clamp(1rem, 3vh, 2rem);
     z-index: -2;
 }
 
 .worldScene {
     position: relative;
-    width: min(1200px, 92vw);
+    width: min(94vw, calc((100dvh - clamp(6.4rem, 12vh, 8.8rem)) * 1.324));
+    max-width: 100%;
+    max-height: calc(100dvh - clamp(6.4rem, 12vh, 8.8rem));
     aspect-ratio: 1768 / 1335;
     transform-origin: 50% 48%;
     will-change: transform;
@@ -163,8 +166,8 @@
 
 .islandLabel {
     position: absolute;
-    left: 50%;
-    top: 50%;
+    left: var(--label-x, 50%);
+    top: var(--label-y, 50%);
     transform: translate(-50%, -50%);
     opacity: 1;
     white-space: nowrap;
@@ -189,6 +192,25 @@
         0 6px 12px rgba(3, 6, 20, 0.42);
     z-index: 2;
     pointer-events: none;
+}
+
+@media screen and (min-width: 1800px) {
+    .islandLabel {
+        min-width: 12rem;
+        padding: 0.38rem 1.2rem;
+        font-size: 1rem;
+        letter-spacing: 0.085em;
+    }
+}
+
+@media screen and (max-width: 1280px) {
+    .islandLabel {
+        min-width: 0;
+        max-width: min(24vw, 18rem);
+        padding: 0.24rem 0.85rem;
+        font-size: clamp(0.72rem, 0.9vw, 0.82rem);
+        letter-spacing: 0.06em;
+    }
 }
 
 .islandHoverCard {
@@ -314,6 +336,10 @@
     color: #eff2ff;
     text-align: left;
     overflow: hidden;
+}
+
+.islandDetailCardMobile {
+    display: none;
 }
 
 .islandDetailClose {
@@ -489,6 +515,10 @@
     transform: translateY(-1px);
 }
 
+.mobileMapNav {
+    display: none;
+}
+
 .isMapMode .worldScene {
 }
 
@@ -527,18 +557,25 @@
 
 @media screen and (max-width: 996px) {
     .heroBanner {
-        padding-top: 6rem;
+        padding: 6rem 1rem 1.5rem;
+        align-content: start;
     }
 
     .worldScene {
-        width: 125vw;
+        width: min(100vw, calc((100dvh - clamp(5.2rem, 10vh, 7rem)) * 1.324));
+        max-height: calc(100dvh - clamp(5.2rem, 10vh, 7rem));
     }
 
     .islandLabel {
-        font-size: 0.72rem;
-        letter-spacing: 0.08em;
-        min-width: 8.4rem;
-        padding: 0.24rem 0.78rem;
+        left: var(--label-mobile-x, var(--label-x, 50%));
+        top: var(--label-mobile-y, var(--label-y, 50%));
+        font-size: clamp(0.52rem, 1.5vw, 0.64rem);
+        letter-spacing: 0.035em;
+        min-width: 0;
+        max-width: min(34vw, 7.8rem);
+        padding: 0.18rem 0.52rem;
+        line-height: 1.15;
+        white-space: normal;
     }
 
     .landmarkPinLabel {
@@ -550,7 +587,37 @@
         display: none;
     }
 
-    .islandDetailCard {
+    .islandDetailCardDesktop {
+        display: none;
+    }
+
+    .islandDetailCardMobile {
+        position: relative;
+        left: auto;
+        right: auto;
+        top: auto;
+        display: block;
+        z-index: 3;
+        width: min(92vw, 28rem);
+        max-width: 100%;
+        max-height: min(52vh, 34rem);
+        margin: 0 auto 1rem;
+        text-align: center;
+        transform: none;
+    }
+
+    .islandDetailCardMobile .islandDetailScroll {
+        max-height: min(52vh, 34rem);
+        padding: 3.1rem 1rem 1.3rem;
+        overflow-y: auto;
+    }
+
+    .islandDetailCardMobile .islandDetailClose {
+        top: 1rem;
+        right: 1rem;
+    }
+
+    .islandDetailCardDesktop {
         left: 50%;
         right: auto;
         top: 2%;
@@ -574,5 +641,80 @@
     .islandDetailClose {
         top: 1rem;
         right: 1.6rem;
+    }
+
+    .isMapMode:not(.isMenuView) .worldFrame {
+        position: relative;
+        inset: auto;
+        width: 100%;
+        padding: 0.5rem 0 0.75rem;
+    }
+
+    .isMapMode:not(.isMenuView) .worldScene {
+        width: min(94vw, 28rem);
+        max-height: min(45vh, 24rem);
+        margin: 0 auto;
+    }
+
+    .isMapMode:not(.isMenuView) .islandHotspotSelected {
+        left: 50% !important;
+        top: 47% !important;
+    }
+
+    .isMenuView .worldFrame {
+        position: relative;
+        inset: auto;
+        width: 100%;
+        padding: clamp(1.5rem, 2vh, 2rem) 0 clamp(1rem, 2vh, 1.5rem);
+    }
+
+    .isMenuView .worldScene {
+        width: min(94vw, 32rem);
+        max-height: min(48vh, 30rem);
+    }
+
+    .isMenuView .islandLabel {
+        display: none;
+    }
+
+    .isMenuView .mobileMapNav {
+        position: relative;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        width: min(88vw, 22rem);
+        margin: 0 auto;
+        padding-bottom: 1rem;
+    }
+
+    .mobileMapNavLink {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.8rem;
+        padding: 0.55rem 1rem;
+        border: 1px solid rgba(224, 232, 255, 0.3);
+        border-radius: 999px;
+        background: rgba(10, 14, 45, 0.82);
+        color: #eff2ff;
+        text-align: center;
+        font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+        font-size: 0.84rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        text-decoration: none;
+        box-shadow:
+            0 0 0 1px rgba(138, 156, 231, 0.12) inset,
+            0 6px 12px rgba(3, 6, 20, 0.32);
+    }
+
+    .mobileMapNavLink:hover,
+    .mobileMapNavLink:focus-visible {
+        color: #ffffff;
+        text-decoration: none;
+        border-color: rgba(224, 232, 255, 0.46);
+        background: rgba(16, 22, 61, 0.9);
     }
 }
