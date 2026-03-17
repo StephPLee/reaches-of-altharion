@@ -1,12 +1,13 @@
 ---
-title: Character Creation
 sidebar_label: "Character Creation"
 sidebar_position: 1
 ---
 
 # Character Creation
 
-This page covers the player-facing setup needed to get your character created and playable on the server.
+# Character Creation Guide
+
+This is a step by step guide on getting your character created and playable on the server. 
 
 ## Getting set up
 

@@ -1,16 +1,111 @@
 [
   {
-    "sourceUrl": "https://docs.google.com/document/d/1lVQVDKXfBXgyFvcd7_gQpEED-WXhA9y1s2126HYIfIs/edit?tab=t.0",
-    "outputPath": "docs/homebrew/boons.md",
-    "sidebar_label": "Boons",
-    "strip_thematic_breaks": true,
-    "sidebar_position": 2
-  },
-  {
     "sourceUrl": "https://docs.google.com/document/d/14c8yFCXazY1Y4KrTJmGRmByoKkfGwL8SyG1A-iwdDfg/edit?tab=t.0",
     "outputPath": "docs/getting-set-up.md",
-    "sidebar_label": "Character Creation Guide",
-    "title_override": "Character Creation Guide",
+    "sidebar_label": "Character Creation",
+    "title_override": "Character Creation",
     "sidebar_position": 1
+  },
+  {
+    "sourceUrl": "https://docs.google.com/document/d/1lVQVDKXfBXgyFvcd7_gQpEED-WXhA9y1s2126HYIfIs/edit?tab=t.0",
+    "outputPath": "docs/homebrew/boons.mdx",
+    "sidebar_label": "Boons",
+    "title_override": "Altharion Boons",
+    "strip_thematic_breaks": true,
+    "sidebar_position": 2,
+    "mdx_imports": [
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+    ],
+    "mdx_after_title": [
+      "<DocSectionSearch",
+      "  nounPlural=\"boons\"",
+      "  placeholder=\"Search by boon name, feature, damage type, or keyword\"",
+      "/>"
+    ]
+  },
+  {
+    "sourceUrl": "https://docs.google.com/document/d/1MaXMUBmw6XP_nr6_-hWcw1fad3kMIIsMD3jWWWcSLdM/edit?tab=t.0",
+    "outputPath": "docs/homebrew/weapons.mdx",
+    "sidebar_label": "Weapons",
+    "title_override": "Weapons",
+    "strip_thematic_breaks": true,
+    "sidebar_position": 4,
+    "mdx_imports": [
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+    ],
+    "mdx_after_title": [
+      "<DocSectionSearch",
+      "  nounPlural=\"weapons\"",
+      "  placeholder=\"Search by weapon name, damage type, property, or keyword\"",
+      "/>"
+    ]
+  },
+  {
+    "sourceUrl": "https://docs.google.com/document/d/172zgkdZO0xmkDFoImeHjxt3lrXbrYe5BMEK0Zvw7kfs/edit?tab=t.0",
+    "outputPath": "docs/homebrew/wondrous-items.mdx",
+    "sidebar_label": "Wondrous Items",
+    "title_override": "Wondrous Items",
+    "strip_thematic_breaks": true,
+    "sidebar_position": 5,
+    "mdx_imports": [
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+    ],
+    "mdx_after_title": [
+      "<DocSectionSearch",
+      "  nounPlural=\"wondrous items\"",
+      "  placeholder=\"Search by item name, effect, rarity, or keyword\"",
+      "/>"
+    ]
+  },
+  {
+    "sourceUrl": "https://docs.google.com/document/d/1KrBEul1wWJ8Wy00IZ-yv17NrEHfJboFIpLLNWTEiDXQ/edit?tab=t.0",
+    "outputPath": "docs/homebrew/species.mdx",
+    "sidebar_label": "Species",
+    "title_override": "Species",
+    "strip_thematic_breaks": true,
+    "sidebar_position": 6,
+    "mdx_imports": [
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+    ],
+    "mdx_after_title": [
+      "<DocSectionSearch",
+      "  nounPlural=\"species\"",
+      "  placeholder=\"Search by species name, trait, feature, or keyword\"",
+      "/>"
+    ]
+  },
+  {
+    "sourceUrl": "https://docs.google.com/document/d/1LAjIMYeSNcj7bZHJKmJ2K-Gq4Ehee41kYxkr1s1e75k/edit?tab=t.0",
+    "outputPath": "docs/homebrew/subclasses.mdx",
+    "sidebar_label": "Subclasses",
+    "title_override": "Subclasses",
+    "strip_thematic_breaks": true,
+    "sidebar_position": 7,
+    "mdx_imports": [
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+    ],
+    "mdx_after_title": [
+      "<DocSectionSearch",
+      "  nounPlural=\"subclasses\"",
+      "  placeholder=\"Search by subclass name, class, feature, or keyword\"",
+      "/>"
+    ]
+  },
+  {
+    "sourceUrl": "https://docs.google.com/document/d/1vDAGChYn66oB1NTt5Zo1YahmluzNCfbaz-2A8JwXAUg/edit?tab=t.0",
+    "outputPath": "docs/homebrew/spells.mdx",
+    "sidebar_label": "Spells",
+    "title_override": "Spells",
+    "strip_thematic_breaks": true,
+    "sidebar_position": 8,
+    "mdx_imports": [
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+    ],
+    "mdx_after_title": [
+      "<DocSectionSearch",
+      "  nounPlural=\"spells\"",
+      "  placeholder=\"Search by spell name, school, damage type, or keyword\"",
+      "/>"
+    ]
   }
 ]

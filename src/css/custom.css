@@ -173,8 +173,8 @@
 [data-theme="dark"] .theme-doc-markdown h1,
 [data-theme="dark"] .theme-doc-markdown h2,
 [data-theme="dark"] .theme-doc-markdown h3 {
-    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    letter-spacing: 0.03em;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    letter-spacing: 0.02em;
 }
 
 [data-theme="dark"] .theme-doc-markdown h1 {
@@ -187,8 +187,10 @@
     padding-top: 0.5rem;
     border-top: 1px solid rgba(203, 218, 255, 0.16);
     color: #e4d6ff;
-    font-size: clamp(1.6rem, 2.5vw, 2.35rem);
-    line-height: 1.08;
+    font-size: clamp(1.2rem, 1.9vw, 1.8rem);
+    line-height: 1.05;
+    text-transform: none;
+    font-variant: normal;
 }
 
 [data-theme="dark"] .theme-doc-markdown h2[class*="sectionHeading"] {
@@ -217,7 +219,7 @@
     font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
     margin-top: 1.35rem;
     margin-bottom: 0.35rem;
-    font-size: clamp(1.05rem, 1.35vw, 1.35rem);
+    font-size: clamp(1rem, 1.25vw, 1.28rem);
     line-height: 1.12;
     color: #f0ebff;
     letter-spacing: 0.01em;

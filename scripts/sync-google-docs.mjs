@@ -66,10 +66,11 @@ async function syncEntry(entry, accessToken) {
     accessToken,
   });
   const normalizedMarkdown = normalizeExportedMarkdown(markdown, entry);
+  const enhancedMarkdown = applyMdxEnhancements(normalizedMarkdown, entry);
   const frontMatter = buildFrontMatter(entry);
   const body = frontMatter
-    ? `${frontMatter}\n\n${normalizedMarkdown}\n`
-    : `${normalizedMarkdown}\n`;
+    ? `${frontMatter}\n\n${enhancedMarkdown}\n`
+    : `${enhancedMarkdown}\n`;
 
   await mkdir(path.dirname(outputFile), { recursive: true });
   await writeFile(outputFile, body, "utf8");
@@ -104,6 +105,8 @@ function buildFrontMatter(entry) {
     "outputPath",
     "title_override",
     "strip_thematic_breaks",
+    "mdx_imports",
+    "mdx_after_title",
   ]);
   const lines = Object.entries(entry)
     .filter(
@@ -155,6 +158,56 @@ function normalizeExportedMarkdown(markdown, entry) {
   }
 
   return lines.join("\n").trim();
+}
+
+function applyMdxEnhancements(markdown, entry) {
+  const imports = Array.isArray(entry.mdx_imports)
+    ? entry.mdx_imports.filter(Boolean)
+    : [];
+  const afterTitle = normalizeMdxBlock(entry.mdx_after_title);
+
+  if (imports.length === 0 && !afterTitle) {
+    return markdown;
+  }
+
+  const lines = markdown.split("\n");
+  const firstHeadingIndex = lines.findIndex((line) => /^#\s+/.test(line));
+  const result = [];
+
+  if (imports.length > 0) {
+    result.push(imports.join("\n"), "");
+  }
+
+  if (firstHeadingIndex === -1) {
+    if (afterTitle) {
+      result.push(afterTitle, "");
+    }
+
+    result.push(markdown);
+    return result.join("\n").trim();
+  }
+
+  result.push(...lines.slice(0, firstHeadingIndex + 1));
+
+  if (afterTitle) {
+    result.push("", afterTitle, "");
+  }
+
+  result.push(...lines.slice(firstHeadingIndex + 1));
+
+  return result.join("\n").trim();
+}
+
+function normalizeMdxBlock(value) {
+  if (!value) {
+    return "";
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join("\n");
+  }
+
+  return String(value).trim();
 }
 
 function applyTitleOverride(lines, titleOverride) {
