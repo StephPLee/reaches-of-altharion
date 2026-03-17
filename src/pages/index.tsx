@@ -203,7 +203,8 @@ function HomepageHeader() {
   const showMapMenu = view === "map";
   const showIslandNames = view === "world";
   const isWorldMapMode = hasEnteredMapMode || showMapMenu || showIslandNames;
-  const showMapNavigation = hasEnteredMapMode || showMapMenu;
+  const showMapNavigation =
+    !showIslandNames && (hasEnteredMapMode || showMapMenu);
   const selectedIsland =
     ISLAND_HOTSPOTS.find((island) => island.id === selectedIslandId) ?? null;
 
@@ -407,13 +408,13 @@ function HomepageHeader() {
               scale: selectedIsland
                 ? shouldReduceMotion
                   ? 1.04
-                  : 1.16
+                  : 1.08
                 : isWorldMapMode
                   ? shouldReduceMotion
                     ? 1.08
-                    : 1.2
+                    : 1.14
                   : 1,
-              y: selectedIsland ? "1%" : isWorldMapMode ? "-2.5%" : "0%",
+              y: selectedIsland ? "0.5%" : isWorldMapMode ? "-1.8%" : "0%",
             }}
             transition={{
               duration: shouldReduceMotion ? 0 : 0.55,

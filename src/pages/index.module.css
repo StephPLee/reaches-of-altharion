@@ -238,9 +238,6 @@
     z-index: 3;
 }
 
-.islandHotspotDimmed {
-}
-
 .islandHotspotDimmed .islandHitbox,
 .islandHotspotDimmed .islandHitboxButton {
     pointer-events: none;
@@ -519,9 +516,6 @@
     display: none;
 }
 
-.isMapMode .worldScene {
-}
-
 .isMapMode .sceneBackdrop {
     transform: translateZ(0) scale(1.08);
 }
@@ -555,6 +549,37 @@
     transform: translate(-50%, 0);
 }
 
+@media screen and (min-width: 1600px) and (min-aspect-ratio: 19/9) {
+    .isMapMode:not(.isMenuView) .islandHotspotSelected {
+        left: 21% !important;
+        top: 54% !important;
+    }
+
+    .isMapMode:not(.isMenuView) .islandDetailCardDesktop {
+        right: 2.5%;
+        width: clamp(25rem, 23vw, 32rem);
+    }
+}
+
+@media screen and (min-width: 997px) and (max-height: 820px) {
+    .isMapMode:not(.isMenuView) .islandHotspotSelected {
+        left: 23% !important;
+        top: 53% !important;
+    }
+
+    .isMapMode:not(.isMenuView) .islandDetailCardDesktop {
+        top: 14%;
+        right: 2%;
+        width: clamp(22rem, 28vw, 28rem);
+        max-height: 66vh;
+    }
+
+    .isMapMode:not(.isMenuView) .islandDetailCardDesktop .islandDetailScroll {
+        max-height: 66vh;
+        padding: 3rem 1.7rem 1.4rem 1.15rem;
+    }
+}
+
 @media screen and (max-width: 996px) {
     .heroBanner {
         padding: 6rem 1rem 1.5rem;
@@ -581,6 +606,10 @@
     .landmarkPinLabel {
         font-size: 0.56rem;
         letter-spacing: 0.1em;
+    }
+
+    .isMapMode:not(.isMenuView) .landmarkPin {
+        display: none;
     }
 
     .islandHoverCard {
