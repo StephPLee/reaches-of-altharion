@@ -111,6 +111,26 @@ const config: Config = {
               to: "/docs/homebrew/guilds",
               label: "Guilds",
             },
+            {
+              to: "/docs/homebrew/weapons",
+              label: "Weapons",
+            },
+            {
+              to: "/docs/homebrew/wondrous-items",
+              label: "Wondrous Items",
+            },
+            {
+              to: "/docs/homebrew/species",
+              label: "Species",
+            },
+            {
+              to: "/docs/homebrew/subclasses",
+              label: "Subclasses",
+            },
+            {
+              to: "/docs/homebrew/spells",
+              label: "Spells",
+            },
           ],
         },
         {

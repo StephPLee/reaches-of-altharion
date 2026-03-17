@@ -18,7 +18,16 @@ const sidebars: SidebarsConfig = {
       label: "Homebrew",
       collapsible: true,
       collapsed: false,
-      items: ["homebrew/starting-graces", "homebrew/boons", "homebrew/guilds"],
+      items: [
+        "homebrew/starting-graces",
+        "homebrew/boons",
+        "homebrew/guilds",
+        "homebrew/weapons",
+        "homebrew/wondrous-items",
+        "homebrew/species",
+        "homebrew/subclasses",
+        "homebrew/spells",
+      ],
     },
   ],
 };

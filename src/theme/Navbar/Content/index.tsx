@@ -43,6 +43,11 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Starting Graces", to: "/docs/homebrew/starting-graces" },
       { label: "Boons", to: "/docs/homebrew/boons" },
       { label: "Guilds", to: "/docs/homebrew/guilds" },
+      { label: "Weapons", to: "/docs/homebrew/weapons" },
+      { label: "Wondrous Items", to: "/docs/homebrew/wondrous-items" },
+      { label: "Species", to: "/docs/homebrew/species" },
+      { label: "Subclasses", to: "/docs/homebrew/subclasses" },
+      { label: "Spells", to: "/docs/homebrew/spells" },
     ],
   },
 ];
