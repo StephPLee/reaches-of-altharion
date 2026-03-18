@@ -14,86 +14,112 @@
     "strip_thematic_breaks": true,
     "sidebar_position": 2,
     "mdx_imports": [
-      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";",
+      "import HomebrewAutomationInjector from \"@site/src/components/HomebrewAutomationInjector\";"
     ],
     "mdx_after_title": [
       "<DocSectionSearch",
       "  nounPlural=\"boons\"",
       "  placeholder=\"Search by boon name, feature, damage type, or keyword\"",
-      "/>"
+      "/>",
+      "",
+      "<HomebrewAutomationInjector />"
     ]
   },
   {
     "sourceUrl": "https://docs.google.com/document/d/1MaXMUBmw6XP_nr6_-hWcw1fad3kMIIsMD3jWWWcSLdM/edit?tab=t.0",
     "outputPath": "docs/homebrew/weapons.mdx",
+    "title": "Weapons",
     "sidebar_label": "Weapons",
     "title_override": "Weapons",
     "strip_thematic_breaks": true,
     "sidebar_position": 4,
     "mdx_imports": [
-      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";",
+      "import HomebrewAutomationInjector from \"@site/src/components/HomebrewAutomationInjector\";"
     ],
     "mdx_after_title": [
       "<DocSectionSearch",
       "  nounPlural=\"weapons\"",
       "  placeholder=\"Search by weapon name, damage type, property, or keyword\"",
-      "/>"
+      "  showSectionMeta",
+      "/>",
+      "",
+      "<HomebrewAutomationInjector />"
     ]
   },
   {
     "sourceUrl": "https://docs.google.com/document/d/172zgkdZO0xmkDFoImeHjxt3lrXbrYe5BMEK0Zvw7kfs/edit?tab=t.0",
     "outputPath": "docs/homebrew/wondrous-items.mdx",
+    "title": "Wondrous Items",
     "sidebar_label": "Wondrous Items",
     "title_override": "Wondrous Items",
     "strip_thematic_breaks": true,
     "sidebar_position": 5,
     "mdx_imports": [
-      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";",
+      "import HomebrewAutomationInjector from \"@site/src/components/HomebrewAutomationInjector\";"
     ],
     "mdx_after_title": [
       "<DocSectionSearch",
       "  nounPlural=\"wondrous items\"",
       "  placeholder=\"Search by item name, effect, rarity, or keyword\"",
-      "/>"
+      "  showSectionMeta",
+      "/>",
+      "",
+      "<HomebrewAutomationInjector />"
     ]
   },
   {
     "sourceUrl": "https://docs.google.com/document/d/1KrBEul1wWJ8Wy00IZ-yv17NrEHfJboFIpLLNWTEiDXQ/edit?tab=t.0",
     "outputPath": "docs/homebrew/species.mdx",
+    "title": "Species",
     "sidebar_label": "Species",
     "title_override": "Species",
     "strip_thematic_breaks": true,
     "sidebar_position": 6,
     "mdx_imports": [
-      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";",
+      "import HomebrewAutomationInjector from \"@site/src/components/HomebrewAutomationInjector\";",
+      "import SpeciesHierarchyEnhancer from \"@site/src/components/SpeciesHierarchyEnhancer\";"
     ],
     "mdx_after_title": [
       "<DocSectionSearch",
       "  nounPlural=\"species\"",
       "  placeholder=\"Search by species name, trait, feature, or keyword\"",
-      "/>"
+      "  showSectionMeta",
+      "/>",
+      "",
+      "<HomebrewAutomationInjector />",
+      "<SpeciesHierarchyEnhancer />"
     ]
   },
   {
     "sourceUrl": "https://docs.google.com/document/d/1LAjIMYeSNcj7bZHJKmJ2K-Gq4Ehee41kYxkr1s1e75k/edit?tab=t.0",
     "outputPath": "docs/homebrew/subclasses.mdx",
+    "title": "Subclasses",
     "sidebar_label": "Subclasses",
     "title_override": "Subclasses",
     "strip_thematic_breaks": true,
     "sidebar_position": 7,
     "mdx_imports": [
-      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";"
+      "import DocSectionSearch from \"@site/src/components/DocSectionSearch\";",
+      "import HomebrewAutomationInjector from \"@site/src/components/HomebrewAutomationInjector\";"
     ],
     "mdx_after_title": [
       "<DocSectionSearch",
       "  nounPlural=\"subclasses\"",
       "  placeholder=\"Search by subclass name, class, feature, or keyword\"",
-      "/>"
+      "  showSectionMeta",
+      "/>",
+      "",
+      "<HomebrewAutomationInjector />"
     ]
   },
   {
     "sourceUrl": "https://docs.google.com/document/d/1vDAGChYn66oB1NTt5Zo1YahmluzNCfbaz-2A8JwXAUg/edit?tab=t.0",
     "outputPath": "docs/homebrew/spells.mdx",
+    "title": "Spells",
     "sidebar_label": "Spells",
     "title_override": "Spells",
     "strip_thematic_breaks": true,
@@ -105,6 +131,7 @@
       "<DocSectionSearch",
       "  nounPlural=\"spells\"",
       "  placeholder=\"Search by spell name, school, damage type, or keyword\"",
+      "  showSectionMeta",
       "/>"
     ]
   }

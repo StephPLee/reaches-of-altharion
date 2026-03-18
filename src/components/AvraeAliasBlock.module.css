@@ -1,0 +1,148 @@
+.wrapper {
+    margin: 0 0 0.35rem;
+}
+.aliasBlock {
+    margin: 0;
+    border: 1px solid rgba(124, 143, 194, 0.16);
+    border-radius: 1rem;
+    overflow: hidden;
+    background: linear-gradient(
+        180deg,
+        rgba(14, 18, 34, 0.96) 0%,
+        rgba(11, 14, 28, 0.98) 100%
+    );
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.aliasBlock[open] {
+    border-color: rgba(132, 156, 214, 0.22);
+}
+
+.summary {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.summary::-webkit-details-marker {
+    display: none;
+}
+
+.summary:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.85rem;
+    background: rgba(255, 255, 255, 0.045);
+    color: rgba(233, 237, 255, 0.92);
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 160ms ease;
+}
+
+.aliasBlock[open] .toggle {
+    transform: rotate(90deg);
+}
+
+.meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1 1 auto;
+    line-height: 1;
+}
+
+.title {
+    display: block;
+    color: rgba(246, 242, 255, 0.96);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.subtitle {
+    display: block;
+    color: rgba(176, 186, 221, 0.76);
+    font-size: 0.84rem;
+    line-height: 1.2;
+}
+
+.downloadButton {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid rgba(124, 143, 194, 0.18);
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(238, 242, 255, 0.92);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.downloadButton:hover,
+.downloadButton:focus-visible {
+    border-color: rgba(160, 182, 235, 0.34);
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.body {
+    border-top: 1px solid rgba(124, 143, 194, 0.12);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.pre {
+    margin: 0;
+    padding: 1rem 1.1rem 1.1rem;
+    overflow-x: auto;
+    color: rgba(240, 243, 255, 0.94);
+    font-size: 0.93rem;
+    line-height: 1.55;
+}
+
+.pre code {
+    font-family:
+        "Cascadia Code", "Fira Code", "Consolas", "Courier New", monospace;
+}
+
+@media screen and (max-width: 996px) {
+    .summary {
+        padding: 0.8rem 0.9rem;
+    }
+
+    .toggle {
+        width: 2.1rem;
+        height: 2.1rem;
+    }
+
+    .title {
+        font-size: 0.95rem;
+    }
+
+    .subtitle {
+        font-size: 0.8rem;
+    }
+
+    .downloadButton {
+        padding: 0.4rem 0.68rem;
+        font-size: 0.78rem;
+    }
+
+    .pre {
+        padding: 0.9rem 1rem 1rem;
+        font-size: 0.88rem;
+    }
+}

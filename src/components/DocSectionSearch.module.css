@@ -111,6 +111,37 @@
     opacity: 0.96;
 }
 
+.sectionMeta {
+    flex: 0 0 auto;
+    padding: 0.18rem 0.55rem;
+    border: 1px solid rgba(100, 128, 189, 0.26);
+    border-radius: 999px;
+    background: rgba(232, 238, 248, 0.88);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: rgba(44, 62, 112, 0.92);
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .sectionMeta {
+    border-color: rgba(154, 180, 235, 0.2);
+    background: rgba(18, 28, 48, 0.92);
+    color: rgba(220, 229, 255, 0.88);
+}
+
+.sectionMetaEmpty {
+    border-color: rgba(179, 104, 104, 0.28);
+    background: rgba(250, 233, 233, 0.9);
+    color: rgba(125, 52, 52, 0.92);
+}
+
+[data-theme="dark"] .sectionMetaEmpty {
+    border-color: rgba(220, 139, 139, 0.24);
+    background: rgba(60, 27, 27, 0.92);
+    color: rgba(255, 204, 204, 0.9);
+}
+
 @media screen and (max-width: 996px) {
     .controlsRow {
         align-items: stretch;
