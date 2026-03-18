@@ -1,0 +1,20 @@
+.group {
+    margin: 0.35rem 0 1rem;
+    padding: 0.2rem 0 0.2rem 0.9rem;
+    border-left: 1px solid rgba(124, 143, 194, 0.18);
+}
+
+.groupLink {
+    display: inline-block;
+    margin-bottom: 0.2rem;
+    font-weight: 700;
+}
+
+.groupList {
+    margin: 0.15rem 0 0;
+    padding-left: 1rem;
+}
+
+.groupList li {
+    margin: 0.18rem 0;
+}

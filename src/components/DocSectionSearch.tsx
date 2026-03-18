@@ -7,13 +7,55 @@ type DocSectionSearchProps = {
   nounPlural: string;
   placeholder: string;
   keepVisibleSelector?: string;
+  showSectionMeta?: boolean;
 };
 
 type Section = {
   heading: HTMLElement;
   contentNodes: HTMLElement[];
   searchText: string;
+  itemCount: number;
 };
+
+function hasMeaningfulText(node: HTMLElement) {
+  return Boolean(node.textContent?.replace(/\s+/g, " ").trim());
+}
+
+function countSectionItems(contentNodes: HTMLElement[]) {
+  const h3Count = contentNodes.reduce(
+    (total, node) =>
+      total + (node.matches("h3") ? 1 : 0) + node.querySelectorAll("h3").length,
+    0,
+  );
+
+  if (h3Count > 0) {
+    return h3Count;
+  }
+
+  const listItemCount = contentNodes.reduce(
+    (total, node) =>
+      total + (node.matches("li") ? 1 : 0) + node.querySelectorAll("li").length,
+    0,
+  );
+
+  if (listItemCount > 0) {
+    return listItemCount;
+  }
+
+  const linkCount = contentNodes.reduce(
+    (total, node) =>
+      total +
+      (node.matches("a[href]") ? 1 : 0) +
+      node.querySelectorAll("a[href]").length,
+    0,
+  );
+
+  if (linkCount > 0) {
+    return linkCount;
+  }
+
+  return contentNodes.some(hasMeaningfulText) ? 1 : 0;
+}
 
 function collectSections(
   article: HTMLElement,
@@ -40,7 +82,12 @@ function collectSections(
       .join(" ")
       .toLowerCase();
 
-    return { heading, contentNodes, searchText };
+    return {
+      heading,
+      contentNodes,
+      searchText,
+      itemCount: countSectionItems(contentNodes),
+    };
   });
 }
 
@@ -53,6 +100,7 @@ export default function DocSectionSearch({
   nounPlural,
   placeholder,
   keepVisibleSelector,
+  showSectionMeta = false,
 }: DocSectionSearchProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sectionsRef = useRef<Section[]>([]);
@@ -94,13 +142,16 @@ export default function DocSectionSearch({
       sections.forEach((section) => {
         section.heading.style.display = "";
         section.heading.classList.remove(styles.sectionHeading);
+        if (showSectionMeta) {
+          section.heading.querySelector(`.${styles.sectionMeta}`)?.remove();
+        }
         section.contentNodes.forEach((node) => {
           node.style.display = "";
         });
         section.heading.onclick = null;
       });
     };
-  }, [headingSelector]);
+  }, [headingSelector, showSectionMeta]);
 
   useEffect(() => {
     const sections = sectionsRef.current;
@@ -114,6 +165,25 @@ export default function DocSectionSearch({
 
       section.heading.style.display = matches ? "" : "none";
       section.heading.classList.add(styles.sectionHeading);
+      if (showSectionMeta) {
+        let meta = section.heading.querySelector<HTMLElement>(
+          `.${styles.sectionMeta}`,
+        );
+
+        if (!meta) {
+          meta = document.createElement("span");
+          meta.className = styles.sectionMeta;
+          section.heading.appendChild(meta);
+        }
+
+        meta.textContent =
+          section.itemCount > 0
+            ? `${section.itemCount} item${section.itemCount === 1 ? "" : "s"}`
+            : "Empty";
+        meta.classList.toggle(styles.sectionMetaEmpty, section.itemCount === 0);
+      } else {
+        section.heading.querySelector(`.${styles.sectionMeta}`)?.remove();
+      }
       section.heading.onclick = () => {
         setCollapsedSections((prev) => ({
           ...prev,
@@ -160,7 +230,12 @@ export default function DocSectionSearch({
     });
 
     setCounts({ visible, total: sections.length });
-  }, [collapsedSections, keepVisibleSelector, normalizedQuery]);
+  }, [
+    collapsedSections,
+    keepVisibleSelector,
+    normalizedQuery,
+    showSectionMeta,
+  ]);
 
   return (
     <div ref={rootRef} className={styles.controlsPanel}>
