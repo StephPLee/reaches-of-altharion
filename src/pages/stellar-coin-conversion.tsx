@@ -223,6 +223,7 @@ export default function StellarCoinConversionPage(): ReactNode {
   const [stellarCoins, setStellarCoins] = useState("1");
   const [startingXp, setStartingXp] = useState("14000");
   const [targetXpLevel, setTargetXpLevel] = useState("10");
+  const [level20Xp, setLevel20Xp] = useState("355000");
 
   const safeLevel = clampNumber(parseWholeNumber(level, 1), 1, 20);
   const safeCoins = Math.max(0, parseWholeNumber(stellarCoins, 0));
@@ -246,6 +247,13 @@ export default function StellarCoinConversionPage(): ReactNode {
   const [leftBreakdownRows, rightBreakdownRows] = splitRows(
     xpCalculation.breakdown,
   );
+  const safeLevel20Xp = Math.max(0, parseWholeNumber(level20Xp, 355000));
+  const level20FloorXp = XP_THRESHOLDS[19].totalXp;
+  const xpAvailableForSc = Math.max(0, safeLevel20Xp - level20FloorXp);
+  const scFromExcessXp = Math.floor(xpAvailableForSc / 5000);
+  const xpSpentForSc = scFromExcessXp * 5000;
+  const xpRemainingAfterSc = safeLevel20Xp - xpSpentForSc;
+  const xpBufferAfterSc = Math.max(0, xpRemainingAfterSc - level20FloorXp);
 
   return (
     <Layout
@@ -536,6 +544,71 @@ export default function StellarCoinConversionPage(): ReactNode {
                       </table>
                     </div>
                   )}
+                </section>
+
+                <section className={`${styles.panel} ${styles.rewardPanel}`}>
+                  <Heading as="h2">Level 20 XP to SC</Heading>
+                  <p className={styles.muted}>
+                    After reaching level 20, excess XP can be converted into
+                    Stellar Coins at a rate of 5,000 XP per SC without dropping
+                    below the level 20 threshold.
+                  </p>
+                  <div className={styles.inputGrid}>
+                    <div className={styles.field}>
+                      <label htmlFor="level-20-xp">Current XP</label>
+                      <input
+                        id="level-20-xp"
+                        inputMode="numeric"
+                        value={level20Xp}
+                        onChange={(event) => setLevel20Xp(event.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    className={`${styles.rewardGrid} ${styles.rewardGridTriple}`}
+                  >
+                    <div className={styles.rewardCard}>
+                      <span className={styles.rewardLabel}>SC Available</span>
+                      <span className={styles.rewardValue}>
+                        {formatValue(scFromExcessXp)}
+                      </span>
+                    </div>
+                    <div className={styles.rewardCard}>
+                      <span className={styles.rewardLabel}>XP Spent</span>
+                      <span className={styles.rewardValue}>
+                        {formatValue(xpSpentForSc)}
+                      </span>
+                    </div>
+                    <div className={styles.rewardCard}>
+                      <span className={styles.rewardLabel}>XP Remaining</span>
+                      <span className={styles.rewardValue}>
+                        {formatValue(xpRemainingAfterSc)}
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    className={`${styles.rewardGrid} ${styles.rewardGridDouble}`}
+                  >
+                    <div className={styles.rewardCard}>
+                      <span className={styles.rewardLabel}>Excess XP</span>
+                      <span className={styles.rewardValue}>
+                        {formatValue(xpAvailableForSc)}
+                      </span>
+                    </div>
+                    <div className={styles.rewardCard}>
+                      <span className={styles.rewardLabel}>XP Buffer Left</span>
+                      <span className={styles.rewardValue}>
+                        {formatValue(xpBufferAfterSc)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.callout}>
+                    With <strong>{formatValue(safeLevel20Xp)}</strong> total XP,
+                    a level 20 character can buy{" "}
+                    <strong>{formatValue(scFromExcessXp)}</strong> Stellar Coin
+                    {scFromExcessXp === 1 ? "" : "s"} and remain at or above{" "}
+                    <strong>{formatValue(level20FloorXp)}</strong> XP.
+                  </div>
                 </section>
 
                 <div className={styles.twoCol}>
