@@ -203,11 +203,16 @@ const TIER_ROWS = [
 ];
 
 const EARLY_REWARD_ROWS = REWARD_TABLE.filter(
-  (row) => row.level >= 1 && row.level <= 10,
+  (row) => row.level >= 1 && row.level <= 11,
 );
 const LATE_REWARD_ROWS = REWARD_TABLE.filter(
-  (row) => row.level >= 11 && row.level <= 20,
+  (row) => row.level >= 12 && row.level <= 22,
 );
+const REWARD_TABLE_GROUPS = [
+  REWARD_TABLE.filter((row) => row.level >= 1 && row.level <= 8),
+  REWARD_TABLE.filter((row) => row.level >= 9 && row.level <= 15),
+  REWARD_TABLE.filter((row) => row.level >= 16 && row.level <= 22),
+];
 
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -339,66 +344,68 @@ export default function RewardsCalculatorPage(): ReactNode {
                 </div>
               </section>
 
-              <div className={styles.twoCol}>
-                <section className={`${styles.panel} ${styles.rewardPanel}`}>
-                  <Heading as="h2">Player Rewards</Heading>
-                  <div className={styles.rewardGrid}>
-                    <div className={styles.rewardCard}>
-                      <span className={styles.rewardLabel}>Reward XP</span>
-                      <span className={styles.rewardValue}>
-                        {formatReward(playerXp)}
-                      </span>
-                    </div>
-                    <div className={styles.rewardCard}>
-                      <span className={styles.rewardLabel}>Reward Gold</span>
-                      <span className={styles.rewardValue}>
-                        {formatReward(playerGold)}
-                      </span>
-                    </div>
-                    <div className={styles.rewardCard}>
-                      <span className={styles.rewardLabel}>Reward SC</span>
-                      <span className={styles.rewardValue}>
-                        {formatReward(playerSc)}
-                      </span>
-                    </div>
+              <section className={`${styles.panel} ${styles.rewardPanel}`}>
+                <Heading as="h2">Player Rewards</Heading>
+                <div
+                  className={`${styles.rewardGrid} ${styles.rewardGridTriple}`}
+                >
+                  <div className={styles.rewardCard}>
+                    <span className={styles.rewardLabel}>XP</span>
+                    <span className={styles.rewardValue}>
+                      {formatReward(playerXp)}
+                    </span>
                   </div>
-                </section>
+                  <div className={styles.rewardCard}>
+                    <span className={styles.rewardLabel}>Gold</span>
+                    <span className={styles.rewardValue}>
+                      {formatReward(playerGold)}
+                    </span>
+                  </div>
+                  <div className={styles.rewardCard}>
+                    <span className={styles.rewardLabel}>SC</span>
+                    <span className={styles.rewardValue}>
+                      {formatReward(playerSc)}
+                    </span>
+                  </div>
+                </div>
+              </section>
 
-                <section className={`${styles.panel} ${styles.rewardPanel}`}>
-                  <Heading as="h2">DM Rewards</Heading>
-                  <div className={styles.rewardGrid}>
-                    <div className={styles.rewardCard}>
-                      <span className={styles.rewardLabel}>Reward XP</span>
-                      <span className={styles.rewardValue}>
-                        {formatReward(dmXp)}
-                      </span>
-                    </div>
-                    <div className={styles.rewardCard}>
-                      <span className={styles.rewardLabel}>Reward Gold</span>
-                      <span className={styles.rewardValue}>
-                        {formatReward(dmGold)}
-                      </span>
-                    </div>
-                    <div className={styles.rewardCard}>
-                      <span className={styles.rewardLabel}>Reward SC</span>
-                      <span className={styles.rewardValue}>
-                        {formatReward(dmSc)}
-                      </span>
-                    </div>
+              <section className={`${styles.panel} ${styles.rewardPanel}`}>
+                <Heading as="h2">DM Rewards</Heading>
+                <div
+                  className={`${styles.rewardGrid} ${styles.rewardGridTriple}`}
+                >
+                  <div className={styles.rewardCard}>
+                    <span className={styles.rewardLabel}>XP</span>
+                    <span className={styles.rewardValue}>
+                      {formatReward(dmXp)}
+                    </span>
                   </div>
-                  <p className={styles.muted}>
-                    DM rewards use an effective quest level of{" "}
-                    <strong>{safeQuestLevel + dmBonusLevel}</strong> based on{" "}
-                    <strong>{safePlayers}</strong> player
-                    {safePlayers === 1 ? "" : "s"}.
-                  </p>
-                  <div className={styles.callout}>
-                    The DM also picks one of their own characters to reward.
-                    That character&apos;s effective quest level increases by{" "}
-                    <strong>+{dmBonusLevel}</strong> based on player count.
+                  <div className={styles.rewardCard}>
+                    <span className={styles.rewardLabel}>Gold</span>
+                    <span className={styles.rewardValue}>
+                      {formatReward(dmGold)}
+                    </span>
                   </div>
-                </section>
-              </div>
+                  <div className={styles.rewardCard}>
+                    <span className={styles.rewardLabel}>SC</span>
+                    <span className={styles.rewardValue}>
+                      {formatReward(dmSc)}
+                    </span>
+                  </div>
+                </div>
+                <p className={styles.muted}>
+                  DM rewards use an effective quest level of{" "}
+                  <strong>{safeQuestLevel + dmBonusLevel}</strong> based on{" "}
+                  <strong>{safePlayers}</strong> player
+                  {safePlayers === 1 ? "" : "s"}.
+                </p>
+                <div className={styles.callout}>
+                  The DM also picks one of their own characters to reward. That
+                  character&apos;s effective quest level increases by{" "}
+                  <strong>+{dmBonusLevel}</strong> based on player count.
+                </div>
+              </section>
 
               <section className={styles.panel}>
                 <Heading as="h2">RP Rewards</Heading>
@@ -431,15 +438,17 @@ export default function RewardsCalculatorPage(): ReactNode {
                     />
                   </div>
                 </div>
-                <div className={styles.rewardGrid}>
+                <div
+                  className={`${styles.rewardGrid} ${styles.rewardGridDouble}`}
+                >
                   <div className={styles.rewardCard}>
-                    <span className={styles.rewardLabel}>Reward XP</span>
+                    <span className={styles.rewardLabel}>XP</span>
                     <span className={styles.rewardValue}>
                       {formatReward(rpXp)}
                     </span>
                   </div>
                   <div className={styles.rewardCard}>
-                    <span className={styles.rewardLabel}>Reward Gold</span>
+                    <span className={styles.rewardLabel}>Gold</span>
                     <span className={styles.rewardValue}>
                       {formatReward(rpGold)}
                     </span>
@@ -507,48 +516,29 @@ export default function RewardsCalculatorPage(): ReactNode {
 
           <section className={`${styles.panel} ${styles.rewardTablePanel}`}>
             <Heading as="h2">Reward Table</Heading>
-            <div className={styles.tableColumns}>
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Level</th>
-                      <th>XP / Hour</th>
-                      <th>Gold / Hour</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {EARLY_REWARD_ROWS.map((row) => (
-                      <tr key={row.level}>
-                        <td className={row.tierClassName}>{row.level}</td>
-                        <td>{formatReward(row.xpPerHour)}</td>
-                        <td>{formatReward(row.goldPerHour)}</td>
+            <div className={styles.tableColumnsTriple}>
+              {REWARD_TABLE_GROUPS.map((group, index) => (
+                <div key={index} className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Level</th>
+                        <th>XP / Hour</th>
+                        <th>Gold / Hour</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Level</th>
-                      <th>XP / Hour</th>
-                      <th>Gold / Hour</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {LATE_REWARD_ROWS.map((row) => (
-                      <tr key={row.level}>
-                        <td className={row.tierClassName}>{row.level}</td>
-                        <td>{formatReward(row.xpPerHour)}</td>
-                        <td>{formatReward(row.goldPerHour)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {group.map((row) => (
+                        <tr key={row.level}>
+                          <td className={row.tierClassName}>{row.level}</td>
+                          <td>{formatReward(row.xpPerHour)}</td>
+                          <td>{formatReward(row.goldPerHour)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
             </div>
           </section>
         </div>

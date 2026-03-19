@@ -1,0 +1,266 @@
+.page {
+    min-height: 100vh;
+    padding: 6.5rem 1.5rem 3rem;
+    background:
+        linear-gradient(rgba(8, 9, 19, 0.76), rgba(8, 9, 19, 0.88)),
+        url("/img/altharion-background.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.shell {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    padding: 1.4rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 1.25rem;
+    background: rgba(8, 10, 20, 0.58);
+    box-shadow: 0 24px 60px rgba(2, 4, 12, 0.44);
+    backdrop-filter: blur(6px);
+}
+
+.hero,
+.panel,
+.subPanel {
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 1rem;
+    background: rgba(13, 15, 29, 0.82);
+    box-shadow:
+        0 10px 22px rgba(2, 4, 12, 0.16),
+        0 1px 0 rgba(233, 221, 186, 0.06) inset;
+}
+
+.hero {
+    display: grid;
+    gap: 0.9rem;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(
+        135deg,
+        rgba(22, 25, 43, 0.88),
+        rgba(14, 16, 28, 0.82)
+    );
+}
+
+.hero h1,
+.panel h2 {
+    margin: 0;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    font-variant: normal;
+    color: #f0e8fb;
+}
+
+.hero h1 {
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    color: #f4ecff;
+}
+
+.hero p,
+.muted {
+    margin: 0;
+    color: #d6ddef;
+    line-height: 1.7;
+}
+
+.panel {
+    padding: 1.35rem;
+}
+
+.subPanel {
+    padding: 1.2rem;
+}
+
+.stack {
+    display: grid;
+    gap: 1.2rem;
+}
+
+.tabRow {
+    display: inline-flex;
+    gap: 0.6rem;
+    margin-bottom: 1.2rem;
+    padding: 0.35rem;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 999px;
+    background: rgba(10, 12, 23, 0.7);
+}
+
+.tabButton {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.65rem 1.2rem;
+    background: transparent;
+    color: #d4dbed;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 1.05rem;
+    cursor: pointer;
+}
+
+.tabButtonActive {
+    background: linear-gradient(
+        135deg,
+        rgba(187, 167, 120, 0.28),
+        rgba(138, 121, 83, 0.26)
+    );
+    color: #fff7e6;
+    box-shadow: 0 0 0 1px rgba(212, 193, 148, 0.22) inset;
+}
+
+.inputGrid,
+.resultGrid {
+    display: grid;
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.inputGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.resultGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.field label,
+.resultLabel {
+    color: #dddff0;
+    font-size: 0.95rem;
+}
+
+.field input {
+    width: 100%;
+    padding: 0.78rem 0.9rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 0.75rem;
+    background: rgba(7, 9, 18, 0.88);
+    color: #f8f5ff;
+    font-size: 1rem;
+}
+
+.field input:focus {
+    outline: none;
+    border-color: rgba(213, 195, 152, 0.44);
+    box-shadow: 0 0 0 3px rgba(213, 195, 152, 0.12);
+}
+
+.resultCard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-height: 6.8rem;
+    padding: 0.8rem 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    background: linear-gradient(
+        180deg,
+        rgba(19, 23, 42, 0.92),
+        rgba(12, 15, 28, 0.9)
+    );
+}
+
+.resultValue {
+    color: #f7f1ff;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: clamp(1.2rem, 2.2vw, 2rem);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.05;
+}
+
+.callout {
+    margin-top: 1rem;
+    padding: 1rem 1.1rem;
+    border-left: 3px solid rgba(183, 168, 128, 0.72);
+    border-radius: 0.6rem;
+    background: rgba(25, 22, 37, 0.62);
+    color: #dce2f3;
+    line-height: 1.7;
+}
+
+.tableColumnsTriple {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: start;
+    justify-items: center;
+    margin-top: 1rem;
+}
+
+.tableWrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 0.95rem;
+}
+
+.table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.55rem;
+}
+
+.table th,
+.table td {
+    padding: 0.75rem 0.85rem;
+    text-align: left;
+}
+
+.table th {
+    color: #f0e8fb;
+    font-weight: 700;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 0.98rem;
+    letter-spacing: 0.01em;
+    background: rgba(24, 27, 45, 0.82);
+    border-top: 1px solid rgba(190, 176, 138, 0.14);
+    border-bottom: 1px solid rgba(190, 176, 138, 0.1);
+}
+
+.table td {
+    color: #d4dbed;
+    background: rgba(14, 17, 31, 0.78);
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(190, 176, 138, 0.08);
+    font-size: 1rem;
+}
+
+.table th:first-child,
+.table td:first-child {
+    border-top-left-radius: 0.8rem;
+    border-bottom-left-radius: 0.8rem;
+    padding-left: 1rem;
+}
+
+.table th:last-child,
+.table td:last-child {
+    border-top-right-radius: 0.8rem;
+    border-bottom-right-radius: 0.8rem;
+    padding-right: 1rem;
+}
+
+@media screen and (max-width: 996px) {
+    .page {
+        padding: 5.6rem 1rem 2rem;
+        background-attachment: scroll;
+    }
+
+    .shell,
+    .hero,
+    .panel,
+    .subPanel {
+        padding: 1rem;
+    }
+
+    .inputGrid,
+    .resultGrid,
+    .tableColumnsTriple {
+        grid-template-columns: 1fr;
+    }
+}
