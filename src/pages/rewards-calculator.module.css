@@ -36,9 +36,11 @@
 
 .hero h1 {
     margin: 0;
-    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
     font-size: clamp(2rem, 4vw, 3.2rem);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-variant: normal;
     color: #f4ecff;
 }
 
@@ -60,6 +62,58 @@
     display: grid;
     gap: 1.3rem;
     align-content: start;
+}
+
+.tabRow {
+    display: inline-flex;
+    gap: 0.6rem;
+    margin-bottom: 1.2rem;
+    padding: 0.45rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgba(16, 19, 33, 0.96),
+        rgba(10, 12, 22, 0.92)
+    );
+    box-shadow:
+        0 10px 22px rgba(2, 4, 12, 0.2),
+        0 1px 0 rgba(233, 221, 186, 0.05) inset;
+}
+
+.tabButton {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.75rem 1.45rem;
+    background: transparent;
+    color: #d4dbed;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 1.3rem;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition:
+        background-color 140ms ease,
+        color 140ms ease,
+        box-shadow 140ms ease,
+        transform 140ms ease;
+}
+
+.tabButton:hover {
+    color: #f2ecff;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tabButtonActive {
+    background: linear-gradient(
+        135deg,
+        rgba(196, 176, 134, 0.3),
+        rgba(128, 109, 74, 0.24)
+    );
+    color: #fff7e6;
+    box-shadow:
+        0 0 0 1px rgba(212, 193, 148, 0.24) inset,
+        0 8px 18px rgba(0, 0, 0, 0.18);
 }
 
 .sideStack {
@@ -87,7 +141,6 @@
 }
 
 .rewardPanel {
-    height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -99,8 +152,10 @@
 .panel h2,
 .panel h3 {
     margin-top: 0;
-    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    letter-spacing: 0.03em;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    font-variant: normal;
     color: #f0e8fb;
 }
 
@@ -148,8 +203,16 @@
     margin-top: 1rem;
 }
 
+.rewardGridTriple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.rewardGridDouble {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .rewardCard {
-    padding: 1rem;
+    padding: 0.8rem 1rem;
     border-radius: 0.9rem;
     border: 1px solid rgba(190, 176, 138, 0.14);
     background: linear-gradient(
@@ -157,25 +220,32 @@
         rgba(19, 23, 42, 0.92),
         rgba(12, 15, 28, 0.9)
     );
-    display: grid;
-    gap: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.15rem;
+    min-height: 6.8rem;
 }
 
 .rewardLabel {
     display: block;
     margin-bottom: 0.3rem;
     color: #c8cfdf;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: 0.95rem;
+    text-transform: none;
+    letter-spacing: 0.01em;
     line-height: 1.35;
     overflow-wrap: anywhere;
 }
 
 .rewardValue {
     color: #f7f1ff;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
     font-size: clamp(1.2rem, 2.2vw, 2rem);
     font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    font-variant: normal;
     line-height: 1.05;
     word-break: keep-all;
     overflow-wrap: normal;
@@ -207,10 +277,31 @@
     border-radius: 0.95rem;
 }
 
+.sideStack .tableWrap {
+    width: 100%;
+}
+
+.sideStack .table {
+    width: 100%;
+}
+
+.sideStack .table th,
+.sideStack .table td {
+    font-size: 1.02rem;
+}
+
 .tableColumns {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.25rem;
+}
+
+.tableColumnsTriple {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: start;
+    justify-items: center;
 }
 
 .table {
@@ -228,8 +319,11 @@
 .table th {
     color: #f0e8fb;
     font-weight: 700;
-    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    letter-spacing: 0.03em;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    font-variant: normal;
     background: rgba(24, 27, 45, 0.82);
     border-top: 1px solid rgba(190, 176, 138, 0.14);
     border-bottom: 1px solid rgba(190, 176, 138, 0.1);
@@ -324,6 +418,10 @@
     }
 
     .tableColumns {
+        grid-template-columns: 1fr;
+    }
+
+    .tableColumnsTriple {
         grid-template-columns: 1fr;
     }
 

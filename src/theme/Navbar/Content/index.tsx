@@ -50,6 +50,10 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Spells", to: "/docs/homebrew/spells" },
     ],
   },
+  {
+    title: "Calculators",
+    links: [{ label: "Rewards Calculator", to: "/rewards-calculator" }],
+  },
 ];
 
 function useNavbarItems() {

@@ -134,6 +134,20 @@ const config: Config = {
           ],
         },
         {
+          label: "Calculators",
+          position: "left",
+          items: [
+            {
+              to: "/rewards-calculator",
+              label: "Rewards Calculator",
+            },
+            {
+              to: "/stellar-coin-conversion",
+              label: "Stellar Coin Conversion",
+            },
+          ],
+        },
+        {
           to: "/?view=world",
           label: "The World of Altharion",
           position: "left",
