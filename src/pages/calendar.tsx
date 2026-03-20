@@ -255,7 +255,7 @@ export default function CalendarPage(): ReactNode {
           {!isLoading && !errorMessage && events.length === 0 ? (
             <section className={styles.panel}>
               <p className={styles.statusMessage}>
-                No events are currently listed in the external calendar.
+                No upcoming scheduled events.
               </p>
             </section>
           ) : null}
