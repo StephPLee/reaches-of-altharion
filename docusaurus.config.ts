@@ -134,6 +134,11 @@ const config: Config = {
           ],
         },
         {
+          to: "/calendar",
+          label: "Calendar",
+          position: "left",
+        },
+        {
           label: "Calculators",
           position: "left",
           items: [
