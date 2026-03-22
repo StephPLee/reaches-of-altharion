@@ -15,7 +15,8 @@
 .code {
     display: block;
     width: 100%;
-    overflow-x: auto;
+    min-width: 0;
+    overflow-x: hidden;
     padding: 0.5rem 0.78rem;
     border: 1px solid rgba(124, 143, 194, 0.16);
     border-radius: 0.9rem;
@@ -29,7 +30,9 @@
 .code code {
     font-family:
         "Cascadia Code", "Fira Code", "Consolas", "Courier New", monospace;
-    white-space: pre;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 @media screen and (max-width: 996px) {

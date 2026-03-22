@@ -1,0 +1,103 @@
+.page {
+    min-height: calc(100vh - var(--ifm-navbar-height));
+    padding: 2.5rem 1.25rem 4rem;
+}
+
+.shell {
+    width: min(48rem, 100%);
+    margin: 0 auto;
+    padding: 1.5rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 1rem;
+    background: rgba(14, 15, 28, 0.84);
+    box-shadow:
+        0 18px 40px rgba(2, 4, 12, 0.42),
+        0 1px 0 rgba(233, 221, 186, 0.06) inset;
+}
+
+.eyebrow {
+    margin: 0 0 0.65rem;
+    color: rgba(224, 232, 255, 0.72);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.intro {
+    margin: 0.85rem 0 0;
+    color: #d7def2;
+    line-height: 1.7;
+}
+
+.panel {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border: 1px solid rgba(196, 215, 255, 0.15);
+    border-radius: 0.8rem;
+    background: rgba(12, 19, 45, 0.54);
+}
+
+.status {
+    margin: 0;
+    color: #f0ebff;
+}
+
+.meta {
+    margin-top: 0.45rem;
+    color: #d7def2;
+}
+
+.actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.button {
+    border: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.6rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid rgba(202, 168, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(24, 21, 52, 0.7);
+    color: #f0e5ff;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.button:hover,
+.button:focus-visible {
+    color: #ffffff;
+    text-decoration: none;
+    border-color: rgba(224, 232, 255, 0.34);
+    background: rgba(37, 31, 76, 0.92);
+}
+
+.button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.formPanel {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(196, 215, 255, 0.15);
+}
+
+.formPanel h2 {
+    margin-bottom: 1rem;
+}
+
+.errorMessage {
+    margin: 0;
+}
+
+.errorMessage {
+    color: #ffd5df;
+}

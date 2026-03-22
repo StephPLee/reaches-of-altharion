@@ -8,6 +8,9 @@ const config: Config = {
   title: "Reaches of Altharion",
   tagline: "D&D 5.5e Westmarch Server",
   favicon: "img/altharion_logo_white.ico",
+  customFields: {
+    authApiBaseUrl: process.env.CLIENT_AUTH_API_BASE_URL || "",
+  },
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -49,6 +52,33 @@ const config: Config = {
         },
       } satisfies Preset.Options,
     ],
+  ],
+  plugins: [
+    function localAuthProxyPlugin(): any {
+      return {
+        name: "local-auth-proxy-plugin",
+        configureWebpack() {
+          if (process.env.NODE_ENV !== "development") {
+            return undefined;
+          }
+
+          return {
+            devServer: {
+              proxy: [
+                {
+                  context: ["/auth", "/api", "/health"],
+                  target:
+                    process.env.DEV_AUTH_PROXY_TARGET ||
+                    "http://127.0.0.1:3001",
+                  changeOrigin: true,
+                  secure: false,
+                },
+              ],
+            },
+          } as any;
+        },
+      };
+    },
   ],
 
   themeConfig: {
@@ -122,6 +152,10 @@ const config: Config = {
             {
               to: "/docs/homebrew/species",
               label: "Species",
+            },
+            {
+              to: "/docs/homebrew/feats",
+              label: "Feats",
             },
             {
               to: "/docs/homebrew/subclasses",

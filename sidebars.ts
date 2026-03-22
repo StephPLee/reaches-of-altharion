@@ -25,6 +25,7 @@ const sidebars: SidebarsConfig = {
         "homebrew/weapons",
         "homebrew/wondrous-items",
         "homebrew/species",
+        "homebrew/feats",
         "homebrew/subclasses",
         "homebrew/spells",
       ],
