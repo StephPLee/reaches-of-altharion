@@ -65,6 +65,52 @@
     margin-left: auto;
 }
 
+.custom-navbar-auth-shell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-left: 1rem;
+    padding-left: 1rem;
+    border-left: 1px solid rgba(190, 176, 138, 0.16);
+}
+
+.custom-navbar-auth-label,
+.custom-navbar-auth-status {
+    color: rgba(236, 226, 255, 0.82);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.custom-navbar-auth-button,
+.custom-navbar-auth-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid rgba(202, 168, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(24, 21, 52, 0.7);
+    color: #f0e5ff;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+        border-color 0.18s ease,
+        background-color 0.18s ease,
+        color 0.18s ease;
+}
+
+.custom-navbar-auth-button:hover,
+.custom-navbar-auth-button:focus-visible,
+.custom-navbar-auth-link:hover,
+.custom-navbar-auth-link:focus-visible {
+    color: #ffffff;
+    text-decoration: none;
+    border-color: rgba(224, 232, 255, 0.34);
+    background: rgba(37, 31, 76, 0.92);
+}
+
 .custom-calendar-nav-item {
     position: relative;
     display: flex;
@@ -586,6 +632,42 @@
 
 .custom-mobile-menu-link:hover,
 .custom-mobile-menu-link:focus-visible {
+    color: #ffffff;
+    text-decoration: none;
+    border-color: rgba(224, 232, 255, 0.28);
+    background: rgba(18, 22, 43, 0.9);
+}
+
+.custom-mobile-auth-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.custom-mobile-auth-label,
+.custom-mobile-auth-status {
+    color: rgba(236, 226, 255, 0.82);
+    padding: 0 0.2rem;
+    font-size: 0.9rem;
+}
+
+.custom-mobile-auth-button,
+.custom-mobile-auth-link {
+    display: block;
+    width: 100%;
+    padding: 0.72rem 0.9rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 0.7rem;
+    background: rgba(13, 15, 29, 0.72);
+    color: #ece2ff;
+    text-align: left;
+    text-decoration: none;
+}
+
+.custom-mobile-auth-button:hover,
+.custom-mobile-auth-button:focus-visible,
+.custom-mobile-auth-link:hover,
+.custom-mobile-auth-link:focus-visible {
     color: #ffffff;
     text-decoration: none;
     border-color: rgba(224, 232, 255, 0.28);

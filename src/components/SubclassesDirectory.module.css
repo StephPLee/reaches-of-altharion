@@ -1,0 +1,490 @@
+.shell {
+    display: grid;
+    gap: 1.5rem;
+    position: relative;
+}
+
+.contentLayout {
+    display: block;
+}
+
+.managerRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.field {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.fieldLabel {
+    color: #f0ebff;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.input {
+    appearance: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.9rem;
+    padding: 0.78rem 0.9rem;
+    border: 1px solid rgba(196, 215, 255, 0.2);
+    border-radius: 0.75rem;
+    background: rgba(10, 15, 33, 0.8);
+    color: #ece2ff;
+}
+
+.input:focus,
+.textarea:focus {
+    outline: none;
+    border-color: rgba(224, 232, 255, 0.34);
+    background: rgba(13, 18, 39, 0.95);
+    box-shadow:
+        0 0 0 1px rgba(224, 232, 255, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.textarea {
+    appearance: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 7rem;
+    padding: 0.78rem 0.9rem;
+    border: 1px solid rgba(196, 215, 255, 0.2);
+    border-radius: 0.75rem;
+    background: rgba(10, 15, 33, 0.8);
+    color: #ece2ff;
+    resize: vertical;
+}
+
+.secondaryButton,
+.primaryButton {
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.4rem;
+    padding: 0.6rem 0.9rem;
+    font-weight: 600;
+}
+
+.secondaryButton {
+    border: 1px solid rgba(196, 215, 255, 0.18);
+    background: rgba(17, 26, 56, 0.52);
+    color: #edf1ff;
+}
+
+.secondaryButton:hover,
+.secondaryButton:focus-visible {
+    background: rgba(29, 42, 85, 0.72);
+    border-color: rgba(224, 232, 255, 0.28);
+    color: #ffffff;
+}
+
+.primaryButton {
+    border: 1px solid rgba(202, 168, 255, 0.28);
+    background: rgba(24, 21, 52, 0.7);
+    color: #f0e5ff;
+}
+
+.primaryButton:hover,
+.primaryButton:focus-visible {
+    color: #ffffff;
+    border-color: rgba(224, 232, 255, 0.34);
+    background: rgba(37, 31, 76, 0.92);
+}
+
+.primaryButton:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.formActions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 0.65rem;
+}
+
+.controlsPanel {
+    margin: 1.5rem 0 0;
+    padding: 1rem;
+    border: 1px solid rgba(115, 140, 196, 0.22);
+    border-radius: 0.9rem;
+    background: linear-gradient(
+        180deg,
+        rgba(240, 244, 252, 0.96) 0%,
+        rgba(232, 238, 248, 0.92) 100%
+    );
+}
+
+[data-theme="dark"] .controlsPanel {
+    border-color: rgba(154, 180, 235, 0.2);
+    background: linear-gradient(
+        180deg,
+        rgba(20, 27, 46, 0.95) 0%,
+        rgba(14, 20, 36, 0.92) 100%
+    );
+}
+
+.controlsRow {
+    display: flex;
+    gap: 0.75rem;
+    align-items: end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.searchField {
+    flex: 1 1 20rem;
+}
+
+.searchLabel {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(112, 134, 186, 0.38);
+    border-radius: 0.7rem;
+    background: rgba(255, 255, 255, 0.92);
+    color: inherit;
+    font: inherit;
+}
+
+[data-theme="dark"] .searchInput {
+    border-color: rgba(154, 180, 235, 0.24);
+    background: rgba(11, 16, 28, 0.9);
+}
+
+.searchInput:focus {
+    outline: 2px solid rgba(88, 122, 210, 0.28);
+    outline-offset: 2px;
+}
+
+.buttonRow {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.controlButton {
+    padding: 0.68rem 0.95rem;
+    border: 1px solid rgba(112, 134, 186, 0.32);
+    border-radius: 0.7rem;
+    background: rgba(255, 255, 255, 0.84);
+    color: inherit;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+[data-theme="dark"] .controlButton {
+    border-color: rgba(154, 180, 235, 0.22);
+    background: rgba(11, 16, 28, 0.88);
+}
+
+.controlButton:hover,
+.controlButton:focus-visible {
+    border-color: rgba(170, 193, 245, 0.52);
+}
+
+.searchHint {
+    margin: 0.7rem 0 0;
+    font-size: 0.82rem;
+    opacity: 0.8;
+}
+
+.count {
+    margin: 0.35rem 0 0;
+    font-size: 0.86rem;
+    opacity: 0.78;
+}
+
+.sectionList {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.section {
+    display: grid;
+    gap: 0.75rem;
+    scroll-margin-top: calc(var(--ifm-navbar-height) + 1rem);
+}
+
+.sectionHeading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    clear: both;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+.sectionHeaderActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 0 0 auto;
+}
+
+.headerActionButton {
+    border: 1px solid rgba(196, 215, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(17, 26, 56, 0.52);
+    color: #edf1ff;
+    cursor: pointer;
+    min-height: 2rem;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.headerActionButton:hover,
+.headerActionButton:focus-visible {
+    background: rgba(29, 42, 85, 0.72);
+    border-color: rgba(224, 232, 255, 0.28);
+    color: #ffffff;
+}
+
+.sectionMeta {
+    flex: 0 0 auto;
+    padding: 0.18rem 0.55rem;
+    border: 1px solid rgba(100, 128, 189, 0.26);
+    border-radius: 999px;
+    background: rgba(232, 238, 248, 0.88);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: rgba(44, 62, 112, 0.92);
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .sectionMeta {
+    border-color: rgba(154, 180, 235, 0.2);
+    background: rgba(18, 28, 48, 0.92);
+    color: rgba(220, 229, 255, 0.88);
+}
+
+.sectionMetaEmpty {
+    border-color: rgba(220, 139, 139, 0.24);
+    background: rgba(60, 27, 27, 0.92);
+    color: rgba(255, 204, 204, 0.9);
+}
+
+.sectionBody {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.inlineComposer {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(196, 215, 255, 0.14);
+    border-radius: 0.85rem;
+    background: rgba(11, 15, 33, 0.52);
+}
+
+.automationComposer {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(196, 215, 255, 0.14);
+    border-radius: 0.85rem;
+    background: rgba(11, 15, 33, 0.52);
+}
+
+.automationGroup {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.automationGroupHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.automationCard {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    border: 1px solid rgba(196, 215, 255, 0.12);
+    border-radius: 0.85rem;
+    background: rgba(8, 12, 27, 0.46);
+}
+
+.sectionBodyCollapsed {
+    display: none;
+}
+
+.linkList {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.linkBlock {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.nestedLinkList {
+    display: grid;
+    gap: 0.75rem;
+    margin-left: 1.5rem;
+    padding-left: 1rem;
+    border-left: 1px solid rgba(196, 215, 255, 0.12);
+}
+
+.nestedLinkBlock {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.linkRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+
+.automationBlock {
+    display: grid;
+    gap: 0.65rem;
+    padding-left: 1.1rem;
+}
+
+.automationActions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.linkLine {
+    margin: 0;
+}
+
+.linkActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.inlineActionButton,
+.inlineDangerButton {
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.inlineActionButton {
+    border: 1px solid rgba(196, 215, 255, 0.18);
+    background: rgba(17, 26, 56, 0.52);
+    color: #edf1ff;
+}
+
+.inlineActionButton:hover,
+.inlineActionButton:focus-visible {
+    background: rgba(29, 42, 85, 0.72);
+    border-color: rgba(224, 232, 255, 0.28);
+    color: #ffffff;
+}
+
+.inlineDangerButton {
+    border: 1px solid rgba(255, 181, 198, 0.18);
+    background: rgba(58, 22, 42, 0.46);
+    color: #ffdbe4;
+}
+
+.inlineDangerButton:hover,
+.inlineDangerButton:focus-visible {
+    background: rgba(83, 26, 54, 0.68);
+    border-color: rgba(255, 210, 221, 0.28);
+    color: #fff0f4;
+}
+
+.inlineDangerButton:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.fallbackText {
+    margin: 0;
+    opacity: 0.82;
+}
+
+.status {
+    margin: 0;
+    opacity: 0.84;
+}
+
+.error {
+    margin: 0;
+    color: #ffd5df;
+}
+
+.success {
+    margin: 0;
+    color: #b9f2cf;
+}
+
+@media screen and (max-width: 996px) {
+    .contentLayout {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .controlsRow {
+        align-items: stretch;
+    }
+
+    .buttonRow {
+        width: 100%;
+    }
+
+    .controlButton {
+        flex: 1 1 10rem;
+    }
+
+    .managerRow,
+    .sectionHeaderActions {
+        grid-template-columns: 1fr;
+        display: grid;
+        align-items: start;
+    }
+
+    .linkRow {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .automationBlock {
+        padding-left: 0;
+    }
+
+    .automationActions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+}

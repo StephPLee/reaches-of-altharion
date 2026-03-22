@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import Link from "@docusaurus/Link";
 import { useLocation } from "@docusaurus/router";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import {
   ErrorCauseBoundary,
   ThemeClassNames,
@@ -24,6 +25,12 @@ type CalendarPreviewEvent = {
   startDate: string;
   endDate: string;
   category: string;
+};
+
+type AuthUser = {
+  username: string;
+  globalName: string | null;
+  isStaff: boolean;
 };
 
 const CALENDAR_CSV_URL =
@@ -69,6 +76,13 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
 
 function useNavbarItems() {
   return useThemeConfig().navbar.items;
+}
+
+function getAuthApiBaseUrl(siteConfig): string {
+  const configuredBaseUrl = siteConfig.customFields?.authApiBaseUrl;
+  return typeof configuredBaseUrl === "string"
+    ? configuredBaseUrl.replace(/\/$/, "")
+    : "";
 }
 
 function normalizeHeader(value: string) {
@@ -335,13 +349,164 @@ function CalendarPreviewLink({ isActive }: { isActive: boolean }): ReactNode {
   );
 }
 
+function NavbarAuthControls({
+  apiBaseUrl,
+  isMobile = false,
+  onNavigate,
+}: {
+  apiBaseUrl: string;
+  isMobile?: boolean;
+  onNavigate?: () => void;
+}): ReactNode {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`${apiBaseUrl}/api/me`, {
+          credentials: "include",
+        });
+
+        if (response.status === 401) {
+          if (!cancelled) {
+            setUser(null);
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Failed to load auth session (${response.status}).`);
+        }
+
+        const payload = await response.json();
+        if (!cancelled) {
+          setUser(payload.authenticated ? payload.user : null);
+        }
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl]);
+
+  async function handleLogout() {
+    try {
+      setIsSubmitting(true);
+      await fetch(`${apiBaseUrl}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+      setUser(null);
+      onNavigate?.();
+      const returnTo =
+        window.location.pathname +
+        window.location.search +
+        window.location.hash;
+      window.location.href =
+        window.location.pathname === "/admin" ? "/?view=map" : returnTo;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function handleLogin() {
+    onNavigate?.();
+    const returnTo =
+      window.location.pathname + window.location.search + window.location.hash;
+    window.location.href = `${apiBaseUrl}/auth/discord/login?returnTo=${encodeURIComponent(returnTo)}`;
+  }
+
+  if (isLoading) {
+    return (
+      <span
+        className={clsx(
+          isMobile ? "custom-mobile-auth-status" : "custom-navbar-auth-status",
+        )}
+      >
+        Checking staff access...
+      </span>
+    );
+  }
+
+  if (!user) {
+    return (
+      <button
+        type="button"
+        className={clsx(
+          "clean-btn",
+          isMobile ? "custom-mobile-auth-button" : "custom-navbar-auth-button",
+        )}
+        onClick={handleLogin}
+      >
+        Staff Login
+      </button>
+    );
+  }
+
+  const displayName = user.globalName || user.username;
+
+  return (
+    <div
+      className={clsx(
+        isMobile ? "custom-mobile-auth-shell" : "custom-navbar-auth-shell",
+      )}
+    >
+      <span
+        className={clsx(
+          isMobile ? "custom-mobile-auth-label" : "custom-navbar-auth-label",
+        )}
+      >
+        {displayName}
+      </span>
+      <Link
+        to="/admin"
+        className={clsx(
+          isMobile ? "custom-mobile-auth-link" : "custom-navbar-auth-link",
+        )}
+        onClick={onNavigate}
+      >
+        Staff Panel
+      </Link>
+      <button
+        type="button"
+        className={clsx(
+          "clean-btn",
+          isMobile ? "custom-mobile-auth-link" : "custom-navbar-auth-link",
+        )}
+        onClick={handleLogout}
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? "Signing Out..." : "Sign Out"}
+      </button>
+    </div>
+  );
+}
+
 export default function NavbarContent(): ReactNode {
+  const { siteConfig } = useDocusaurusContext();
   const items = useNavbarItems();
   const [leftItems, rightItems] = splitNavbarItems(items);
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const isCalendarActive = location.pathname === "/calendar";
+  const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -381,6 +546,7 @@ export default function NavbarContent(): ReactNode {
               items={rightItems}
               isCalendarActive={isCalendarActive}
             />
+            <NavbarAuthControls apiBaseUrl={authApiBaseUrl} />
           </div>
         </div>
       </div>
@@ -442,6 +608,14 @@ export default function NavbarContent(): ReactNode {
                       </div>
                     </div>
                   ))}
+                  <div className="custom-mobile-menu-group">
+                    <p className="custom-mobile-menu-group__title">Staff</p>
+                    <NavbarAuthControls
+                      apiBaseUrl={authApiBaseUrl}
+                      isMobile
+                      onNavigate={() => setIsMobileMenuOpen(false)}
+                    />
+                  </div>
                 </div>
               </div>
             </>,
