@@ -51,14 +51,8 @@ const databaseSslMode = process.env.DATABASE_SSL_MODE || "require";
 const databaseSslRejectUnauthorized =
   process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "false" ? false : true;
 
-if (
-  isProduction &&
-  databaseSslMode !== "disable" &&
-  databaseSslRejectUnauthorized === false
-) {
-  throw new Error(
-    "DATABASE_SSL_REJECT_UNAUTHORIZED must be true in production.",
-  );
+if (isProduction && databaseSslMode === "disable") {
+  throw new Error("DATABASE_SSL_MODE cannot be disable in production.");
 }
 
 module.exports = {
