@@ -235,7 +235,7 @@ function getDmBonusLevel(players: number) {
 }
 
 function formatReward(value: number) {
-  const rounded = Number.isInteger(value) ? value : Number(value.toFixed(2));
+  const rounded = Math.round(value);
   return new Intl.NumberFormat("en-GB").format(rounded);
 }
 
