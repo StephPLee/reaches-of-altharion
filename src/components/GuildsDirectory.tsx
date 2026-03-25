@@ -853,6 +853,88 @@ export default function GuildsDirectory() {
     setFormMessage("");
   }
 
+  function renderGuildComposer(
+    submitLabel: string,
+    resetLabel: string,
+    onReset: () => void,
+  ) {
+    return (
+      <form className={styles.composer} onSubmit={handleGuildSubmit}>
+        <div className={styles.managerRow}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Guild Name</span>
+            <input
+              className={styles.input}
+              value={guildForm.name}
+              onChange={(event) => updateGuildField("name", event.target.value)}
+            />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Slug</span>
+            <input
+              className={styles.input}
+              value={guildForm.slug}
+              onChange={(event) => updateGuildField("slug", event.target.value)}
+            />
+          </label>
+        </div>
+        <div className={styles.managerRow}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Emblem Source</span>
+            <input
+              className={styles.input}
+              value={guildForm.emblemSrc}
+              onChange={(event) =>
+                updateGuildField("emblemSrc", event.target.value)
+              }
+              placeholder="/img/Golden%20Quill.webp"
+            />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Emblem Alt</span>
+            <input
+              className={styles.input}
+              value={guildForm.emblemAlt}
+              onChange={(event) =>
+                updateGuildField("emblemAlt", event.target.value)
+              }
+            />
+          </label>
+        </div>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Summary</span>
+          <textarea
+            className={styles.textarea}
+            value={guildForm.summary}
+            onChange={(event) =>
+              updateGuildField("summary", event.target.value)
+            }
+          />
+        </label>
+        <div className={styles.formActions}>
+          <button
+            className={styles.secondaryButton}
+            type="button"
+            onClick={onReset}
+          >
+            {resetLabel}
+          </button>
+          <button
+            className={styles.primaryButton}
+            type="submit"
+            disabled={isSubmittingGuild}
+          >
+            {isSubmittingGuild
+              ? editingGuildId
+                ? "Saving..."
+                : "Creating..."
+              : submitLabel}
+          </button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <section className={styles.shell}>
       <div className={styles.controlsPanel}>
@@ -887,16 +969,18 @@ export default function GuildsDirectory() {
                 className={styles.controlButton}
                 type="button"
                 onClick={() => {
-                  setOpenGuildComposer((current) => !current);
-                  if (openGuildComposer) {
+                  if (editingGuildId !== null || openGuildComposer) {
                     resetGuildForm();
                   } else {
+                    setOpenGuildComposer(true);
                     setFormError("");
                     setFormMessage("");
                   }
                 }}
               >
-                {openGuildComposer ? "Close Guild Editor" : "Add Guild"}
+                {editingGuildId !== null || openGuildComposer
+                  ? "Close Guild Editor"
+                  : "Add Guild"}
               </button>
             ) : null}
           </div>
@@ -910,87 +994,9 @@ export default function GuildsDirectory() {
         </p>
         {formMessage ? <p className={styles.message}>{formMessage}</p> : null}
         {formError ? <p className={styles.error}>{formError}</p> : null}
-        {isStaff && openGuildComposer ? (
-          <form className={styles.composer} onSubmit={handleGuildSubmit}>
-            <div className={styles.managerRow}>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Guild Name</span>
-                <input
-                  className={styles.input}
-                  value={guildForm.name}
-                  onChange={(event) =>
-                    updateGuildField("name", event.target.value)
-                  }
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Slug</span>
-                <input
-                  className={styles.input}
-                  value={guildForm.slug}
-                  onChange={(event) =>
-                    updateGuildField("slug", event.target.value)
-                  }
-                />
-              </label>
-            </div>
-            <div className={styles.managerRow}>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Emblem Source</span>
-                <input
-                  className={styles.input}
-                  value={guildForm.emblemSrc}
-                  onChange={(event) =>
-                    updateGuildField("emblemSrc", event.target.value)
-                  }
-                  placeholder="/img/Golden%20Quill.webp"
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Emblem Alt</span>
-                <input
-                  className={styles.input}
-                  value={guildForm.emblemAlt}
-                  onChange={(event) =>
-                    updateGuildField("emblemAlt", event.target.value)
-                  }
-                />
-              </label>
-            </div>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Summary</span>
-              <textarea
-                className={styles.textarea}
-                value={guildForm.summary}
-                onChange={(event) =>
-                  updateGuildField("summary", event.target.value)
-                }
-              />
-            </label>
-            <div className={styles.formActions}>
-              <button
-                className={styles.secondaryButton}
-                type="button"
-                onClick={resetGuildForm}
-              >
-                Clear
-              </button>
-              <button
-                className={styles.primaryButton}
-                type="submit"
-                disabled={isSubmittingGuild}
-              >
-                {isSubmittingGuild
-                  ? editingGuildId
-                    ? "Saving..."
-                    : "Creating..."
-                  : editingGuildId
-                    ? "Save Guild"
-                    : "Add Guild"}
-              </button>
-            </div>
-          </form>
-        ) : null}
+        {isStaff && openGuildComposer && editingGuildId === null
+          ? renderGuildComposer("Add Guild", "Clear", resetGuildForm)
+          : null}
       </div>
       <DirectorySidebarIndex items={sidebarItems} />
 
@@ -999,483 +1005,510 @@ export default function GuildsDirectory() {
       {!loading && !error ? (
         <div className={styles.contentLayout}>
           <div className={styles.guildList}>
-            {visibleGuilds.map((guild) => (
-              <article
-                id={`guild-${guild.slug}`}
-                className={`${styles.guildCard} ${
-                  isGuildCollapsed(guild.id) ? styles.guildCardCollapsed : ""
-                }`.trim()}
-                key={guild.id}
-              >
-                <div className={styles.guildHeader}>
-                  <button
-                    className={styles.guildHeaderMain}
-                    type="button"
-                    onClick={() => toggleGuildCollapsed(guild.id)}
-                  >
-                    <GuildEmblem
-                      src={guild.emblemSrc || ""}
-                      alt={guild.emblemAlt || guild.name}
-                      className={
-                        isGuildCollapsed(guild.id)
-                          ? "doc-section-kept-collapsed"
-                          : ""
-                      }
-                    />
-                    <div className={styles.guildHeadingBlock}>
-                      <h2 className={styles.guildHeading}>{guild.name}</h2>
-                      {!isGuildCollapsed(guild.id) && guild.summary ? (
-                        <p className={styles.guildSummary}>{guild.summary}</p>
-                      ) : null}
-                    </div>
-                  </button>
-                  {isStaff ? (
-                    <div className={styles.guildActions}>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => toggleGuildCollapsed(guild.id)}
-                      >
-                        {isGuildCollapsed(guild.id) ? "Open" : "Close"}
-                      </button>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => beginEditGuild(guild)}
-                      >
-                        Edit Guild
-                      </button>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => beginAddUpgrade(guild.id)}
-                      >
-                        Add Upgrade
-                      </button>
-                      <button
-                        className={styles.inlineDangerButton}
-                        type="button"
-                        onClick={() => handleDeleteGuild(guild.id)}
-                        disabled={deletingGuildId === guild.id}
-                      >
-                        {deletingGuildId === guild.id
-                          ? "Removing..."
-                          : "Remove Guild"}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
+            {visibleGuilds.map((guild) => {
+              const isEditingThisGuild = editingGuildId === guild.id;
+              const isCollapsed =
+                isGuildCollapsed(guild.id) && !isEditingThisGuild;
 
-                {!isGuildCollapsed(guild.id) &&
-                isStaff &&
-                openUpgradeGuildId === guild.id ? (
-                  <form
-                    className={styles.upgradeComposer}
-                    onSubmit={handleUpgradeSubmit}
-                  >
-                    <div className={styles.managerRow}>
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Upgrade Title</span>
-                        <input
-                          className={styles.input}
-                          value={upgradeForm.title}
-                          onChange={(event) =>
-                            updateUpgradeField("title", event.target.value)
-                          }
-                        />
-                      </label>
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Tier Order</span>
-                        <input
-                          className={styles.input}
-                          type="number"
-                          value={upgradeForm.sortOrder}
-                          onChange={(event) =>
-                            updateUpgradeField("sortOrder", event.target.value)
-                          }
-                        />
-                      </label>
-                    </div>
-                    <div className={styles.managerRow}>
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Requirement</span>
-                        <textarea
-                          className={styles.textarea}
-                          value={upgradeForm.requirement}
-                          onChange={(event) =>
-                            updateUpgradeField(
-                              "requirement",
-                              event.target.value,
-                            )
-                          }
-                        />
-                      </label>
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Reward</span>
-                        <textarea
-                          className={styles.textarea}
-                          value={upgradeForm.reward}
-                          onChange={(event) =>
-                            updateUpgradeField("reward", event.target.value)
-                          }
-                        />
-                      </label>
-                    </div>
-                    <label className={styles.field}>
-                      <span className={styles.fieldLabel}>Details</span>
-                      <textarea
-                        className={styles.textarea}
-                        value={upgradeForm.details}
-                        onChange={(event) =>
-                          updateUpgradeField("details", event.target.value)
+              return (
+                <article
+                  id={`guild-${guild.slug}`}
+                  className={`${styles.guildCard} ${
+                    isCollapsed ? styles.guildCardCollapsed : ""
+                  }`.trim()}
+                  key={guild.id}
+                >
+                  <div className={styles.guildHeader}>
+                    <button
+                      className={styles.guildHeaderMain}
+                      type="button"
+                      onClick={() => toggleGuildCollapsed(guild.id)}
+                    >
+                      <GuildEmblem
+                        src={guild.emblemSrc || ""}
+                        alt={guild.emblemAlt || guild.name}
+                        className={
+                          isCollapsed ? "doc-section-kept-collapsed" : ""
                         }
                       />
-                    </label>
-                    <div className={styles.formActions}>
-                      <button
-                        className={styles.secondaryButton}
-                        type="button"
-                        onClick={resetUpgradeForm}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        className={styles.primaryButton}
-                        type="submit"
-                        disabled={isSubmittingUpgrade}
-                      >
-                        {isSubmittingUpgrade
-                          ? editingUpgradeId
-                            ? "Saving..."
-                            : "Creating..."
-                          : editingUpgradeId
-                            ? "Save Upgrade"
-                            : "Add Upgrade"}
-                      </button>
-                    </div>
-                  </form>
-                ) : null}
-
-                {!isGuildCollapsed(guild.id) ? (
-                  <div className={styles.upgradeList}>
-                    {guild.upgrades.map((upgrade) => (
-                      <section className={styles.upgradeCard} key={upgrade.id}>
-                        <div className={styles.upgradeHeader}>
-                          <h3 className={styles.upgradeHeading}>
-                            {upgrade.title}
-                          </h3>
-                          {isStaff ? (
-                            <div className={styles.upgradeActions}>
-                              <button
-                                className={styles.inlineActionButton}
-                                type="button"
-                                onClick={() => beginEditUpgrade(upgrade)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className={styles.inlineActionButton}
-                                type="button"
-                                onClick={() => beginAddAutomation(upgrade.id)}
-                              >
-                                {upgrade.automationEntries.length > 0
-                                  ? "Add Automation"
-                                  : "Add Automation"}
-                              </button>
-                              <button
-                                className={styles.inlineDangerButton}
-                                type="button"
-                                onClick={() => handleDeleteUpgrade(upgrade.id)}
-                                disabled={deletingUpgradeId === upgrade.id}
-                              >
-                                {deletingUpgradeId === upgrade.id
-                                  ? "Removing..."
-                                  : "Remove"}
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
-                        <p className={styles.upgradeText}>
-                          <strong>Requirement:</strong> {upgrade.requirement}
-                        </p>
-                        <p className={styles.upgradeText}>
-                          <strong>Reward:</strong> {upgrade.reward}
-                        </p>
-                        {upgrade.details ? (
-                          <p className={styles.upgradeText}>
-                            {upgrade.details}
-                          </p>
+                      <div className={styles.guildHeadingBlock}>
+                        <h2 className={styles.guildHeading}>{guild.name}</h2>
+                        {!isCollapsed &&
+                        !isEditingThisGuild &&
+                        guild.summary ? (
+                          <p className={styles.guildSummary}>{guild.summary}</p>
                         ) : null}
-                        {upgrade.automationEntries.map((automationEntry) => (
-                          <div
-                            className={styles.automationBlock}
-                            key={automationEntry.id}
-                          >
-                            <HomebrewAutomationSection
-                              title={automationEntry.panelTitle}
-                              subtitle={automationEntry.panelSubtitle}
-                            >
-                              {automationEntry.setupCommands.map((command) => (
-                                <AvraeCommandBlock
-                                  key={command.id}
-                                  label={command.label}
-                                  command={command.command}
-                                />
-                              ))}
-                              {automationEntry.codeBlocks.map((codeBlock) => (
-                                <AvraeAliasBlock
-                                  key={codeBlock.id}
-                                  title={codeBlock.title}
-                                  code={codeBlock.code}
-                                  downloadName={codeBlock.downloadName}
-                                />
-                              ))}
-                            </HomebrewAutomationSection>
+                      </div>
+                    </button>
+                    {isStaff ? (
+                      <div className={styles.guildActions}>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => toggleGuildCollapsed(guild.id)}
+                        >
+                          {isCollapsed ? "Open" : "Close"}
+                        </button>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => beginEditGuild(guild)}
+                        >
+                          {isEditingThisGuild ? "Editing Guild" : "Edit Guild"}
+                        </button>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => beginAddUpgrade(guild.id)}
+                        >
+                          Add Upgrade
+                        </button>
+                        <button
+                          className={styles.inlineDangerButton}
+                          type="button"
+                          onClick={() => handleDeleteGuild(guild.id)}
+                          disabled={deletingGuildId === guild.id}
+                        >
+                          {deletingGuildId === guild.id
+                            ? "Removing..."
+                            : "Remove Guild"}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {isEditingThisGuild
+                    ? renderGuildComposer(
+                        "Save Guild",
+                        "Cancel",
+                        resetGuildForm,
+                      )
+                    : null}
+
+                  {!isCollapsed &&
+                  !isEditingThisGuild &&
+                  isStaff &&
+                  openUpgradeGuildId === guild.id ? (
+                    <form
+                      className={styles.upgradeComposer}
+                      onSubmit={handleUpgradeSubmit}
+                    >
+                      <div className={styles.managerRow}>
+                        <label className={styles.field}>
+                          <span className={styles.fieldLabel}>
+                            Upgrade Title
+                          </span>
+                          <input
+                            className={styles.input}
+                            value={upgradeForm.title}
+                            onChange={(event) =>
+                              updateUpgradeField("title", event.target.value)
+                            }
+                          />
+                        </label>
+                        <label className={styles.field}>
+                          <span className={styles.fieldLabel}>Tier Order</span>
+                          <input
+                            className={styles.input}
+                            type="number"
+                            value={upgradeForm.sortOrder}
+                            onChange={(event) =>
+                              updateUpgradeField(
+                                "sortOrder",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                      <div className={styles.managerRow}>
+                        <label className={styles.field}>
+                          <span className={styles.fieldLabel}>Requirement</span>
+                          <textarea
+                            className={styles.textarea}
+                            value={upgradeForm.requirement}
+                            onChange={(event) =>
+                              updateUpgradeField(
+                                "requirement",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                        <label className={styles.field}>
+                          <span className={styles.fieldLabel}>Reward</span>
+                          <textarea
+                            className={styles.textarea}
+                            value={upgradeForm.reward}
+                            onChange={(event) =>
+                              updateUpgradeField("reward", event.target.value)
+                            }
+                          />
+                        </label>
+                      </div>
+                      <label className={styles.field}>
+                        <span className={styles.fieldLabel}>Details</span>
+                        <textarea
+                          className={styles.textarea}
+                          value={upgradeForm.details}
+                          onChange={(event) =>
+                            updateUpgradeField("details", event.target.value)
+                          }
+                        />
+                      </label>
+                      <div className={styles.formActions}>
+                        <button
+                          className={styles.secondaryButton}
+                          type="button"
+                          onClick={resetUpgradeForm}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className={styles.primaryButton}
+                          type="submit"
+                          disabled={isSubmittingUpgrade}
+                        >
+                          {isSubmittingUpgrade
+                            ? editingUpgradeId
+                              ? "Saving..."
+                              : "Creating..."
+                            : editingUpgradeId
+                              ? "Save Upgrade"
+                              : "Add Upgrade"}
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+
+                  {!isCollapsed && !isEditingThisGuild ? (
+                    <div className={styles.upgradeList}>
+                      {guild.upgrades.map((upgrade) => (
+                        <section
+                          className={styles.upgradeCard}
+                          key={upgrade.id}
+                        >
+                          <div className={styles.upgradeHeader}>
+                            <h3 className={styles.upgradeHeading}>
+                              {upgrade.title}
+                            </h3>
                             {isStaff ? (
                               <div className={styles.upgradeActions}>
                                 <button
                                   className={styles.inlineActionButton}
                                   type="button"
-                                  onClick={() =>
-                                    beginEditAutomation(
-                                      upgrade.id,
-                                      automationEntry,
-                                    )
-                                  }
+                                  onClick={() => beginEditUpgrade(upgrade)}
                                 >
-                                  Edit Automation
+                                  Edit
+                                </button>
+                                <button
+                                  className={styles.inlineActionButton}
+                                  type="button"
+                                  onClick={() => beginAddAutomation(upgrade.id)}
+                                >
+                                  {upgrade.automationEntries.length > 0
+                                    ? "Add Automation"
+                                    : "Add Automation"}
                                 </button>
                                 <button
                                   className={styles.inlineDangerButton}
                                   type="button"
                                   onClick={() =>
-                                    handleDeleteAutomation(automationEntry.id)
+                                    handleDeleteUpgrade(upgrade.id)
                                   }
-                                  disabled={
-                                    deletingAutomationEntryId ===
-                                    automationEntry.id
-                                  }
+                                  disabled={deletingUpgradeId === upgrade.id}
                                 >
-                                  {deletingAutomationEntryId ===
-                                  automationEntry.id
+                                  {deletingUpgradeId === upgrade.id
                                     ? "Removing..."
-                                    : "Remove Automation"}
+                                    : "Remove"}
                                 </button>
                               </div>
                             ) : null}
                           </div>
-                        ))}
-                        {isStaff && openAutomationUpgradeId === upgrade.id ? (
-                          <form
-                            className={styles.upgradeComposer}
-                            onSubmit={handleAutomationSubmit}
-                          >
-                            <div className={styles.managerRow}>
-                              <label className={styles.field}>
-                                <span className={styles.fieldLabel}>
-                                  Panel Title
-                                </span>
-                                <input
-                                  className={styles.input}
-                                  value={automationForm.panelTitle}
-                                  onChange={(event) =>
-                                    updateAutomationField(
-                                      "panelTitle",
-                                      event.target.value,
-                                    )
-                                  }
-                                />
-                              </label>
-                              <label className={styles.field}>
-                                <span className={styles.fieldLabel}>
-                                  Panel Subtitle
-                                </span>
-                                <input
-                                  className={styles.input}
-                                  value={automationForm.panelSubtitle}
-                                  onChange={(event) =>
-                                    updateAutomationField(
-                                      "panelSubtitle",
-                                      event.target.value,
-                                    )
-                                  }
-                                />
-                              </label>
+                          <p className={styles.upgradeText}>
+                            <strong>Requirement:</strong> {upgrade.requirement}
+                          </p>
+                          <p className={styles.upgradeText}>
+                            <strong>Reward:</strong> {upgrade.reward}
+                          </p>
+                          {upgrade.details ? (
+                            <p className={styles.upgradeText}>
+                              {upgrade.details}
+                            </p>
+                          ) : null}
+                          {upgrade.automationEntries.map((automationEntry) => (
+                            <div
+                              className={styles.automationBlock}
+                              key={automationEntry.id}
+                            >
+                              <HomebrewAutomationSection
+                                title={automationEntry.panelTitle}
+                                subtitle={automationEntry.panelSubtitle}
+                              >
+                                {automationEntry.setupCommands.map(
+                                  (command) => (
+                                    <AvraeCommandBlock
+                                      key={command.id}
+                                      label={command.label}
+                                      command={command.command}
+                                    />
+                                  ),
+                                )}
+                                {automationEntry.codeBlocks.map((codeBlock) => (
+                                  <AvraeAliasBlock
+                                    key={codeBlock.id}
+                                    title={codeBlock.title}
+                                    code={codeBlock.code}
+                                    downloadName={codeBlock.downloadName}
+                                  />
+                                ))}
+                              </HomebrewAutomationSection>
+                              {isStaff ? (
+                                <div className={styles.upgradeActions}>
+                                  <button
+                                    className={styles.inlineActionButton}
+                                    type="button"
+                                    onClick={() =>
+                                      beginEditAutomation(
+                                        upgrade.id,
+                                        automationEntry,
+                                      )
+                                    }
+                                  >
+                                    Edit Automation
+                                  </button>
+                                  <button
+                                    className={styles.inlineDangerButton}
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteAutomation(automationEntry.id)
+                                    }
+                                    disabled={
+                                      deletingAutomationEntryId ===
+                                      automationEntry.id
+                                    }
+                                  >
+                                    {deletingAutomationEntryId ===
+                                    automationEntry.id
+                                      ? "Removing..."
+                                      : "Remove Automation"}
+                                  </button>
+                                </div>
+                              ) : null}
                             </div>
-                            <div className={styles.automationGroup}>
-                              <div className={styles.automationGroupHeader}>
-                                <span className={styles.fieldLabel}>
-                                  Setup Commands
-                                </span>
+                          ))}
+                          {isStaff && openAutomationUpgradeId === upgrade.id ? (
+                            <form
+                              className={styles.upgradeComposer}
+                              onSubmit={handleAutomationSubmit}
+                            >
+                              <div className={styles.managerRow}>
+                                <label className={styles.field}>
+                                  <span className={styles.fieldLabel}>
+                                    Panel Title
+                                  </span>
+                                  <input
+                                    className={styles.input}
+                                    value={automationForm.panelTitle}
+                                    onChange={(event) =>
+                                      updateAutomationField(
+                                        "panelTitle",
+                                        event.target.value,
+                                      )
+                                    }
+                                  />
+                                </label>
+                                <label className={styles.field}>
+                                  <span className={styles.fieldLabel}>
+                                    Panel Subtitle
+                                  </span>
+                                  <input
+                                    className={styles.input}
+                                    value={automationForm.panelSubtitle}
+                                    onChange={(event) =>
+                                      updateAutomationField(
+                                        "panelSubtitle",
+                                        event.target.value,
+                                      )
+                                    }
+                                  />
+                                </label>
+                              </div>
+                              <div className={styles.automationGroup}>
+                                <div className={styles.automationGroupHeader}>
+                                  <span className={styles.fieldLabel}>
+                                    Setup Commands
+                                  </span>
+                                  <button
+                                    className={styles.secondaryButton}
+                                    type="button"
+                                    onClick={addSetupCommandDraft}
+                                  >
+                                    Add Command
+                                  </button>
+                                </div>
+                                {automationForm.setupCommands.map((draft) => (
+                                  <div
+                                    className={styles.automationCard}
+                                    key={draft.id}
+                                  >
+                                    <label className={styles.field}>
+                                      <span className={styles.fieldLabel}>
+                                        Label
+                                      </span>
+                                      <input
+                                        className={styles.input}
+                                        value={draft.label}
+                                        onChange={(event) =>
+                                          updateSetupCommandDraft(
+                                            draft.id,
+                                            "label",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                    <label className={styles.field}>
+                                      <span className={styles.fieldLabel}>
+                                        Command
+                                      </span>
+                                      <textarea
+                                        className={styles.textarea}
+                                        value={draft.command}
+                                        onChange={(event) =>
+                                          updateSetupCommandDraft(
+                                            draft.id,
+                                            "command",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                    <div className={styles.formActions}>
+                                      <button
+                                        className={styles.secondaryButton}
+                                        type="button"
+                                        onClick={() =>
+                                          removeSetupCommandDraft(draft.id)
+                                        }
+                                      >
+                                        Remove Command
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className={styles.automationGroup}>
+                                <div className={styles.automationGroupHeader}>
+                                  <span className={styles.fieldLabel}>
+                                    Code Blocks
+                                  </span>
+                                  <button
+                                    className={styles.secondaryButton}
+                                    type="button"
+                                    onClick={addCodeBlockDraft}
+                                  >
+                                    Add Code Block
+                                  </button>
+                                </div>
+                                {automationForm.codeBlocks.map((draft) => (
+                                  <div
+                                    className={styles.automationCard}
+                                    key={draft.id}
+                                  >
+                                    <label className={styles.field}>
+                                      <span className={styles.fieldLabel}>
+                                        Title
+                                      </span>
+                                      <input
+                                        className={styles.input}
+                                        value={draft.title}
+                                        onChange={(event) =>
+                                          updateCodeBlockDraft(
+                                            draft.id,
+                                            "title",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                    <label className={styles.field}>
+                                      <span className={styles.fieldLabel}>
+                                        Download Name
+                                      </span>
+                                      <input
+                                        className={styles.input}
+                                        value={draft.downloadName}
+                                        onChange={(event) =>
+                                          updateCodeBlockDraft(
+                                            draft.id,
+                                            "downloadName",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                    <label className={styles.field}>
+                                      <span className={styles.fieldLabel}>
+                                        Code
+                                      </span>
+                                      <textarea
+                                        className={styles.textarea}
+                                        value={draft.code}
+                                        onChange={(event) =>
+                                          updateCodeBlockDraft(
+                                            draft.id,
+                                            "code",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                    <div className={styles.formActions}>
+                                      <button
+                                        className={styles.secondaryButton}
+                                        type="button"
+                                        onClick={() =>
+                                          removeCodeBlockDraft(draft.id)
+                                        }
+                                      >
+                                        Remove Code Block
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className={styles.formActions}>
                                 <button
                                   className={styles.secondaryButton}
                                   type="button"
-                                  onClick={addSetupCommandDraft}
+                                  onClick={resetAutomationForm}
                                 >
-                                  Add Command
+                                  Cancel
                                 </button>
-                              </div>
-                              {automationForm.setupCommands.map((draft) => (
-                                <div
-                                  className={styles.automationCard}
-                                  key={draft.id}
-                                >
-                                  <label className={styles.field}>
-                                    <span className={styles.fieldLabel}>
-                                      Label
-                                    </span>
-                                    <input
-                                      className={styles.input}
-                                      value={draft.label}
-                                      onChange={(event) =>
-                                        updateSetupCommandDraft(
-                                          draft.id,
-                                          "label",
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
-                                  <label className={styles.field}>
-                                    <span className={styles.fieldLabel}>
-                                      Command
-                                    </span>
-                                    <textarea
-                                      className={styles.textarea}
-                                      value={draft.command}
-                                      onChange={(event) =>
-                                        updateSetupCommandDraft(
-                                          draft.id,
-                                          "command",
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
-                                  <div className={styles.formActions}>
-                                    <button
-                                      className={styles.secondaryButton}
-                                      type="button"
-                                      onClick={() =>
-                                        removeSetupCommandDraft(draft.id)
-                                      }
-                                    >
-                                      Remove Command
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <div className={styles.automationGroup}>
-                              <div className={styles.automationGroupHeader}>
-                                <span className={styles.fieldLabel}>
-                                  Code Blocks
-                                </span>
                                 <button
-                                  className={styles.secondaryButton}
-                                  type="button"
-                                  onClick={addCodeBlockDraft}
+                                  className={styles.primaryButton}
+                                  type="submit"
+                                  disabled={isSubmittingAutomation}
                                 >
-                                  Add Code Block
+                                  {isSubmittingAutomation
+                                    ? editingAutomationEntryId
+                                      ? "Saving..."
+                                      : "Creating..."
+                                    : editingAutomationEntryId
+                                      ? "Save Automation"
+                                      : "Add Automation"}
                                 </button>
                               </div>
-                              {automationForm.codeBlocks.map((draft) => (
-                                <div
-                                  className={styles.automationCard}
-                                  key={draft.id}
-                                >
-                                  <label className={styles.field}>
-                                    <span className={styles.fieldLabel}>
-                                      Title
-                                    </span>
-                                    <input
-                                      className={styles.input}
-                                      value={draft.title}
-                                      onChange={(event) =>
-                                        updateCodeBlockDraft(
-                                          draft.id,
-                                          "title",
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
-                                  <label className={styles.field}>
-                                    <span className={styles.fieldLabel}>
-                                      Download Name
-                                    </span>
-                                    <input
-                                      className={styles.input}
-                                      value={draft.downloadName}
-                                      onChange={(event) =>
-                                        updateCodeBlockDraft(
-                                          draft.id,
-                                          "downloadName",
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
-                                  <label className={styles.field}>
-                                    <span className={styles.fieldLabel}>
-                                      Code
-                                    </span>
-                                    <textarea
-                                      className={styles.textarea}
-                                      value={draft.code}
-                                      onChange={(event) =>
-                                        updateCodeBlockDraft(
-                                          draft.id,
-                                          "code",
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
-                                  <div className={styles.formActions}>
-                                    <button
-                                      className={styles.secondaryButton}
-                                      type="button"
-                                      onClick={() =>
-                                        removeCodeBlockDraft(draft.id)
-                                      }
-                                    >
-                                      Remove Code Block
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <div className={styles.formActions}>
-                              <button
-                                className={styles.secondaryButton}
-                                type="button"
-                                onClick={resetAutomationForm}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                className={styles.primaryButton}
-                                type="submit"
-                                disabled={isSubmittingAutomation}
-                              >
-                                {isSubmittingAutomation
-                                  ? editingAutomationEntryId
-                                    ? "Saving..."
-                                    : "Creating..."
-                                  : editingAutomationEntryId
-                                    ? "Save Automation"
-                                    : "Add Automation"}
-                              </button>
-                            </div>
-                          </form>
-                        ) : null}
-                      </section>
-                    ))}
-                  </div>
-                ) : null}
-              </article>
-            ))}
+                            </form>
+                          ) : null}
+                        </section>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
             {!visibleGuilds.length ? (
               <p className={styles.emptyState}>
                 No guilds match the current search.

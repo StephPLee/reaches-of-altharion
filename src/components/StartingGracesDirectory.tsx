@@ -777,6 +777,63 @@ export default function StartingGracesDirectory() {
     setFormMessage("");
   }
 
+  function renderGraceComposer(
+    submitLabel: string,
+    resetLabel: string,
+    onReset: () => void,
+  ) {
+    return (
+      <form className={styles.composer} onSubmit={handleGraceSubmit}>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Grace Title</span>
+          <input
+            className={styles.input}
+            value={graceForm.title}
+            onChange={(event) => updateGraceField("title", event.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Slug</span>
+          <input
+            className={styles.input}
+            value={graceForm.slug}
+            onChange={(event) => updateGraceField("slug", event.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Content</span>
+          <textarea
+            className={styles.textarea}
+            value={graceForm.contentMarkdown}
+            onChange={(event) =>
+              updateGraceField("contentMarkdown", event.target.value)
+            }
+          />
+        </label>
+        <div className={styles.formActions}>
+          <button
+            className={styles.secondaryButton}
+            type="button"
+            onClick={onReset}
+          >
+            {resetLabel}
+          </button>
+          <button
+            className={styles.primaryButton}
+            type="submit"
+            disabled={isSubmittingGrace}
+          >
+            {isSubmittingGrace
+              ? editingGraceId
+                ? "Saving..."
+                : "Creating..."
+              : submitLabel}
+          </button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <section className={styles.shell}>
       <div className={styles.controlsPanel}>
@@ -811,16 +868,18 @@ export default function StartingGracesDirectory() {
                 className={styles.controlButton}
                 type="button"
                 onClick={() => {
-                  setOpenGraceComposer((current) => !current);
-                  if (openGraceComposer) {
+                  if (editingGraceId !== null || openGraceComposer) {
                     resetGraceForm();
                   } else {
+                    setOpenGraceComposer(true);
                     setFormError("");
                     setFormMessage("");
                   }
                 }}
               >
-                {openGraceComposer ? "Close Grace Editor" : "Add Grace"}
+                {editingGraceId !== null || openGraceComposer
+                  ? "Close Grace Editor"
+                  : "Add Grace"}
               </button>
             ) : null}
           </div>
@@ -834,62 +893,9 @@ export default function StartingGracesDirectory() {
         </p>
         {formMessage ? <p className={styles.message}>{formMessage}</p> : null}
         {formError ? <p className={styles.error}>{formError}</p> : null}
-        {isStaff && openGraceComposer ? (
-          <form className={styles.composer} onSubmit={handleGraceSubmit}>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Grace Title</span>
-              <input
-                className={styles.input}
-                value={graceForm.title}
-                onChange={(event) =>
-                  updateGraceField("title", event.target.value)
-                }
-              />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Slug</span>
-              <input
-                className={styles.input}
-                value={graceForm.slug}
-                onChange={(event) =>
-                  updateGraceField("slug", event.target.value)
-                }
-              />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Content</span>
-              <textarea
-                className={styles.textarea}
-                value={graceForm.contentMarkdown}
-                onChange={(event) =>
-                  updateGraceField("contentMarkdown", event.target.value)
-                }
-              />
-            </label>
-            <div className={styles.formActions}>
-              <button
-                className={styles.secondaryButton}
-                type="button"
-                onClick={resetGraceForm}
-              >
-                Clear
-              </button>
-              <button
-                className={styles.primaryButton}
-                type="submit"
-                disabled={isSubmittingGrace}
-              >
-                {isSubmittingGrace
-                  ? editingGraceId
-                    ? "Saving..."
-                    : "Creating..."
-                  : editingGraceId
-                    ? "Save Grace"
-                    : "Add Grace"}
-              </button>
-            </div>
-          </form>
-        ) : null}
+        {isStaff && openGraceComposer && editingGraceId === null
+          ? renderGraceComposer("Add Grace", "Clear", resetGraceForm)
+          : null}
       </div>
       <DirectorySidebarIndex items={sidebarItems} />
 
@@ -898,314 +904,343 @@ export default function StartingGracesDirectory() {
       {!loading && !error ? (
         <div className={styles.contentLayout}>
           <div className={styles.graceList}>
-            {visibleGraces.map((grace) => (
-              <article
-                id={`grace-${grace.slug}`}
-                className={`${styles.graceCard} ${
-                  isGraceCollapsed(grace.id) ? styles.graceCardCollapsed : ""
-                }`.trim()}
-                key={grace.id}
-              >
-                <div className={styles.graceHeader}>
-                  <button
-                    className={styles.graceHeaderMain}
-                    type="button"
-                    onClick={() => toggleGraceCollapsed(grace.id)}
-                  >
-                    <h2 className={styles.graceHeading}>{grace.title}</h2>
-                  </button>
-                  {isStaff ? (
-                    <div className={styles.graceActions}>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => toggleGraceCollapsed(grace.id)}
-                      >
-                        {isGraceCollapsed(grace.id) ? "Open" : "Close"}
-                      </button>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => beginEditGrace(grace)}
-                      >
-                        Edit Grace
-                      </button>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => beginAddAutomation(grace.id)}
-                      >
-                        Add Automation
-                      </button>
-                      <button
-                        className={styles.inlineDangerButton}
-                        type="button"
-                        onClick={() => handleDeleteGrace(grace.id)}
-                        disabled={deletingGraceId === grace.id}
-                      >
-                        {deletingGraceId === grace.id
-                          ? "Removing..."
-                          : "Remove Grace"}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
+            {visibleGraces.map((grace) => {
+              const isEditingThisGrace = editingGraceId === grace.id;
+              const isCollapsed =
+                isGraceCollapsed(grace.id) && !isEditingThisGrace;
 
-                <div
-                  className={
-                    isGraceCollapsed(grace.id)
-                      ? styles.graceBodyCollapsed
-                      : styles.graceBody
-                  }
+              return (
+                <article
+                  id={`grace-${grace.slug}`}
+                  className={`${styles.graceCard} ${
+                    isCollapsed ? styles.graceCardCollapsed : ""
+                  }`.trim()}
+                  key={grace.id}
                 >
-                  <div className={styles.content}>
-                    {renderGraceContent(grace.contentMarkdown)}
+                  <div className={styles.graceHeader}>
+                    <button
+                      className={styles.graceHeaderMain}
+                      type="button"
+                      onClick={() => toggleGraceCollapsed(grace.id)}
+                    >
+                      <h2 className={styles.graceHeading}>{grace.title}</h2>
+                    </button>
+                    {isStaff ? (
+                      <div className={styles.graceActions}>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => toggleGraceCollapsed(grace.id)}
+                        >
+                          {isCollapsed ? "Open" : "Close"}
+                        </button>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => beginEditGrace(grace)}
+                        >
+                          {isEditingThisGrace ? "Editing Grace" : "Edit Grace"}
+                        </button>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => beginAddAutomation(grace.id)}
+                        >
+                          Add Automation
+                        </button>
+                        <button
+                          className={styles.inlineDangerButton}
+                          type="button"
+                          onClick={() => handleDeleteGrace(grace.id)}
+                          disabled={deletingGraceId === grace.id}
+                        >
+                          {deletingGraceId === grace.id
+                            ? "Removing..."
+                            : "Remove Grace"}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
 
-                  {grace.automationEntries.map((automationEntry) => (
-                    <div
-                      className={styles.automationBlock}
-                      key={automationEntry.id}
-                    >
-                      <HomebrewAutomationSection
-                        title={automationEntry.panelTitle}
-                        subtitle={automationEntry.panelSubtitle}
+                  <div
+                    className={
+                      isCollapsed ? styles.graceBodyCollapsed : styles.graceBody
+                    }
+                  >
+                    {isEditingThisGrace ? (
+                      renderGraceComposer(
+                        "Save Grace",
+                        "Cancel",
+                        resetGraceForm,
+                      )
+                    ) : (
+                      <>
+                        <div className={styles.content}>
+                          {renderGraceContent(grace.contentMarkdown)}
+                        </div>
+
+                        {grace.automationEntries.map((automationEntry) => (
+                          <div
+                            className={styles.automationBlock}
+                            key={automationEntry.id}
+                          >
+                            <HomebrewAutomationSection
+                              title={automationEntry.panelTitle}
+                              subtitle={automationEntry.panelSubtitle}
+                            >
+                              {automationEntry.setupCommands.map((command) => (
+                                <AvraeCommandBlock
+                                  key={command.id}
+                                  label={command.label}
+                                  command={command.command}
+                                />
+                              ))}
+                              {automationEntry.codeBlocks.map((codeBlock) => (
+                                <AvraeAliasBlock
+                                  key={codeBlock.id}
+                                  title={codeBlock.title}
+                                  code={codeBlock.code}
+                                  downloadName={codeBlock.downloadName}
+                                />
+                              ))}
+                            </HomebrewAutomationSection>
+                            {isStaff ? (
+                              <div className={styles.automationActions}>
+                                <button
+                                  className={styles.inlineActionButton}
+                                  type="button"
+                                  onClick={() =>
+                                    beginEditAutomation(
+                                      grace.id,
+                                      automationEntry,
+                                    )
+                                  }
+                                >
+                                  Edit Automation
+                                </button>
+                                <button
+                                  className={styles.inlineDangerButton}
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteAutomation(automationEntry.id)
+                                  }
+                                  disabled={
+                                    deletingAutomationEntryId ===
+                                    automationEntry.id
+                                  }
+                                >
+                                  {deletingAutomationEntryId ===
+                                  automationEntry.id
+                                    ? "Removing..."
+                                    : "Remove Automation"}
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {isStaff && openAutomationGraceId === grace.id ? (
+                      <form
+                        className={styles.automationComposer}
+                        onSubmit={handleAutomationSubmit}
                       >
-                        {automationEntry.setupCommands.map((command) => (
-                          <AvraeCommandBlock
-                            key={command.id}
-                            label={command.label}
-                            command={command.command}
+                        <label className={styles.field}>
+                          <span className={styles.fieldLabel}>Panel Title</span>
+                          <input
+                            className={styles.input}
+                            value={automationForm.panelTitle}
+                            onChange={(event) =>
+                              updateAutomationField(
+                                "panelTitle",
+                                event.target.value,
+                              )
+                            }
                           />
-                        ))}
-                        {automationEntry.codeBlocks.map((codeBlock) => (
-                          <AvraeAliasBlock
-                            key={codeBlock.id}
-                            title={codeBlock.title}
-                            code={codeBlock.code}
-                            downloadName={codeBlock.downloadName}
-                          />
-                        ))}
-                      </HomebrewAutomationSection>
-                      {isStaff ? (
-                        <div className={styles.automationActions}>
-                          <button
-                            className={styles.inlineActionButton}
-                            type="button"
-                            onClick={() =>
-                              beginEditAutomation(grace.id, automationEntry)
-                            }
-                          >
-                            Edit Automation
-                          </button>
-                          <button
-                            className={styles.inlineDangerButton}
-                            type="button"
-                            onClick={() =>
-                              handleDeleteAutomation(automationEntry.id)
-                            }
-                            disabled={
-                              deletingAutomationEntryId === automationEntry.id
-                            }
-                          >
-                            {deletingAutomationEntryId === automationEntry.id
-                              ? "Removing..."
-                              : "Remove Automation"}
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-
-                  {isStaff && openAutomationGraceId === grace.id ? (
-                    <form
-                      className={styles.automationComposer}
-                      onSubmit={handleAutomationSubmit}
-                    >
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Panel Title</span>
-                        <input
-                          className={styles.input}
-                          value={automationForm.panelTitle}
-                          onChange={(event) =>
-                            updateAutomationField(
-                              "panelTitle",
-                              event.target.value,
-                            )
-                          }
-                        />
-                      </label>
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>
-                          Panel Subtitle
-                        </span>
-                        <input
-                          className={styles.input}
-                          value={automationForm.panelSubtitle}
-                          onChange={(event) =>
-                            updateAutomationField(
-                              "panelSubtitle",
-                              event.target.value,
-                            )
-                          }
-                        />
-                      </label>
-
-                      <div className={styles.automationGroup}>
-                        <div className={styles.automationGroupHeader}>
+                        </label>
+                        <label className={styles.field}>
                           <span className={styles.fieldLabel}>
-                            Setup Commands
+                            Panel Subtitle
                           </span>
+                          <input
+                            className={styles.input}
+                            value={automationForm.panelSubtitle}
+                            onChange={(event) =>
+                              updateAutomationField(
+                                "panelSubtitle",
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+
+                        <div className={styles.automationGroup}>
+                          <div className={styles.automationGroupHeader}>
+                            <span className={styles.fieldLabel}>
+                              Setup Commands
+                            </span>
+                            <button
+                              className={styles.secondaryButton}
+                              type="button"
+                              onClick={addSetupCommandDraft}
+                            >
+                              Add Command
+                            </button>
+                          </div>
+                          {automationForm.setupCommands.map((draft) => (
+                            <div
+                              className={styles.automationCard}
+                              key={draft.id}
+                            >
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>Label</span>
+                                <input
+                                  className={styles.input}
+                                  value={draft.label}
+                                  onChange={(event) =>
+                                    updateSetupCommandDraft(
+                                      draft.id,
+                                      "label",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>
+                                  Command
+                                </span>
+                                <textarea
+                                  className={styles.textarea}
+                                  value={draft.command}
+                                  onChange={(event) =>
+                                    updateSetupCommandDraft(
+                                      draft.id,
+                                      "command",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <div className={styles.formActions}>
+                                <button
+                                  className={styles.secondaryButton}
+                                  type="button"
+                                  onClick={() =>
+                                    removeSetupCommandDraft(draft.id)
+                                  }
+                                >
+                                  Remove Command
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className={styles.automationGroup}>
+                          <div className={styles.automationGroupHeader}>
+                            <span className={styles.fieldLabel}>
+                              Code Blocks
+                            </span>
+                            <button
+                              className={styles.secondaryButton}
+                              type="button"
+                              onClick={addCodeBlockDraft}
+                            >
+                              Add Code Block
+                            </button>
+                          </div>
+                          {automationForm.codeBlocks.map((draft) => (
+                            <div
+                              className={styles.automationCard}
+                              key={draft.id}
+                            >
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>Title</span>
+                                <input
+                                  className={styles.input}
+                                  value={draft.title}
+                                  onChange={(event) =>
+                                    updateCodeBlockDraft(
+                                      draft.id,
+                                      "title",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>
+                                  Download Name
+                                </span>
+                                <input
+                                  className={styles.input}
+                                  value={draft.downloadName}
+                                  onChange={(event) =>
+                                    updateCodeBlockDraft(
+                                      draft.id,
+                                      "downloadName",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>Code</span>
+                                <textarea
+                                  className={styles.textarea}
+                                  value={draft.code}
+                                  onChange={(event) =>
+                                    updateCodeBlockDraft(
+                                      draft.id,
+                                      "code",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <div className={styles.formActions}>
+                                <button
+                                  className={styles.secondaryButton}
+                                  type="button"
+                                  onClick={() => removeCodeBlockDraft(draft.id)}
+                                >
+                                  Remove Code Block
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className={styles.formActions}>
                           <button
                             className={styles.secondaryButton}
                             type="button"
-                            onClick={addSetupCommandDraft}
+                            onClick={resetAutomationForm}
                           >
-                            Add Command
+                            Cancel
                           </button>
-                        </div>
-                        {automationForm.setupCommands.map((draft) => (
-                          <div className={styles.automationCard} key={draft.id}>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>Label</span>
-                              <input
-                                className={styles.input}
-                                value={draft.label}
-                                onChange={(event) =>
-                                  updateSetupCommandDraft(
-                                    draft.id,
-                                    "label",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>Command</span>
-                              <textarea
-                                className={styles.textarea}
-                                value={draft.command}
-                                onChange={(event) =>
-                                  updateSetupCommandDraft(
-                                    draft.id,
-                                    "command",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <div className={styles.formActions}>
-                              <button
-                                className={styles.secondaryButton}
-                                type="button"
-                                onClick={() =>
-                                  removeSetupCommandDraft(draft.id)
-                                }
-                              >
-                                Remove Command
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className={styles.automationGroup}>
-                        <div className={styles.automationGroupHeader}>
-                          <span className={styles.fieldLabel}>Code Blocks</span>
                           <button
-                            className={styles.secondaryButton}
-                            type="button"
-                            onClick={addCodeBlockDraft}
+                            className={styles.primaryButton}
+                            type="submit"
+                            disabled={isSubmittingAutomation}
                           >
-                            Add Code Block
+                            {isSubmittingAutomation
+                              ? editingAutomationEntryId
+                                ? "Saving..."
+                                : "Creating..."
+                              : editingAutomationEntryId
+                                ? "Save Automation"
+                                : "Add Automation"}
                           </button>
                         </div>
-                        {automationForm.codeBlocks.map((draft) => (
-                          <div className={styles.automationCard} key={draft.id}>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>Title</span>
-                              <input
-                                className={styles.input}
-                                value={draft.title}
-                                onChange={(event) =>
-                                  updateCodeBlockDraft(
-                                    draft.id,
-                                    "title",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>
-                                Download Name
-                              </span>
-                              <input
-                                className={styles.input}
-                                value={draft.downloadName}
-                                onChange={(event) =>
-                                  updateCodeBlockDraft(
-                                    draft.id,
-                                    "downloadName",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>Code</span>
-                              <textarea
-                                className={styles.textarea}
-                                value={draft.code}
-                                onChange={(event) =>
-                                  updateCodeBlockDraft(
-                                    draft.id,
-                                    "code",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <div className={styles.formActions}>
-                              <button
-                                className={styles.secondaryButton}
-                                type="button"
-                                onClick={() => removeCodeBlockDraft(draft.id)}
-                              >
-                                Remove Code Block
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className={styles.formActions}>
-                        <button
-                          className={styles.secondaryButton}
-                          type="button"
-                          onClick={resetAutomationForm}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          className={styles.primaryButton}
-                          type="submit"
-                          disabled={isSubmittingAutomation}
-                        >
-                          {isSubmittingAutomation
-                            ? editingAutomationEntryId
-                              ? "Saving..."
-                              : "Creating..."
-                            : editingAutomationEntryId
-                              ? "Save Automation"
-                              : "Add Automation"}
-                        </button>
-                      </div>
-                    </form>
-                  ) : null}
-                </div>
-              </article>
-            ))}
+                      </form>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
             {!visibleGraces.length ? (
               <p className={styles.emptyState}>
                 No starting graces match the current search.
