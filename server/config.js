@@ -70,6 +70,7 @@ module.exports = {
     process.env.DISCORD_OAUTH_REDIRECT_URI ||
     "http://localhost:3001/auth/discord/callback",
   requiredRoleId: process.env.REQUIRED_ROLE_ID,
+  dmRoleId: process.env.DM_ROLE_ID || "",
   isProduction,
   port: Number(process.env.PORT || process.env.SERVER_PORT || 3001),
   oauthStateCookieName:
@@ -104,4 +105,12 @@ module.exports = {
   adminRateLimitMaxRequests: Number(
     process.env.ADMIN_RATE_LIMIT_MAX_REQUESTS || 120,
   ),
+  westMarchesApiBaseUrl: (
+    process.env.WEST_MARCHES_API_BASE_URL ||
+    "https://www.westmarches.games/api/v1"
+  ).replace(/\/$/, ""),
+  westMarchesApiKey: process.env.WEST_MARCHES_API_KEY || "",
+  westMarchesGoldCurrencyId: process.env.WEST_MARCHES_GOLD_CURRENCY_ID || "",
+  westMarchesScCurrencyId: process.env.WEST_MARCHES_SC_CURRENCY_ID || "",
+  westMarchesRewardChannelId: process.env.WEST_MARCHES_REWARD_CHANNEL_ID || "",
 };

@@ -16,11 +16,15 @@ const {
   oauthStateTtlMinutes,
   port,
   requiredRoleId,
+  dmRoleId,
   sessionRateLimitMaxRequests,
   sessionRateLimitWindowMs,
   sessionCookieSameSite,
   staffRevalidationMinutes,
   sessionCookieName,
+  westMarchesGoldCurrencyId,
+  westMarchesRewardChannelId,
+  westMarchesScCurrencyId,
 } = require("./config");
 const { recordAuditEvent } = require("./audit");
 const { pool } = require("./db");
@@ -76,6 +80,7 @@ const {
   fetchDiscordUser,
   fetchGuildMember,
   memberHasRole,
+  postChannelMessage,
 } = require("./discord");
 const {
   createSession,
@@ -84,8 +89,15 @@ const {
   deleteSessionsForUser,
   getSessionUser,
   upsertUser,
-  updateUserStaffStatus,
+  updateUserRoleStatus,
 } = require("./sessions");
+const {
+  distributeReward,
+  getCharacter,
+  isWestMarchesConfigured,
+  listAllCharacters,
+  listCurrencies,
+} = require("./westmarches");
 
 const app = express();
 const rateLimitBuckets = new Map();
@@ -198,6 +210,20 @@ function normalizeReturnToPath(value) {
   return value;
 }
 
+function buildAuthRedirectUrl(returnToPath, authErrorCode) {
+  const redirectUrl = new URL(returnToPath, appOrigin);
+  redirectUrl.searchParams.set("authError", authErrorCode);
+  return redirectUrl.toString();
+}
+
+function redirectWithAuthError(req, res, authErrorCode) {
+  const returnTo = normalizeReturnToPath(getOauthReturnToFromRequest(req));
+  clearOauthStateCookie(res);
+  clearOauthReturnToCookie(res);
+  clearSessionCookie(res);
+  res.redirect(buildAuthRedirectUrl(returnTo, authErrorCode));
+}
+
 function getClientIp(req) {
   return (
     req.headers["x-forwarded-for"]?.toString().split(",")[0].trim() ||
@@ -280,6 +306,15 @@ setInterval(
 ).unref();
 
 function requireTrustedOrigin(req, res, next) {
+  if (
+    req.method === "GET" ||
+    req.method === "HEAD" ||
+    req.method === "OPTIONS"
+  ) {
+    next();
+    return;
+  }
+
   const originHeader = req.headers.origin;
 
   if (!originHeader) {
@@ -315,15 +350,18 @@ async function revalidateStaffUser(user) {
 
   const guildMember = await fetchGuildMember(user.discordUserId);
   const isStaff = memberHasRole(guildMember, requiredRoleId);
+  const isDm = dmRoleId ? memberHasRole(guildMember, dmRoleId) : false;
 
-  await updateUserStaffStatus({
+  await updateUserRoleStatus({
     discordUserId: user.discordUserId,
     isStaff,
+    isDm,
   });
 
   return {
     ...user,
     isStaff: Boolean(guildMember) && isStaff,
+    isDm: Boolean(guildMember) && isDm,
     lastGuildCheckAt: new Date(),
   };
 }
@@ -351,28 +389,24 @@ app.get("/auth/discord/callback", authCallbackRateLimiter, async (req, res) => {
   const requestMetadata = getRequestMetadata(req);
 
   if (error) {
-    clearOauthStateCookie(res);
-    clearOauthReturnToCookie(res);
     await recordAuditEvent({
       action: "discord_login",
       status: "denied",
       metadata: { reason: "discord_error", error },
       ...requestMetadata,
     });
-    res.status(400).send(`Discord authorization failed: ${error}`);
+    redirectWithAuthError(req, res, "discord_denied");
     return;
   }
 
   if (typeof code !== "string" || !code) {
-    clearOauthStateCookie(res);
-    clearOauthReturnToCookie(res);
     await recordAuditEvent({
       action: "discord_login",
       status: "denied",
       metadata: { reason: "missing_code" },
       ...requestMetadata,
     });
-    res.status(400).send("Missing Discord authorization code.");
+    redirectWithAuthError(req, res, "discord_denied");
     return;
   }
 
@@ -383,16 +417,13 @@ app.get("/auth/discord/callback", authCallbackRateLimiter, async (req, res) => {
     !storedState ||
     state !== storedState
   ) {
-    clearOauthStateCookie(res);
-    clearOauthReturnToCookie(res);
-    clearSessionCookie(res);
     await recordAuditEvent({
       action: "discord_login",
       status: "denied",
       metadata: { reason: "invalid_state" },
       ...requestMetadata,
     });
-    res.status(400).send("Invalid OAuth state.");
+    redirectWithAuthError(req, res, "login_failed");
     return;
   }
 
@@ -402,9 +433,6 @@ app.get("/auth/discord/callback", authCallbackRateLimiter, async (req, res) => {
     const guildMember = await fetchGuildMember(discordUser.id);
 
     if (!guildMember) {
-      clearSessionCookie(res);
-      clearOauthStateCookie(res);
-      clearOauthReturnToCookie(res);
       await recordAuditEvent({
         action: "discord_login",
         status: "denied",
@@ -412,18 +440,18 @@ app.get("/auth/discord/callback", authCallbackRateLimiter, async (req, res) => {
         metadata: { reason: "not_in_guild" },
         ...requestMetadata,
       });
-      res
-        .status(403)
-        .send("You must be a member of the Discord server to sign in.");
+      redirectWithAuthError(req, res, "not_in_server");
       return;
     }
 
     const isStaff = memberHasRole(guildMember, requiredRoleId);
-    if (!isStaff) {
-      const deniedUser = await upsertUser({ discordUser, isStaff: false });
-      clearSessionCookie(res);
-      clearOauthStateCookie(res);
-      clearOauthReturnToCookie(res);
+    const isDm = dmRoleId ? memberHasRole(guildMember, dmRoleId) : false;
+    if (!isStaff && !isDm) {
+      const deniedUser = await upsertUser({
+        discordUser,
+        isStaff: false,
+        isDm: false,
+      });
       await recordAuditEvent({
         action: "discord_login",
         status: "denied",
@@ -432,11 +460,11 @@ app.get("/auth/discord/callback", authCallbackRateLimiter, async (req, res) => {
         metadata: { reason: "missing_staff_role" },
         ...requestMetadata,
       });
-      res.status(403).send("You do not have the required staff role.");
+      redirectWithAuthError(req, res, "staff_only");
       return;
     }
 
-    const user = await upsertUser({ discordUser, isStaff });
+    const user = await upsertUser({ discordUser, isStaff, isDm });
     const session = await createSession(user.id);
     const returnTo = normalizeReturnToPath(getOauthReturnToFromRequest(req));
 
@@ -456,16 +484,13 @@ app.get("/auth/discord/callback", authCallbackRateLimiter, async (req, res) => {
     res.redirect(`${appOrigin}${returnTo}`);
   } catch (authError) {
     console.error("Discord auth callback failed:", authError);
-    clearOauthStateCookie(res);
-    clearOauthReturnToCookie(res);
-    clearSessionCookie(res);
     await recordAuditEvent({
       action: "discord_login",
       status: "error",
       metadata: { reason: "callback_exception" },
       ...requestMetadata,
     });
-    res.status(500).send("Failed to complete Discord sign-in.");
+    redirectWithAuthError(req, res, "login_failed");
   }
 });
 
@@ -501,6 +526,41 @@ async function requireStaffSession(req, res, next) {
   } catch (sessionError) {
     console.error("Staff session check failed:", sessionError);
     res.status(500).json({ error: "Failed to verify staff session." });
+  }
+}
+
+async function requireRewardSubmitSession(req, res, next) {
+  try {
+    const sessionToken = getSessionTokenFromRequest(req);
+    const user = await getSessionUser(sessionToken);
+
+    if (!user) {
+      res.status(401).json({ error: "Authentication required." });
+      return;
+    }
+
+    const revalidatedUser = await revalidateStaffUser(user);
+
+    if (!revalidatedUser.isStaff && !revalidatedUser.isDm) {
+      await deleteSessionsForUser(user.id);
+      clearSessionCookie(res);
+      await recordAuditEvent({
+        action: "reward_submit_revalidation",
+        status: "denied",
+        userId: user.id,
+        discordUserId: user.discordUserId,
+        metadata: { reason: "reward_role_missing_on_revalidation" },
+        ...getRequestMetadata(req),
+      });
+      res.status(403).json({ error: "DM or staff role required." });
+      return;
+    }
+
+    req.staffUser = revalidatedUser;
+    next();
+  } catch (sessionError) {
+    console.error("Reward submit session check failed:", sessionError);
+    res.status(500).json({ error: "Failed to verify reward submit session." });
   }
 }
 
@@ -826,6 +886,262 @@ function normalizeBoonAutomationPayload(body) {
   };
 }
 
+function parseOptionalWholeNumber(value) {
+  if (value === undefined || value === null || value === "") {
+    return 0;
+  }
+
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.trunc(value);
+}
+
+function normalizeWestMarchesRewardPayload(body) {
+  const { characterId, experience, gold, sc, reason, discordId } = body ?? {};
+
+  if (typeof characterId !== "string" || !characterId.trim()) {
+    return { error: "characterId is required." };
+  }
+
+  const normalizedExperience = parseOptionalWholeNumber(experience);
+  const normalizedGold = parseOptionalWholeNumber(gold);
+  const normalizedSc = parseOptionalWholeNumber(sc);
+
+  if (
+    normalizedExperience === null ||
+    normalizedGold === null ||
+    normalizedSc === null
+  ) {
+    return {
+      error: "experience, gold, and sc must be whole numbers when provided.",
+    };
+  }
+
+  if (normalizedExperience < 0 || normalizedGold < 0 || normalizedSc < 0) {
+    return { error: "Reward values cannot be negative." };
+  }
+
+  if (
+    normalizedExperience === 0 &&
+    normalizedGold === 0 &&
+    normalizedSc === 0
+  ) {
+    return { error: "At least one reward value must be greater than zero." };
+  }
+
+  const currencies = {};
+
+  if (normalizedGold > 0) {
+    if (!westMarchesGoldCurrencyId) {
+      return {
+        error:
+          "WEST_MARCHES_GOLD_CURRENCY_ID is required to award gold rewards.",
+      };
+    }
+    currencies[westMarchesGoldCurrencyId] = normalizedGold;
+  }
+
+  if (normalizedSc > 0) {
+    if (!westMarchesScCurrencyId) {
+      return {
+        error: "WEST_MARCHES_SC_CURRENCY_ID is required to award SC rewards.",
+      };
+    }
+    currencies[westMarchesScCurrencyId] = normalizedSc;
+  }
+
+  return {
+    characterId: characterId.trim(),
+    reward: {
+      ...(normalizedExperience > 0 ? { experience: normalizedExperience } : {}),
+      ...(Object.keys(currencies).length > 0 ? { currencies } : {}),
+      reason:
+        typeof reason === "string" && reason.trim()
+          ? reason.trim().slice(0, 500)
+          : "Rewards calculator submission",
+      ...(typeof discordId === "string" && discordId.trim()
+        ? { discordId: discordId.trim() }
+        : {}),
+    },
+  };
+}
+
+function normalizeWestMarchesRewardBatchPayload(body) {
+  const { characterIds, experience, gold, sc, reason } = body ?? {};
+
+  if (
+    !Array.isArray(characterIds) ||
+    characterIds.length === 0 ||
+    characterIds.some(
+      (characterId) => typeof characterId !== "string" || !characterId.trim(),
+    )
+  ) {
+    return {
+      error: "characterIds must contain at least one valid character id.",
+    };
+  }
+
+  const firstCharacterId = characterIds[0].trim();
+  const normalizedSinglePayload = normalizeWestMarchesRewardPayload({
+    characterId: firstCharacterId,
+    experience,
+    gold,
+    sc,
+    reason,
+  });
+
+  if (normalizedSinglePayload.error) {
+    return normalizedSinglePayload;
+  }
+
+  return {
+    characterIds: [
+      ...new Set(characterIds.map((characterId) => characterId.trim())),
+    ],
+    reward: normalizedSinglePayload.reward,
+  };
+}
+
+function formatRewardAmount(value) {
+  return `+${new Intl.NumberFormat("en-GB").format(value)}`;
+}
+
+function buildRewardCharacterLine(character) {
+  const name =
+    typeof character?.name === "string" && character.name.trim()
+      ? character.name.trim()
+      : character?.id || "Unknown character";
+  const discordId = character?.user?.discordId;
+
+  return discordId ? `${name} <@${discordId}>` : name;
+}
+
+function truncateEmbedFieldValue(value) {
+  if (value.length <= 1024) {
+    return value;
+  }
+
+  return `${value.slice(0, 1021)}...`;
+}
+
+function buildRewardChannelPayload({ characters, rewardRequest, staffUser }) {
+  const submittedBy =
+    staffUser.globalName?.trim() || staffUser.username || "Unknown staff";
+  const characterLines = characters.map(buildRewardCharacterLine);
+  const mentionIds = [
+    ...new Set(
+      characters
+        .map((character) => character?.user?.discordId)
+        .filter((discordId) => typeof discordId === "string" && discordId),
+    ),
+  ];
+  const fields = [
+    {
+      name: "Characters",
+      value: truncateEmbedFieldValue(characterLines.join("\n") || "Unknown"),
+      inline: false,
+    },
+  ];
+
+  if (
+    typeof rewardRequest.experience === "number" &&
+    rewardRequest.experience > 0
+  ) {
+    fields.push({
+      name: "Exp",
+      value: formatRewardAmount(rewardRequest.experience),
+      inline: true,
+    });
+  }
+
+  if (
+    rewardRequest.currencies &&
+    typeof rewardRequest.currencies === "object" &&
+    westMarchesGoldCurrencyId &&
+    typeof rewardRequest.currencies[westMarchesGoldCurrencyId] === "number"
+  ) {
+    fields.push({
+      name: "Gold",
+      value: formatRewardAmount(
+        rewardRequest.currencies[westMarchesGoldCurrencyId],
+      ),
+      inline: true,
+    });
+  }
+
+  if (
+    rewardRequest.currencies &&
+    typeof rewardRequest.currencies === "object" &&
+    westMarchesScCurrencyId &&
+    typeof rewardRequest.currencies[westMarchesScCurrencyId] === "number"
+  ) {
+    fields.push({
+      name: "Stellar Coins",
+      value: formatRewardAmount(
+        rewardRequest.currencies[westMarchesScCurrencyId],
+      ),
+      inline: true,
+    });
+  }
+
+  fields.push({
+    name: "Reason",
+    value: truncateEmbedFieldValue(
+      rewardRequest.reason || "Rewards calculator submission",
+    ),
+    inline: false,
+  });
+
+  return {
+    embeds: [
+      {
+        title: "Rewards Distributed",
+        color: 0x4aa3ff,
+        fields,
+        footer: {
+          text: `Submitted by ${submittedBy}`,
+        },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+    allowed_mentions: {
+      parse: [],
+      users: mentionIds,
+    },
+  };
+}
+
+async function notifyRewardChannel({ characterIds, rewardRequest, staffUser }) {
+  if (!westMarchesRewardChannelId) {
+    return;
+  }
+
+  const characters = await Promise.all(
+    characterIds.map(async (characterId) => {
+      try {
+        return await getCharacter(characterId);
+      } catch (characterError) {
+        console.warn(
+          "Failed to load West Marches character for Discord notification:",
+          characterError,
+        );
+        return { id: characterId, name: characterId, user: null };
+      }
+    }),
+  );
+
+  await postChannelMessage(
+    westMarchesRewardChannelId,
+    buildRewardChannelPayload({
+      characters,
+      rewardRequest,
+      staffUser,
+    }),
+  );
+}
+
 app.get("/api/calendar", async (_req, res) => {
   try {
     const events = await listPublishedCalendarEvents();
@@ -883,6 +1199,315 @@ app.get("/api/starting-graces", async (_req, res) => {
     res.status(500).json({ error: "Failed to load starting graces." });
   }
 });
+
+app.get(
+  "/api/rewards/westmarches/status",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (_req, res) => {
+    res.json({
+      configured: isWestMarchesConfigured(),
+      currencyMappings: {
+        gold: westMarchesGoldCurrencyId || null,
+        sc: westMarchesScCurrencyId || null,
+      },
+    });
+  },
+);
+
+app.get(
+  "/api/rewards/westmarches/characters",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    try {
+      const query =
+        typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const characters = await listAllCharacters();
+      const filteredCharacters = query
+        ? characters.filter((character) => {
+            const haystack = [
+              character?.name,
+              character?.id,
+              character?.user?.discordId,
+              character?.user?.id,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+
+            return haystack.includes(query);
+          })
+        : characters;
+
+      res.json({
+        characters: filteredCharacters
+          .filter(
+            (character) =>
+              typeof character?.status !== "string" ||
+              character.status.toUpperCase() !== "RETIRED",
+          )
+          .map((character) => ({
+            id: character.id,
+            name:
+              typeof character.name === "string" ? character.name.trim() : "",
+            level: character.level,
+            experience: character.experience,
+            status: character.status,
+            image: character.image,
+            user: character.user || null,
+          })),
+      });
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to load West Marches characters:",
+        westMarchesError,
+      );
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to load West Marches characters.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/rewards/westmarches/currencies",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (_req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    try {
+      const currencies = await listCurrencies();
+      res.json({ currencies });
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to load West Marches currencies:",
+        westMarchesError,
+      );
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to load West Marches currencies.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/admin/westmarches/debug",
+  requireStaffSession,
+  async (_req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    try {
+      const [currencies, characters] = await Promise.all([
+        listCurrencies(),
+        listAllCharacters(),
+      ]);
+
+      res.json({
+        configured: true,
+        currencyMappings: {
+          gold: westMarchesGoldCurrencyId || null,
+          sc: westMarchesScCurrencyId || null,
+        },
+        currencies,
+        charactersSample: characters.slice(0, 25),
+        characterCount: characters.length,
+      });
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to load West Marches debug payload:",
+        westMarchesError,
+      );
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to load West Marches debug payload.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/rewards/westmarches/rewards/batch",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const normalizedPayload = normalizeWestMarchesRewardBatchPayload(req.body);
+    if (normalizedPayload.error) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const rewards = await Promise.all(
+        normalizedPayload.characterIds.map((characterId) =>
+          distributeReward({
+            characterId,
+            reward: normalizedPayload.reward,
+          }),
+        ),
+      );
+
+      if (westMarchesRewardChannelId) {
+        try {
+          await notifyRewardChannel({
+            characterIds: normalizedPayload.characterIds,
+            rewardRequest: normalizedPayload.reward,
+            staffUser: req.staffUser,
+          });
+        } catch (notificationError) {
+          console.error(
+            "Failed to post reward batch notification to Discord:",
+            notificationError,
+          );
+        }
+      }
+
+      await recordAuditEvent({
+        action: "westmarches_reward_distribute_batch",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          characterIds: normalizedPayload.characterIds,
+          rewards,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ rewards });
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to distribute West Marches reward batch:",
+        westMarchesError,
+      );
+
+      await recordAuditEvent({
+        action: "westmarches_reward_distribute_batch",
+        status: "error",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          characterIds: normalizedPayload.characterIds,
+          error:
+            westMarchesError instanceof Error
+              ? westMarchesError.message
+              : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to distribute reward batch.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/rewards/westmarches/rewards",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const normalizedPayload = normalizeWestMarchesRewardPayload(req.body);
+    if (normalizedPayload.error) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const reward = await distributeReward(normalizedPayload);
+
+      if (westMarchesRewardChannelId) {
+        try {
+          await notifyRewardChannel({
+            characterIds: [normalizedPayload.characterId],
+            rewardRequest: normalizedPayload.reward,
+            staffUser: req.staffUser,
+          });
+        } catch (notificationError) {
+          console.error(
+            "Failed to post reward notification to Discord:",
+            notificationError,
+          );
+        }
+      }
+
+      await recordAuditEvent({
+        action: "westmarches_reward_distribute",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          characterId: normalizedPayload.characterId,
+          reward,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ reward });
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to distribute West Marches reward:",
+        westMarchesError,
+      );
+
+      await recordAuditEvent({
+        action: "westmarches_reward_distribute",
+        status: "error",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          characterId: normalizedPayload.characterId,
+          error:
+            westMarchesError instanceof Error
+              ? westMarchesError.message
+              : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to distribute reward.",
+      });
+    }
+  },
+);
 
 app.post(
   "/api/admin/starting-graces",
@@ -2471,7 +3096,10 @@ app.get("/api/me", sessionRateLimiter, async (req, res) => {
 
     res.json({
       authenticated: true,
-      user,
+      user: {
+        ...user,
+        canSubmitRewards: Boolean(user.isStaff || user.isDm),
+      },
     });
   } catch (sessionError) {
     console.error("Session lookup failed:", sessionError);

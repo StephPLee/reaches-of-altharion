@@ -31,6 +31,8 @@ type AuthUser = {
   username: string;
   globalName: string | null;
   isStaff: boolean;
+  isDm?: boolean;
+  canSubmitRewards?: boolean;
 };
 
 const CALENDAR_CSV_URL =
@@ -83,6 +85,21 @@ function getAuthApiBaseUrl(siteConfig): string {
   return typeof configuredBaseUrl === "string"
     ? configuredBaseUrl.replace(/\/$/, "")
     : "";
+}
+
+function getAuthErrorMessage(code: string | null) {
+  switch (code) {
+    case "staff_only":
+      return "You do not have permission to sign in to the staff tools.";
+    case "not_in_server":
+      return "You must be in the Discord server before you can sign in.";
+    case "discord_denied":
+      return "Discord sign-in was cancelled or denied.";
+    case "login_failed":
+      return "Discord sign-in failed. Please try again.";
+    default:
+      return "";
+  }
 }
 
 function normalizeHeader(value: string) {
@@ -361,6 +378,8 @@ function NavbarAuthControls({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authNotice, setAuthNotice] = useState("");
+  const location = useLocation();
 
   useEffect(() => {
     let cancelled = false;
@@ -405,6 +424,27 @@ function NavbarAuthControls({
     };
   }, [apiBaseUrl]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    const message = getAuthErrorMessage(url.searchParams.get("authError"));
+
+    if (!message) {
+      return;
+    }
+
+    setAuthNotice(message);
+    url.searchParams.delete("authError");
+    window.history.replaceState(
+      {},
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }, [location.key]);
+
   async function handleLogout() {
     try {
       setIsSubmitting(true);
@@ -434,67 +474,136 @@ function NavbarAuthControls({
 
   if (isLoading) {
     return (
-      <span
-        className={clsx(
-          isMobile ? "custom-mobile-auth-status" : "custom-navbar-auth-status",
-        )}
-      >
-        Checking staff access...
-      </span>
+      <>
+        {authNotice ? (
+          <div
+            className={clsx(
+              isMobile
+                ? "custom-mobile-auth-notice"
+                : "custom-navbar-auth-notice",
+            )}
+          >
+            <span>{authNotice}</span>
+            <button
+              type="button"
+              className="clean-btn custom-auth-notice__close"
+              onClick={() => setAuthNotice("")}
+              aria-label="Dismiss sign-in notice"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+        <span
+          className={clsx(
+            isMobile
+              ? "custom-mobile-auth-status"
+              : "custom-navbar-auth-status",
+          )}
+        >
+          Checking staff access...
+        </span>
+      </>
     );
   }
 
   if (!user) {
     return (
-      <button
-        type="button"
-        className={clsx(
-          "clean-btn",
-          isMobile ? "custom-mobile-auth-button" : "custom-navbar-auth-button",
-        )}
-        onClick={handleLogin}
-      >
-        Staff Login
-      </button>
+      <>
+        {authNotice ? (
+          <div
+            className={clsx(
+              isMobile
+                ? "custom-mobile-auth-notice"
+                : "custom-navbar-auth-notice",
+            )}
+          >
+            <span>{authNotice}</span>
+            <button
+              type="button"
+              className="clean-btn custom-auth-notice__close"
+              onClick={() => setAuthNotice("")}
+              aria-label="Dismiss sign-in notice"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+        <button
+          type="button"
+          className={clsx(
+            "clean-btn",
+            isMobile
+              ? "custom-mobile-auth-button"
+              : "custom-navbar-auth-button",
+          )}
+          onClick={handleLogin}
+        >
+          Staff / DM Login
+        </button>
+      </>
     );
   }
 
   const displayName = user.globalName || user.username;
 
   return (
-    <div
-      className={clsx(
-        isMobile ? "custom-mobile-auth-shell" : "custom-navbar-auth-shell",
-      )}
-    >
-      <span
+    <>
+      {authNotice ? (
+        <div
+          className={clsx(
+            isMobile
+              ? "custom-mobile-auth-notice"
+              : "custom-navbar-auth-notice",
+          )}
+        >
+          <span>{authNotice}</span>
+          <button
+            type="button"
+            className="clean-btn custom-auth-notice__close"
+            onClick={() => setAuthNotice("")}
+            aria-label="Dismiss sign-in notice"
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+      <div
         className={clsx(
-          isMobile ? "custom-mobile-auth-label" : "custom-navbar-auth-label",
+          isMobile ? "custom-mobile-auth-shell" : "custom-navbar-auth-shell",
         )}
       >
-        {displayName}
-      </span>
-      <Link
-        to="/admin"
-        className={clsx(
-          isMobile ? "custom-mobile-auth-link" : "custom-navbar-auth-link",
-        )}
-        onClick={onNavigate}
-      >
-        Staff Panel
-      </Link>
-      <button
-        type="button"
-        className={clsx(
-          "clean-btn",
-          isMobile ? "custom-mobile-auth-link" : "custom-navbar-auth-link",
-        )}
-        onClick={handleLogout}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? "Signing Out..." : "Sign Out"}
-      </button>
-    </div>
+        <span
+          className={clsx(
+            isMobile ? "custom-mobile-auth-label" : "custom-navbar-auth-label",
+          )}
+        >
+          {displayName}
+        </span>
+        {user.isStaff ? (
+          <Link
+            to="/admin"
+            className={clsx(
+              isMobile ? "custom-mobile-auth-link" : "custom-navbar-auth-link",
+            )}
+            onClick={onNavigate}
+          >
+            Staff Panel
+          </Link>
+        ) : null}
+        <button
+          type="button"
+          className={clsx(
+            "clean-btn",
+            isMobile ? "custom-mobile-auth-link" : "custom-navbar-auth-link",
+          )}
+          onClick={handleLogout}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Signing Out..." : "Sign Out"}
+        </button>
+      </div>
+    </>
   );
 }
 
