@@ -127,9 +127,7 @@ function renderInlineMarkdown(text: string) {
     }
 
     if (token.startsWith("**") && token.endsWith("**")) {
-      nodes.push(
-        <strong key={`${start}-strong`}>{token.slice(2, -2)}</strong>,
-      );
+      nodes.push(<strong key={`${start}-strong`}>{token.slice(2, -2)}</strong>);
     } else {
       nodes.push(<em key={`${start}-em`}>{token.slice(1, -1)}</em>);
     }
@@ -162,9 +160,7 @@ function renderBoonContent(markdown: string) {
         className={isFlavorText ? styles.flavorText : undefined}
         key={`p-${nodes.length}`}
       >
-        {renderInlineMarkdown(
-          isFlavorText ? text.slice(1, -1).trim() : text,
-        )}
+        {renderInlineMarkdown(isFlavorText ? text.slice(1, -1).trim() : text)}
       </p>,
     );
     paragraphLines = [];
@@ -198,7 +194,9 @@ function renderBoonContent(markdown: string) {
       flushParagraph();
       flushList();
       nodes.push(
-        <h3 key={`h3-${nodes.length}`}>{renderInlineMarkdown(line.slice(4))}</h3>,
+        <h3 key={`h3-${nodes.length}`}>
+          {renderInlineMarkdown(line.slice(4))}
+        </h3>,
       );
       continue;
     }
@@ -270,7 +268,9 @@ export default function BoonsDirectory() {
   const [isSubmittingAutomation, setIsSubmittingAutomation] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
-  const [boonForm, setBoonForm] = useState<BoonFormState>(createEmptyBoonForm());
+  const [boonForm, setBoonForm] = useState<BoonFormState>(
+    createEmptyBoonForm(),
+  );
   const [automationForm, setAutomationForm] = useState<AutomationFormState>({
     panelTitle: "Avrae Automation",
     panelSubtitle: "Expand to view setup and download options",
@@ -583,7 +583,9 @@ export default function BoonsDirectory() {
       setFormMessage(editingBoonId ? "Boon updated." : "Boon created.");
     } catch (submitError) {
       setFormError(
-        submitError instanceof Error ? submitError.message : "Failed to save boon.",
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save boon.",
       );
       setFormMessage("");
     } finally {
@@ -597,10 +599,13 @@ export default function BoonsDirectory() {
       setFormError("");
       setFormMessage("");
 
-      const response = await fetch(`${authApiBaseUrl}/api/admin/boons/${boonId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${authApiBaseUrl}/api/admin/boons/${boonId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
@@ -758,7 +763,10 @@ export default function BoonsDirectory() {
     setFormMessage("");
   }
 
-  function beginEditAutomation(boonId: number, automationEntry: AutomationEntry) {
+  function beginEditAutomation(
+    boonId: number,
+    automationEntry: AutomationEntry,
+  ) {
     setAutomationForm({
       panelTitle: automationEntry.panelTitle,
       panelSubtitle: automationEntry.panelSubtitle,
@@ -775,6 +783,63 @@ export default function BoonsDirectory() {
     setOpenAutomationBoonId(boonId);
     setFormError("");
     setFormMessage("");
+  }
+
+  function renderBoonComposer(
+    submitLabel: string,
+    resetLabel: string,
+    onReset: () => void,
+  ) {
+    return (
+      <form className={styles.composer} onSubmit={handleBoonSubmit}>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Boon Title</span>
+          <input
+            className={styles.input}
+            value={boonForm.title}
+            onChange={(event) => updateBoonField("title", event.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Slug</span>
+          <input
+            className={styles.input}
+            value={boonForm.slug}
+            onChange={(event) => updateBoonField("slug", event.target.value)}
+          />
+        </label>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Content</span>
+          <textarea
+            className={styles.textarea}
+            value={boonForm.contentMarkdown}
+            onChange={(event) =>
+              updateBoonField("contentMarkdown", event.target.value)
+            }
+          />
+        </label>
+        <div className={styles.formActions}>
+          <button
+            className={styles.secondaryButton}
+            type="button"
+            onClick={onReset}
+          >
+            {resetLabel}
+          </button>
+          <button
+            className={styles.primaryButton}
+            type="submit"
+            disabled={isSubmittingBoon}
+          >
+            {isSubmittingBoon
+              ? editingBoonId
+                ? "Saving..."
+                : "Creating..."
+              : submitLabel}
+          </button>
+        </div>
+      </form>
+    );
   }
 
   return (
@@ -811,80 +876,34 @@ export default function BoonsDirectory() {
                 className={styles.controlButton}
                 type="button"
                 onClick={() => {
-                  setOpenBoonComposer((current) => !current);
-                  if (openBoonComposer) {
+                  if (editingBoonId !== null || openBoonComposer) {
                     resetBoonForm();
                   } else {
+                    setOpenBoonComposer(true);
                     setFormError("");
                     setFormMessage("");
                   }
                 }}
               >
-                {openBoonComposer ? "Close Boon Editor" : "Add Boon"}
+                {editingBoonId !== null || openBoonComposer
+                  ? "Close Boon Editor"
+                  : "Add Boon"}
               </button>
             ) : null}
           </div>
         </div>
         <p className={styles.searchHint}>
-          Search filters by boon name, body text, setup commands, and automation.
+          Search filters by boon name, body text, setup commands, and
+          automation.
         </p>
         <p className={styles.count}>
           Showing {visibleBoons.length} of {boons.length} boons.
         </p>
         {formMessage ? <p className={styles.message}>{formMessage}</p> : null}
         {formError ? <p className={styles.error}>{formError}</p> : null}
-        {isStaff && openBoonComposer ? (
-          <form className={styles.composer} onSubmit={handleBoonSubmit}>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Boon Title</span>
-              <input
-                className={styles.input}
-                value={boonForm.title}
-                onChange={(event) => updateBoonField("title", event.target.value)}
-              />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Slug</span>
-              <input
-                className={styles.input}
-                value={boonForm.slug}
-                onChange={(event) => updateBoonField("slug", event.target.value)}
-              />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Content</span>
-              <textarea
-                className={styles.textarea}
-                value={boonForm.contentMarkdown}
-                onChange={(event) =>
-                  updateBoonField("contentMarkdown", event.target.value)
-                }
-              />
-            </label>
-            <div className={styles.formActions}>
-              <button
-                className={styles.secondaryButton}
-                type="button"
-                onClick={resetBoonForm}
-              >
-                Clear
-              </button>
-              <button
-                className={styles.primaryButton}
-                type="submit"
-                disabled={isSubmittingBoon}
-              >
-                {isSubmittingBoon
-                  ? editingBoonId
-                    ? "Saving..."
-                    : "Creating..."
-                  : editingBoonId
-                    ? "Save Boon"
-                    : "Add Boon"}
-              </button>
-            </div>
-          </form>
-        ) : null}
+        {isStaff && openBoonComposer && editingBoonId === null
+          ? renderBoonComposer("Add Boon", "Clear", resetBoonForm)
+          : null}
       </div>
       <DirectorySidebarIndex items={sidebarItems} />
 
@@ -893,302 +912,343 @@ export default function BoonsDirectory() {
       {!loading && !error ? (
         <div className={styles.contentLayout}>
           <div className={styles.boonList}>
-            {visibleBoons.map((boon) => (
-              <article
-                id={`boon-${boon.slug}`}
-                className={`${styles.boonCard} ${
-                  isBoonCollapsed(boon.id) ? styles.boonCardCollapsed : ""
-                }`.trim()}
-                key={boon.id}
-              >
-                <div className={styles.boonHeader}>
-                  <button
-                    className={styles.boonHeaderMain}
-                    type="button"
-                    onClick={() => toggleBoonCollapsed(boon.id)}
-                  >
-                    <h2 className={styles.boonHeading}>{boon.title}</h2>
-                  </button>
-                  {isStaff ? (
-                    <div className={styles.boonActions}>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => toggleBoonCollapsed(boon.id)}
-                      >
-                        {isBoonCollapsed(boon.id) ? "Open" : "Close"}
-                      </button>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => beginEditBoon(boon)}
-                      >
-                        Edit Boon
-                      </button>
-                      <button
-                        className={styles.inlineActionButton}
-                        type="button"
-                        onClick={() => beginAddAutomation(boon.id)}
-                      >
-                        Add Automation
-                      </button>
-                      <button
-                        className={styles.inlineDangerButton}
-                        type="button"
-                        onClick={() => handleDeleteBoon(boon.id)}
-                        disabled={deletingBoonId === boon.id}
-                      >
-                        {deletingBoonId === boon.id ? "Removing..." : "Remove Boon"}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
+            {visibleBoons.map((boon) => {
+              const isEditingThisBoon = editingBoonId === boon.id;
+              const isCollapsed =
+                isBoonCollapsed(boon.id) && !isEditingThisBoon;
 
-                <div
-                  className={
-                    isBoonCollapsed(boon.id)
-                      ? styles.boonBodyCollapsed
-                      : styles.boonBody
-                  }
+              return (
+                <article
+                  id={`boon-${boon.slug}`}
+                  className={`${styles.boonCard} ${
+                    isCollapsed ? styles.boonCardCollapsed : ""
+                  }`.trim()}
+                  key={boon.id}
                 >
-                  <div className={styles.content}>
-                    {renderBoonContent(boon.contentMarkdown)}
+                  <div className={styles.boonHeader}>
+                    <button
+                      className={styles.boonHeaderMain}
+                      type="button"
+                      onClick={() => toggleBoonCollapsed(boon.id)}
+                    >
+                      <h2 className={styles.boonHeading}>{boon.title}</h2>
+                    </button>
+                    {isStaff ? (
+                      <div className={styles.boonActions}>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => toggleBoonCollapsed(boon.id)}
+                        >
+                          {isCollapsed ? "Open" : "Close"}
+                        </button>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => beginEditBoon(boon)}
+                        >
+                          {isEditingThisBoon ? "Editing Boon" : "Edit Boon"}
+                        </button>
+                        <button
+                          className={styles.inlineActionButton}
+                          type="button"
+                          onClick={() => beginAddAutomation(boon.id)}
+                        >
+                          Add Automation
+                        </button>
+                        <button
+                          className={styles.inlineDangerButton}
+                          type="button"
+                          onClick={() => handleDeleteBoon(boon.id)}
+                          disabled={deletingBoonId === boon.id}
+                        >
+                          {deletingBoonId === boon.id
+                            ? "Removing..."
+                            : "Remove Boon"}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
 
-                  {boon.automationEntries.map((automationEntry) => (
-                    <div className={styles.automationBlock} key={automationEntry.id}>
-                      <HomebrewAutomationSection
-                        title={automationEntry.panelTitle}
-                        subtitle={automationEntry.panelSubtitle}
+                  <div
+                    className={
+                      isCollapsed ? styles.boonBodyCollapsed : styles.boonBody
+                    }
+                  >
+                    {isEditingThisBoon ? (
+                      renderBoonComposer("Save Boon", "Cancel", resetBoonForm)
+                    ) : (
+                      <>
+                        <div className={styles.content}>
+                          {renderBoonContent(boon.contentMarkdown)}
+                        </div>
+
+                        {boon.automationEntries.map((automationEntry) => (
+                          <div
+                            className={styles.automationBlock}
+                            key={automationEntry.id}
+                          >
+                            <HomebrewAutomationSection
+                              title={automationEntry.panelTitle}
+                              subtitle={automationEntry.panelSubtitle}
+                            >
+                              {automationEntry.setupCommands.map((command) => (
+                                <AvraeCommandBlock
+                                  key={command.id}
+                                  label={command.label}
+                                  command={command.command}
+                                />
+                              ))}
+                              {automationEntry.codeBlocks.map((codeBlock) => (
+                                <AvraeAliasBlock
+                                  key={codeBlock.id}
+                                  title={codeBlock.title}
+                                  code={codeBlock.code}
+                                  downloadName={codeBlock.downloadName}
+                                />
+                              ))}
+                            </HomebrewAutomationSection>
+                            {isStaff ? (
+                              <div className={styles.automationActions}>
+                                <button
+                                  className={styles.inlineActionButton}
+                                  type="button"
+                                  onClick={() =>
+                                    beginEditAutomation(
+                                      boon.id,
+                                      automationEntry,
+                                    )
+                                  }
+                                >
+                                  Edit Automation
+                                </button>
+                                <button
+                                  className={styles.inlineDangerButton}
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteAutomation(automationEntry.id)
+                                  }
+                                  disabled={
+                                    deletingAutomationEntryId ===
+                                    automationEntry.id
+                                  }
+                                >
+                                  {deletingAutomationEntryId ===
+                                  automationEntry.id
+                                    ? "Removing..."
+                                    : "Remove Automation"}
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {isStaff && openAutomationBoonId === boon.id ? (
+                      <form
+                        className={styles.automationComposer}
+                        onSubmit={handleAutomationSubmit}
                       >
-                        {automationEntry.setupCommands.map((command) => (
-                          <AvraeCommandBlock
-                            key={command.id}
-                            label={command.label}
-                            command={command.command}
+                        <label className={styles.field}>
+                          <span className={styles.fieldLabel}>Panel Title</span>
+                          <input
+                            className={styles.input}
+                            value={automationForm.panelTitle}
+                            onChange={(event) =>
+                              updateAutomationField(
+                                "panelTitle",
+                                event.target.value,
+                              )
+                            }
                           />
-                        ))}
-                        {automationEntry.codeBlocks.map((codeBlock) => (
-                          <AvraeAliasBlock
-                            key={codeBlock.id}
-                            title={codeBlock.title}
-                            code={codeBlock.code}
-                            downloadName={codeBlock.downloadName}
+                        </label>
+                        <label className={styles.field}>
+                          <span className={styles.fieldLabel}>
+                            Panel Subtitle
+                          </span>
+                          <input
+                            className={styles.input}
+                            value={automationForm.panelSubtitle}
+                            onChange={(event) =>
+                              updateAutomationField(
+                                "panelSubtitle",
+                                event.target.value,
+                              )
+                            }
                           />
-                        ))}
-                      </HomebrewAutomationSection>
-                      {isStaff ? (
-                        <div className={styles.automationActions}>
-                          <button
-                            className={styles.inlineActionButton}
-                            type="button"
-                            onClick={() =>
-                              beginEditAutomation(boon.id, automationEntry)
-                            }
-                          >
-                            Edit Automation
-                          </button>
-                          <button
-                            className={styles.inlineDangerButton}
-                            type="button"
-                            onClick={() =>
-                              handleDeleteAutomation(automationEntry.id)
-                            }
-                            disabled={
-                              deletingAutomationEntryId === automationEntry.id
-                            }
-                          >
-                            {deletingAutomationEntryId === automationEntry.id
-                              ? "Removing..."
-                              : "Remove Automation"}
-                          </button>
+                        </label>
+
+                        <div className={styles.automationGroup}>
+                          <div className={styles.automationGroupHeader}>
+                            <span className={styles.fieldLabel}>
+                              Setup Commands
+                            </span>
+                            <button
+                              className={styles.secondaryButton}
+                              type="button"
+                              onClick={addSetupCommandDraft}
+                            >
+                              Add Command
+                            </button>
+                          </div>
+                          {automationForm.setupCommands.map((draft) => (
+                            <div
+                              className={styles.automationCard}
+                              key={draft.id}
+                            >
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>Label</span>
+                                <input
+                                  className={styles.input}
+                                  value={draft.label}
+                                  onChange={(event) =>
+                                    updateSetupCommandDraft(
+                                      draft.id,
+                                      "label",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>
+                                  Command
+                                </span>
+                                <textarea
+                                  className={styles.textarea}
+                                  value={draft.command}
+                                  onChange={(event) =>
+                                    updateSetupCommandDraft(
+                                      draft.id,
+                                      "command",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <div className={styles.formActions}>
+                                <button
+                                  className={styles.secondaryButton}
+                                  type="button"
+                                  onClick={() =>
+                                    removeSetupCommandDraft(draft.id)
+                                  }
+                                >
+                                  Remove Command
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ) : null}
-                    </div>
-                  ))}
 
-                  {isStaff && openAutomationBoonId === boon.id ? (
-                    <form
-                      className={styles.automationComposer}
-                      onSubmit={handleAutomationSubmit}
-                    >
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Panel Title</span>
-                        <input
-                          className={styles.input}
-                          value={automationForm.panelTitle}
-                          onChange={(event) =>
-                            updateAutomationField("panelTitle", event.target.value)
-                          }
-                        />
-                      </label>
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Panel Subtitle</span>
-                        <input
-                          className={styles.input}
-                          value={automationForm.panelSubtitle}
-                          onChange={(event) =>
-                            updateAutomationField(
-                              "panelSubtitle",
-                              event.target.value,
-                            )
-                          }
-                        />
-                      </label>
+                        <div className={styles.automationGroup}>
+                          <div className={styles.automationGroupHeader}>
+                            <span className={styles.fieldLabel}>
+                              Code Blocks
+                            </span>
+                            <button
+                              className={styles.secondaryButton}
+                              type="button"
+                              onClick={addCodeBlockDraft}
+                            >
+                              Add Code Block
+                            </button>
+                          </div>
+                          {automationForm.codeBlocks.map((draft) => (
+                            <div
+                              className={styles.automationCard}
+                              key={draft.id}
+                            >
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>Title</span>
+                                <input
+                                  className={styles.input}
+                                  value={draft.title}
+                                  onChange={(event) =>
+                                    updateCodeBlockDraft(
+                                      draft.id,
+                                      "title",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>
+                                  Download Name
+                                </span>
+                                <input
+                                  className={styles.input}
+                                  value={draft.downloadName}
+                                  onChange={(event) =>
+                                    updateCodeBlockDraft(
+                                      draft.id,
+                                      "downloadName",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <label className={styles.field}>
+                                <span className={styles.fieldLabel}>Code</span>
+                                <textarea
+                                  className={styles.textarea}
+                                  value={draft.code}
+                                  onChange={(event) =>
+                                    updateCodeBlockDraft(
+                                      draft.id,
+                                      "code",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </label>
+                              <div className={styles.formActions}>
+                                <button
+                                  className={styles.secondaryButton}
+                                  type="button"
+                                  onClick={() => removeCodeBlockDraft(draft.id)}
+                                >
+                                  Remove Code Block
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
 
-                      <div className={styles.automationGroup}>
-                        <div className={styles.automationGroupHeader}>
-                          <span className={styles.fieldLabel}>Setup Commands</span>
+                        <div className={styles.formActions}>
                           <button
                             className={styles.secondaryButton}
                             type="button"
-                            onClick={addSetupCommandDraft}
+                            onClick={resetAutomationForm}
                           >
-                            Add Command
+                            Cancel
                           </button>
-                        </div>
-                        {automationForm.setupCommands.map((draft) => (
-                          <div className={styles.automationCard} key={draft.id}>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>Label</span>
-                              <input
-                                className={styles.input}
-                                value={draft.label}
-                                onChange={(event) =>
-                                  updateSetupCommandDraft(
-                                    draft.id,
-                                    "label",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>Command</span>
-                              <textarea
-                                className={styles.textarea}
-                                value={draft.command}
-                                onChange={(event) =>
-                                  updateSetupCommandDraft(
-                                    draft.id,
-                                    "command",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <div className={styles.formActions}>
-                              <button
-                                className={styles.secondaryButton}
-                                type="button"
-                                onClick={() => removeSetupCommandDraft(draft.id)}
-                              >
-                                Remove Command
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className={styles.automationGroup}>
-                        <div className={styles.automationGroupHeader}>
-                          <span className={styles.fieldLabel}>Code Blocks</span>
                           <button
-                            className={styles.secondaryButton}
-                            type="button"
-                            onClick={addCodeBlockDraft}
+                            className={styles.primaryButton}
+                            type="submit"
+                            disabled={isSubmittingAutomation}
                           >
-                            Add Code Block
+                            {isSubmittingAutomation
+                              ? editingAutomationEntryId
+                                ? "Saving..."
+                                : "Creating..."
+                              : editingAutomationEntryId
+                                ? "Save Automation"
+                                : "Add Automation"}
                           </button>
                         </div>
-                        {automationForm.codeBlocks.map((draft) => (
-                          <div className={styles.automationCard} key={draft.id}>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>Title</span>
-                              <input
-                                className={styles.input}
-                                value={draft.title}
-                                onChange={(event) =>
-                                  updateCodeBlockDraft(
-                                    draft.id,
-                                    "title",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>
-                                Download Name
-                              </span>
-                              <input
-                                className={styles.input}
-                                value={draft.downloadName}
-                                onChange={(event) =>
-                                  updateCodeBlockDraft(
-                                    draft.id,
-                                    "downloadName",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <label className={styles.field}>
-                              <span className={styles.fieldLabel}>Code</span>
-                              <textarea
-                                className={styles.textarea}
-                                value={draft.code}
-                                onChange={(event) =>
-                                  updateCodeBlockDraft(
-                                    draft.id,
-                                    "code",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                            <div className={styles.formActions}>
-                              <button
-                                className={styles.secondaryButton}
-                                type="button"
-                                onClick={() => removeCodeBlockDraft(draft.id)}
-                              >
-                                Remove Code Block
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className={styles.formActions}>
-                        <button
-                          className={styles.secondaryButton}
-                          type="button"
-                          onClick={resetAutomationForm}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          className={styles.primaryButton}
-                          type="submit"
-                          disabled={isSubmittingAutomation}
-                        >
-                          {isSubmittingAutomation
-                            ? editingAutomationEntryId
-                              ? "Saving..."
-                              : "Creating..."
-                            : editingAutomationEntryId
-                              ? "Save Automation"
-                              : "Add Automation"}
-                        </button>
-                      </div>
-                    </form>
-                  ) : null}
-                </div>
-              </article>
-            ))}
+                      </form>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
             {!visibleBoons.length ? (
-              <p className={styles.emptyState}>No boons match the current search.</p>
+              <p className={styles.emptyState}>
+                No boons match the current search.
+              </p>
             ) : null}
           </div>
         </div>
