@@ -33,6 +33,7 @@
 - `DISCORD_TOKEN`
 - `DISCORD_GUILD_ID`
 - `REQUIRED_ROLE_ID`
+- `DM_ROLE_ID` (optional, for rewards-calculator submit access without staff edit access)
 - `DISCORD_OAUTH_REDIRECT_URI`
 - `DATABASE_URL`
 

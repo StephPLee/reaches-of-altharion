@@ -88,6 +88,29 @@ async function fetchGuildMember(discordUserId) {
   return response.json();
 }
 
+async function postChannelMessage(channelId, payload) {
+  const response = await fetch(
+    `${DISCORD_API_BASE_URL}/channels/${channelId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${discordBotToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to post Discord channel message: ${response.status} ${errorText}`,
+    );
+  }
+
+  return response.json();
+}
+
 function memberHasRole(member, requiredRoleId) {
   return Array.isArray(member?.roles) && member.roles.includes(requiredRoleId);
 }
@@ -98,4 +121,5 @@ module.exports = {
   fetchDiscordUser,
   fetchGuildMember,
   memberHasRole,
+  postChannelMessage,
 };

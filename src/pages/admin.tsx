@@ -13,6 +13,8 @@ type SessionUser = {
   username: string;
   globalName: string | null;
   isStaff: boolean;
+  isDm?: boolean;
+  canSubmitRewards?: boolean;
 };
 
 function getAuthApiBaseUrl(siteConfig): string {
@@ -53,7 +55,13 @@ export default function AdminPage(): ReactNode {
 
         const payload = await response.json();
         if (!cancelled) {
-          setUser(payload.authenticated ? payload.user : null);
+          const nextUser = payload.authenticated ? payload.user : null;
+          if (nextUser && !nextUser.isStaff) {
+            setUser(null);
+            history.replace("/?view=map");
+            return;
+          }
+          setUser(nextUser);
         }
       } catch {
         if (!cancelled) {

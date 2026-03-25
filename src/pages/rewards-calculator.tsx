@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import styles from "./rewards-calculator.module.css";
 
@@ -13,6 +14,46 @@ type RewardRow = {
   tierClassName: string;
   range: string;
 };
+
+type SessionUser = {
+  id?: number;
+  username: string;
+  globalName: string | null;
+  isStaff: boolean;
+  isDm?: boolean;
+  canSubmitRewards?: boolean;
+};
+
+type WestMarchesUserRef = {
+  id: string;
+  discordId: string | null;
+};
+
+type WestMarchesCharacter = {
+  id: string;
+  name: string;
+  level: number;
+  experience: number;
+  status: string;
+  image: string | null;
+  user: WestMarchesUserRef | null;
+};
+
+type WestMarchesCurrency = {
+  id: string;
+  name: string;
+  order: number;
+};
+
+type WestMarchesStatus = {
+  configured: boolean;
+  currencyMappings: {
+    gold: string | null;
+    sc: string | null;
+  };
+};
+
+type RewardTarget = "player" | "dm" | "rp";
 
 const REWARD_TABLE: RewardRow[] = [
   {
@@ -202,12 +243,6 @@ const TIER_ROWS = [
   { name: "Paragon", range: "20+", className: styles.tierParagon },
 ];
 
-const EARLY_REWARD_ROWS = REWARD_TABLE.filter(
-  (row) => row.level >= 1 && row.level <= 11,
-);
-const LATE_REWARD_ROWS = REWARD_TABLE.filter(
-  (row) => row.level >= 12 && row.level <= 22,
-);
 const REWARD_TABLE_GROUPS = [
   REWARD_TABLE.filter((row) => row.level >= 1 && row.level <= 8),
   REWARD_TABLE.filter((row) => row.level >= 9 && row.level <= 15),
@@ -235,8 +270,7 @@ function getDmBonusLevel(players: number) {
 }
 
 function formatReward(value: number) {
-  const rounded = Math.round(value);
-  return new Intl.NumberFormat("en-GB").format(rounded);
+  return new Intl.NumberFormat("en-GB").format(Math.round(value));
 }
 
 function parseWholeNumber(value: string, fallback: number) {
@@ -244,7 +278,21 @@ function parseWholeNumber(value: string, fallback: number) {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+function getAuthApiBaseUrl(siteConfig): string {
+  const configuredBaseUrl = siteConfig.customFields?.authApiBaseUrl;
+  return typeof configuredBaseUrl === "string"
+    ? configuredBaseUrl.replace(/\/$/, "")
+    : "";
+}
+
+function formatCharacterOption(character: WestMarchesCharacter) {
+  return character.name.trim();
+}
+
 export default function RewardsCalculatorPage(): ReactNode {
+  const { siteConfig } = useDocusaurusContext();
+  const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
+
   const [hours, setHours] = useState("4");
   const [minutes, setMinutes] = useState("0");
   const [questLevel, setQuestLevel] = useState("6");
@@ -252,6 +300,177 @@ export default function RewardsCalculatorPage(): ReactNode {
   const [rpHours, setRpHours] = useState("0");
   const [rpMinutes, setRpMinutes] = useState("10");
   const [rpLevel, setRpLevel] = useState("4");
+
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [authError, setAuthError] = useState("");
+
+  const [isWestMarchesLoading, setIsWestMarchesLoading] = useState(true);
+  const [westMarchesError, setWestMarchesError] = useState("");
+  const [westMarchesStatus, setWestMarchesStatus] =
+    useState<WestMarchesStatus | null>(null);
+  const [characters, setCharacters] = useState<WestMarchesCharacter[]>([]);
+  const [currencies, setCurrencies] = useState<WestMarchesCurrency[]>([]);
+
+  const [playerCharacterIds, setPlayerCharacterIds] = useState<string[]>([]);
+  const [dmCharacterId, setDmCharacterId] = useState("");
+  const [rpCharacterId, setRpCharacterId] = useState("");
+  const [playerCharacterQuery, setPlayerCharacterQuery] = useState("");
+  const [dmCharacterQuery, setDmCharacterQuery] = useState("");
+  const [rpCharacterQuery, setRpCharacterQuery] = useState("");
+  const [playerReason, setPlayerReason] = useState("");
+  const [dmReason, setDmReason] = useState("");
+  const [rpReason, setRpReason] = useState("");
+  const [submittingTarget, setSubmittingTarget] = useState<RewardTarget | null>(
+    null,
+  );
+  const [submissionMessage, setSubmissionMessage] = useState("");
+  const [submissionError, setSubmissionError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      try {
+        setIsAuthLoading(true);
+        setAuthError("");
+
+        const response = await fetch(`${authApiBaseUrl}/api/me`, {
+          credentials: "include",
+        });
+
+        if (response.status === 401) {
+          if (!cancelled) {
+            setUser(null);
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Failed to load auth session (${response.status}).`);
+        }
+
+        const payload = await response.json();
+        if (!cancelled) {
+          setUser(payload.authenticated ? payload.user : null);
+        }
+      } catch (sessionError) {
+        if (!cancelled) {
+          setAuthError(
+            sessionError instanceof Error
+              ? sessionError.message
+              : "Failed to load staff session.",
+          );
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAuthLoading(false);
+        }
+      }
+    }
+
+    loadSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [authApiBaseUrl]);
+
+  useEffect(() => {
+    if (!user?.canSubmitRewards) {
+      setIsWestMarchesLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadWestMarchesData() {
+      try {
+        setIsWestMarchesLoading(true);
+        setWestMarchesError("");
+
+        const [statusResponse, charactersResponse, currenciesResponse] =
+          await Promise.all([
+            fetch(`${authApiBaseUrl}/api/rewards/westmarches/status`, {
+              credentials: "include",
+            }),
+            fetch(`${authApiBaseUrl}/api/rewards/westmarches/characters`, {
+              credentials: "include",
+            }),
+            fetch(`${authApiBaseUrl}/api/rewards/westmarches/currencies`, {
+              credentials: "include",
+            }),
+          ]);
+
+        const statusPayload = await statusResponse.json().catch(() => ({}));
+        const charactersPayload = await charactersResponse
+          .json()
+          .catch(() => ({}));
+        const currenciesPayload = await currenciesResponse
+          .json()
+          .catch(() => ({}));
+
+        if (!statusResponse.ok) {
+          throw new Error(
+            statusPayload.error || "Failed to load West Marches status.",
+          );
+        }
+
+        if (!charactersResponse.ok) {
+          throw new Error(
+            charactersPayload.error ||
+              "Failed to load West Marches characters.",
+          );
+        }
+
+        if (!currenciesResponse.ok) {
+          throw new Error(
+            currenciesPayload.error ||
+              "Failed to load West Marches currencies.",
+          );
+        }
+
+        if (!cancelled) {
+          setWestMarchesStatus(statusPayload);
+          setCharacters(() => {
+            const nextCharacters = Array.isArray(charactersPayload.characters)
+              ? charactersPayload.characters
+              : [];
+
+            return [...nextCharacters].sort((left, right) =>
+              formatCharacterOption(left).localeCompare(
+                formatCharacterOption(right),
+                undefined,
+                { sensitivity: "base" },
+              ),
+            );
+          });
+          setCurrencies(
+            Array.isArray(currenciesPayload.currencies)
+              ? currenciesPayload.currencies
+              : [],
+          );
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setWestMarchesError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Failed to load West Marches integration data.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsWestMarchesLoading(false);
+        }
+      }
+    }
+
+    loadWestMarchesData();
+    return () => {
+      cancelled = true;
+    };
+  }, [authApiBaseUrl, user?.canSubmitRewards]);
 
   const safeHours = Math.max(0, parseWholeNumber(hours, 0));
   const safeMinutes = clampNumber(parseWholeNumber(minutes, 0), 0, 59);
@@ -281,6 +500,277 @@ export default function RewardsCalculatorPage(): ReactNode {
   const rpXp = Math.round((rpDuration * rpRewardRow.xpPerHour) / 3);
   const rpGold = Math.round((rpDuration * rpRewardRow.goldPerHour) / 3);
 
+  const playerDefaultReason = `Quest rewards: ${safeHours}h ${safeMinutes}m, level ${safeQuestLevel}, ${safePlayers} player${safePlayers === 1 ? "" : "s"}`;
+  const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}`;
+  const rpDefaultReason = `RP rewards: ${safeRpHours}h ${safeRpMinutes}m, level ${safeRpLevel}`;
+
+  function getCurrencyNameById(currencyId: string | null) {
+    if (!currencyId) {
+      return "Not configured";
+    }
+
+    return (
+      currencies.find((currency) => currency.id === currencyId)?.name ||
+      currencyId
+    );
+  }
+
+  function filterCharacters(query: string) {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return characters;
+    }
+
+    return characters.filter((character) =>
+      formatCharacterOption(character).toLowerCase().includes(normalizedQuery),
+    );
+  }
+
+  const filteredPlayerCharacters = useMemo(
+    () => filterCharacters(playerCharacterQuery),
+    [characters, playerCharacterQuery],
+  );
+  const filteredDmCharacters = useMemo(
+    () => filterCharacters(dmCharacterQuery),
+    [characters, dmCharacterQuery],
+  );
+  const filteredRpCharacters = useMemo(
+    () => filterCharacters(rpCharacterQuery),
+    [characters, rpCharacterQuery],
+  );
+
+  async function submitReward(target: RewardTarget) {
+    const targetConfig =
+      target === "player"
+        ? {
+            characterIds: playerCharacterIds,
+            experience: Math.round(playerXp),
+            gold: Math.round(playerGold),
+            sc: playerSc,
+            reason: playerReason.trim() || playerDefaultReason,
+          }
+        : target === "dm"
+          ? {
+              characterId: dmCharacterId,
+              experience: Math.round(dmXp),
+              gold: Math.round(dmGold),
+              sc: dmSc,
+              reason: dmReason.trim() || dmDefaultReason,
+            }
+          : {
+              characterId: rpCharacterId,
+              experience: Math.round(rpXp),
+              gold: Math.round(rpGold),
+              sc: 0,
+              reason: rpReason.trim() || rpDefaultReason,
+            };
+
+    if (
+      (target === "player" && targetConfig.characterIds.length === 0) ||
+      (target !== "player" && !targetConfig.characterId)
+    ) {
+      setSubmissionMessage("");
+      setSubmissionError("Choose a character before submitting rewards.");
+      return;
+    }
+
+    try {
+      setSubmittingTarget(target);
+      setSubmissionError("");
+      setSubmissionMessage("");
+
+      if (target === "player") {
+        const response = await fetch(
+          `${authApiBaseUrl}/api/rewards/westmarches/rewards/batch`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              characterIds: targetConfig.characterIds,
+              experience: targetConfig.experience,
+              gold: targetConfig.gold,
+              sc: targetConfig.sc,
+              reason: targetConfig.reason,
+            }),
+          },
+        );
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to submit rewards.");
+        }
+      } else {
+        const response = await fetch(
+          `${authApiBaseUrl}/api/rewards/westmarches/rewards`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(targetConfig),
+          },
+        );
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.error || "Failed to submit rewards.");
+        }
+      }
+
+      setSubmissionMessage(
+        target === "player"
+          ? `PLAYER rewards submitted for ${targetConfig.characterIds.length} characters.`
+          : `${target.toUpperCase()} rewards submitted successfully.`,
+      );
+    } catch (submitError) {
+      setSubmissionError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to submit rewards.",
+      );
+      setSubmissionMessage("");
+    } finally {
+      setSubmittingTarget(null);
+    }
+  }
+
+  function togglePlayerCharacter(characterId: string) {
+    setPlayerCharacterIds((current) =>
+      current.includes(characterId)
+        ? current.filter((id) => id !== characterId)
+        : [...current, characterId],
+    );
+  }
+
+  function renderRewardSubmissionControls(
+    target: RewardTarget,
+    description: string,
+    reason: string,
+    setReason: (value: string) => void,
+    defaultReason: string,
+  ) {
+    const isMultiSelect = target === "player";
+    const singleCharacterId = target === "dm" ? dmCharacterId : rpCharacterId;
+    const setSingleCharacterId =
+      target === "dm" ? setDmCharacterId : setRpCharacterId;
+    const characterQuery =
+      target === "player"
+        ? playerCharacterQuery
+        : target === "dm"
+          ? dmCharacterQuery
+          : rpCharacterQuery;
+    const setCharacterQuery =
+      target === "player"
+        ? setPlayerCharacterQuery
+        : target === "dm"
+          ? setDmCharacterQuery
+          : setRpCharacterQuery;
+    const filteredCharacters =
+      target === "player"
+        ? filteredPlayerCharacters
+        : target === "dm"
+          ? filteredDmCharacters
+          : filteredRpCharacters;
+
+    return (
+      <div className={styles.submissionPanel}>
+        <p className={styles.muted}>{description}</p>
+        <div className={styles.submissionGrid}>
+          <div className={styles.field}>
+            <label htmlFor={`${target}-character-search`}>
+              {isMultiSelect ? "Characters" : "Character"}
+            </label>
+            <input
+              id={`${target}-character-search`}
+              className={styles.input}
+              value={characterQuery}
+              onChange={(event) => setCharacterQuery(event.target.value)}
+              placeholder={
+                isMultiSelect
+                  ? "Search characters to add"
+                  : "Search for a character"
+              }
+            />
+            {isMultiSelect && playerCharacterIds.length > 0 ? (
+              <div className={styles.selectionChips}>
+                {playerCharacterIds.map((characterId) => {
+                  const character = characters.find(
+                    (item) => item.id === characterId,
+                  );
+                  if (!character) {
+                    return null;
+                  }
+
+                  return (
+                    <button
+                      key={characterId}
+                      type="button"
+                      className={styles.selectionChip}
+                      onClick={() => togglePlayerCharacter(characterId)}
+                    >
+                      {formatCharacterOption(character)} x
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            <div className={styles.searchResults}>
+              {filteredCharacters.map((character) => {
+                const isSelected = isMultiSelect
+                  ? playerCharacterIds.includes(character.id)
+                  : singleCharacterId === character.id;
+
+                return (
+                  <button
+                    key={character.id}
+                    type="button"
+                    className={`${styles.searchResultButton} ${
+                      isSelected ? styles.searchResultButtonSelected : ""
+                    }`.trim()}
+                    onClick={() => {
+                      if (isMultiSelect) {
+                        togglePlayerCharacter(character.id);
+                      } else {
+                        setSingleCharacterId(character.id);
+                      }
+                    }}
+                  >
+                    {formatCharacterOption(character)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className={styles.field}>
+            <label htmlFor={`${target}-reason`}>Reason</label>
+            <textarea
+              id={`${target}-reason`}
+              className={styles.textarea}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder={defaultReason}
+              rows={3}
+            />
+          </div>
+        </div>
+        <div className={styles.formActions}>
+          <button
+            type="button"
+            className={styles.actionButton}
+            onClick={() => submitReward(target)}
+            disabled={
+              submittingTarget !== null || !westMarchesStatus?.configured
+            }
+          >
+            {submittingTarget === target ? "Submitting..." : "Submit Reward"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Layout
       title="Rewards Calculator"
@@ -291,8 +781,9 @@ export default function RewardsCalculatorPage(): ReactNode {
           <section className={styles.hero}>
             <Heading as="h1">Rewards Calculator</Heading>
             <p>
-              Calculate player, DM, and RP rewards directly on the site using
-              the same reward table and formulas as the existing spreadsheet.
+              Calculate player, DM, and RP rewards directly on the site. Staff
+              can also submit them to West Marches through the protected
+              backend.
             </p>
           </section>
 
@@ -344,6 +835,28 @@ export default function RewardsCalculatorPage(): ReactNode {
                 </div>
               </section>
 
+              {!isAuthLoading &&
+              user?.canSubmitRewards &&
+              (submissionMessage ||
+                submissionError ||
+                westMarchesError ||
+                authError) ? (
+                <section className={styles.panel}>
+                  {submissionMessage ? (
+                    <p className={styles.successText}>{submissionMessage}</p>
+                  ) : null}
+                  {submissionError ? (
+                    <p className={styles.errorText}>{submissionError}</p>
+                  ) : null}
+                  {westMarchesError ? (
+                    <p className={styles.errorText}>{westMarchesError}</p>
+                  ) : null}
+                  {authError ? (
+                    <p className={styles.errorText}>{authError}</p>
+                  ) : null}
+                </section>
+              ) : null}
+
               <section className={`${styles.panel} ${styles.rewardPanel}`}>
                 <Heading as="h2">Player Rewards</Heading>
                 <div
@@ -368,6 +881,15 @@ export default function RewardsCalculatorPage(): ReactNode {
                     </span>
                   </div>
                 </div>
+                {user?.canSubmitRewards
+                  ? renderRewardSubmissionControls(
+                      "player",
+                      "Search and select one or more player characters to receive the calculated reward package.",
+                      playerReason,
+                      setPlayerReason,
+                      playerDefaultReason,
+                    )
+                  : null}
               </section>
 
               <section className={`${styles.panel} ${styles.rewardPanel}`}>
@@ -405,6 +927,15 @@ export default function RewardsCalculatorPage(): ReactNode {
                   character&apos;s effective quest level increases by{" "}
                   <strong>+{dmBonusLevel}</strong> based on player count.
                 </div>
+                {user?.canSubmitRewards
+                  ? renderRewardSubmissionControls(
+                      "dm",
+                      "Search and select the single DM character that should receive the DM reward package.",
+                      dmReason,
+                      setDmReason,
+                      dmDefaultReason,
+                    )
+                  : null}
               </section>
 
               <section className={styles.panel}>
@@ -454,6 +985,15 @@ export default function RewardsCalculatorPage(): ReactNode {
                     </span>
                   </div>
                 </div>
+                {user?.canSubmitRewards
+                  ? renderRewardSubmissionControls(
+                      "rp",
+                      "Search and select the single character that should receive the RP reward package.",
+                      rpReason,
+                      setRpReason,
+                      rpDefaultReason,
+                    )
+                  : null}
               </section>
             </div>
 

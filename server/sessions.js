@@ -10,7 +10,7 @@ function createRawSessionToken() {
   return crypto.randomBytes(32).toString("base64url");
 }
 
-async function upsertUser({ discordUser, isStaff }) {
+async function upsertUser({ discordUser, isStaff, isDm }) {
   const result = await pool.query(
     `
     INSERT INTO users (
@@ -19,19 +19,21 @@ async function upsertUser({ discordUser, isStaff }) {
       global_name,
       avatar,
       is_staff,
+      is_dm,
       last_guild_check_at,
       updated_at
     )
-    VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+    VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
     ON CONFLICT (discord_user_id)
     DO UPDATE SET
       username = EXCLUDED.username,
       global_name = EXCLUDED.global_name,
       avatar = EXCLUDED.avatar,
       is_staff = EXCLUDED.is_staff,
+      is_dm = EXCLUDED.is_dm,
       last_guild_check_at = NOW(),
       updated_at = NOW()
-    RETURNING id, discord_user_id, username, global_name, avatar, is_staff
+    RETURNING id, discord_user_id, username, global_name, avatar, is_staff, is_dm
     `,
     [
       discordUser.id,
@@ -39,18 +41,20 @@ async function upsertUser({ discordUser, isStaff }) {
       discordUser.global_name,
       discordUser.avatar,
       isStaff,
+      isDm,
     ],
   );
 
   return result.rows[0];
 }
 
-async function updateUserStaffStatus({ discordUserId, isStaff }) {
+async function updateUserRoleStatus({ discordUserId, isStaff, isDm }) {
   const result = await pool.query(
     `
     UPDATE users
     SET
       is_staff = $2,
+      is_dm = $3,
       last_guild_check_at = NOW(),
       updated_at = NOW()
     WHERE discord_user_id = $1
@@ -61,9 +65,10 @@ async function updateUserStaffStatus({ discordUserId, isStaff }) {
       global_name,
       avatar,
       is_staff,
+      is_dm,
       last_guild_check_at
     `,
-    [discordUserId, isStaff],
+    [discordUserId, isStaff, isDm],
   );
 
   return result.rows[0] || null;
@@ -108,6 +113,7 @@ async function getSessionUser(sessionToken) {
       u.global_name,
       u.avatar,
       u.is_staff,
+      u.is_dm,
       u.last_guild_check_at
     FROM admin_sessions s
     JOIN users u ON u.id = s.user_id
@@ -139,6 +145,7 @@ async function getSessionUser(sessionToken) {
     globalName: session.global_name,
     avatar: session.avatar,
     isStaff: session.is_staff,
+    isDm: session.is_dm,
     lastGuildCheckAt: session.last_guild_check_at,
     expiresAt: session.expires_at,
   };
@@ -187,5 +194,5 @@ module.exports = {
   deleteSessionsForUser,
   getSessionUser,
   upsertUser,
-  updateUserStaffStatus,
+  updateUserRoleStatus,
 };
