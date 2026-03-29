@@ -504,17 +504,6 @@ export default function RewardsCalculatorPage(): ReactNode {
   const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}`;
   const rpDefaultReason = `RP rewards: ${safeRpHours}h ${safeRpMinutes}m, level ${safeRpLevel}`;
 
-  function getCurrencyNameById(currencyId: string | null) {
-    if (!currencyId) {
-      return "Not configured";
-    }
-
-    return (
-      currencies.find((currency) => currency.id === currencyId)?.name ||
-      currencyId
-    );
-  }
-
   function filterCharacters(query: string) {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) {

@@ -302,6 +302,93 @@
     padding: 0.25rem 0 1.1rem;
 }
 
+.guildContent {
+    display: grid;
+    gap: 1rem;
+}
+
+.rosterSection {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid rgba(196, 215, 255, 0.12);
+    border-radius: 0.85rem;
+    background: rgba(8, 12, 27, 0.46);
+}
+
+.rosterToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rosterToggleTitle {
+    color: #f0ebff;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.rosterToggleMeta {
+    color: rgba(224, 230, 248, 0.82);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.rosterList {
+    display: grid;
+    gap: 0.6rem;
+    max-height: 16rem;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(222, 231, 255, 0.62) rgba(7, 11, 38, 0.3);
+}
+
+.rosterList::-webkit-scrollbar {
+    width: 0.7rem;
+}
+
+.rosterList::-webkit-scrollbar-track {
+    background: rgba(7, 11, 38, 0.3);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(123, 145, 219, 0.08);
+}
+
+.rosterList::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgba(222, 231, 255, 0.72) 0%,
+        rgba(160, 180, 240, 0.46) 100%
+    );
+    background-clip: padding-box;
+    box-shadow:
+        inset 0 0 0 1px rgba(245, 248, 255, 0.12),
+        0 4px 10px rgba(4, 7, 24, 0.16);
+}
+
+.rosterMember {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(196, 215, 255, 0.12);
+    border-radius: 0.75rem;
+    background: rgba(12, 16, 31, 0.72);
+    color: #ece2ff;
+}
+
+.rosterStatus {
+    margin: 0;
+    color: rgba(224, 230, 248, 0.82);
+}
+
 .guildCard:last-child .guildHeader,
 .guildCard:last-child .upgradeList {
     border-bottom: 1px solid rgba(154, 180, 235, 0.12);

@@ -52,6 +52,12 @@ type Guild = {
   upgrades: GuildUpgrade[];
 };
 
+type GuildRoster = {
+  guildName: string;
+  memberCount: number;
+  members: string[];
+};
+
 type SessionUser = {
   username: string;
   globalName: string | null;
@@ -183,6 +189,7 @@ export default function GuildsDirectory() {
   const [collapsedGuilds, setCollapsedGuilds] = useState<
     Record<number, boolean>
   >({});
+  const [openRosters, setOpenRosters] = useState<Record<number, boolean>>({});
   const [openGuildComposer, setOpenGuildComposer] = useState(false);
   const [editingGuildId, setEditingGuildId] = useState<number | null>(null);
   const [editingUpgradeId, setEditingUpgradeId] = useState<number | null>(null);
@@ -207,6 +214,9 @@ export default function GuildsDirectory() {
   const [isSubmittingAutomation, setIsSubmittingAutomation] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
+  const [guildRosters, setGuildRosters] = useState<GuildRoster[]>([]);
+  const [guildRostersLoading, setGuildRostersLoading] = useState(true);
+  const [guildRostersError, setGuildRostersError] = useState("");
   const [guildForm, setGuildForm] = useState<GuildFormState>(
     createEmptyGuildForm(),
   );
@@ -252,6 +262,49 @@ export default function GuildsDirectory() {
     }
 
     loadGuilds();
+    return () => {
+      cancelled = true;
+    };
+  }, [authApiBaseUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGuildRosters() {
+      try {
+        setGuildRostersLoading(true);
+        setGuildRostersError("");
+        const response = await fetch(
+          `${authApiBaseUrl}/api/rewards/westmarches/guild-rosters`,
+        );
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || "Failed to load guild rosters.");
+        }
+
+        const payload = await response.json();
+        if (!cancelled) {
+          setGuildRosters(
+            Array.isArray(payload.rosters) ? payload.rosters : [],
+          );
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setGuildRosters([]);
+          setGuildRostersError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Failed to load guild rosters.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setGuildRostersLoading(false);
+        }
+      }
+    }
+
+    loadGuildRosters();
     return () => {
       cancelled = true;
     };
@@ -366,6 +419,17 @@ export default function GuildsDirectory() {
     setCollapsedGuilds(
       Object.fromEntries(guilds.map((guild) => [guild.id, collapsed])),
     );
+  }
+
+  function isRosterOpen(guildId: number) {
+    return openRosters[guildId] ?? false;
+  }
+
+  function toggleRosterOpen(guildId: number) {
+    setOpenRosters((current) => ({
+      ...current,
+      [guildId]: !(current[guildId] ?? false),
+    }));
   }
 
   function resetGuildForm() {
@@ -1009,6 +1073,15 @@ export default function GuildsDirectory() {
               const isEditingThisGuild = editingGuildId === guild.id;
               const isCollapsed =
                 isGuildCollapsed(guild.id) && !isEditingThisGuild;
+              const matchedRoster =
+                guildRosters.find(
+                  (roster) =>
+                    roster.guildName.trim().toLowerCase() ===
+                    guild.name.trim().toLowerCase(),
+                ) || null;
+              const rosterMembers = matchedRoster?.members || [];
+              const rosterCount = matchedRoster?.memberCount || 0;
+              const rosterOpen = isRosterOpen(guild.id);
 
               return (
                 <article
@@ -1182,328 +1255,378 @@ export default function GuildsDirectory() {
                   ) : null}
 
                   {!isCollapsed && !isEditingThisGuild ? (
-                    <div className={styles.upgradeList}>
-                      {guild.upgrades.map((upgrade) => (
-                        <section
-                          className={styles.upgradeCard}
-                          key={upgrade.id}
+                    <div className={styles.guildContent}>
+                      <section className={styles.rosterSection}>
+                        <button
+                          className={styles.rosterToggle}
+                          type="button"
+                          onClick={() => toggleRosterOpen(guild.id)}
                         >
-                          <div className={styles.upgradeHeader}>
-                            <h3 className={styles.upgradeHeading}>
-                              {upgrade.title}
-                            </h3>
-                            {isStaff ? (
-                              <div className={styles.upgradeActions}>
-                                <button
-                                  className={styles.inlineActionButton}
-                                  type="button"
-                                  onClick={() => beginEditUpgrade(upgrade)}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  className={styles.inlineActionButton}
-                                  type="button"
-                                  onClick={() => beginAddAutomation(upgrade.id)}
-                                >
-                                  {upgrade.automationEntries.length > 0
-                                    ? "Add Automation"
-                                    : "Add Automation"}
-                                </button>
-                                <button
-                                  className={styles.inlineDangerButton}
-                                  type="button"
-                                  onClick={() =>
-                                    handleDeleteUpgrade(upgrade.id)
-                                  }
-                                  disabled={deletingUpgradeId === upgrade.id}
-                                >
-                                  {deletingUpgradeId === upgrade.id
-                                    ? "Removing..."
-                                    : "Remove"}
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
-                          <p className={styles.upgradeText}>
-                            <strong>Requirement:</strong> {upgrade.requirement}
-                          </p>
-                          <p className={styles.upgradeText}>
-                            <strong>Reward:</strong> {upgrade.reward}
-                          </p>
-                          {upgrade.details ? (
-                            <p className={styles.upgradeText}>
-                              {upgrade.details}
+                          <span className={styles.rosterToggleTitle}>
+                            Guild Roster
+                          </span>
+                          <span className={styles.rosterToggleMeta}>
+                            {guildRostersLoading
+                              ? "Loading..."
+                              : `${rosterCount} member${rosterCount === 1 ? "" : "s"}`}
+                          </span>
+                        </button>
+                        {rosterOpen ? (
+                          guildRostersError ? (
+                            <p className={styles.rosterStatus}>
+                              {guildRostersError}
                             </p>
-                          ) : null}
-                          {upgrade.automationEntries.map((automationEntry) => (
-                            <div
-                              className={styles.automationBlock}
-                              key={automationEntry.id}
-                            >
-                              <HomebrewAutomationSection
-                                title={automationEntry.panelTitle}
-                                subtitle={automationEntry.panelSubtitle}
-                              >
-                                {automationEntry.setupCommands.map(
-                                  (command) => (
-                                    <AvraeCommandBlock
-                                      key={command.id}
-                                      label={command.label}
-                                      command={command.command}
-                                    />
-                                  ),
-                                )}
-                                {automationEntry.codeBlocks.map((codeBlock) => (
-                                  <AvraeAliasBlock
-                                    key={codeBlock.id}
-                                    title={codeBlock.title}
-                                    code={codeBlock.code}
-                                    downloadName={codeBlock.downloadName}
-                                  />
-                                ))}
-                              </HomebrewAutomationSection>
+                          ) : rosterMembers.length > 0 ? (
+                            <div className={styles.rosterList}>
+                              {rosterMembers.map((member) => (
+                                <div
+                                  key={`${guild.id}-${member}`}
+                                  className={styles.rosterMember}
+                                >
+                                  {member}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className={styles.rosterStatus}>
+                              No active guild members listed yet.
+                            </p>
+                          )
+                        ) : null}
+                      </section>
+                      <div className={styles.upgradeList}>
+                        {guild.upgrades.map((upgrade) => (
+                          <section
+                            className={styles.upgradeCard}
+                            key={upgrade.id}
+                          >
+                            <div className={styles.upgradeHeader}>
+                              <h3 className={styles.upgradeHeading}>
+                                {upgrade.title}
+                              </h3>
                               {isStaff ? (
                                 <div className={styles.upgradeActions}>
                                   <button
                                     className={styles.inlineActionButton}
                                     type="button"
+                                    onClick={() => beginEditUpgrade(upgrade)}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className={styles.inlineActionButton}
+                                    type="button"
                                     onClick={() =>
-                                      beginEditAutomation(
-                                        upgrade.id,
-                                        automationEntry,
-                                      )
+                                      beginAddAutomation(upgrade.id)
                                     }
                                   >
-                                    Edit Automation
+                                    {upgrade.automationEntries.length > 0
+                                      ? "Add Automation"
+                                      : "Add Automation"}
                                   </button>
                                   <button
                                     className={styles.inlineDangerButton}
                                     type="button"
                                     onClick={() =>
-                                      handleDeleteAutomation(automationEntry.id)
+                                      handleDeleteUpgrade(upgrade.id)
                                     }
-                                    disabled={
-                                      deletingAutomationEntryId ===
-                                      automationEntry.id
-                                    }
+                                    disabled={deletingUpgradeId === upgrade.id}
                                   >
-                                    {deletingAutomationEntryId ===
-                                    automationEntry.id
+                                    {deletingUpgradeId === upgrade.id
                                       ? "Removing..."
-                                      : "Remove Automation"}
+                                      : "Remove"}
                                   </button>
                                 </div>
                               ) : null}
                             </div>
-                          ))}
-                          {isStaff && openAutomationUpgradeId === upgrade.id ? (
-                            <form
-                              className={styles.upgradeComposer}
-                              onSubmit={handleAutomationSubmit}
-                            >
-                              <div className={styles.managerRow}>
-                                <label className={styles.field}>
-                                  <span className={styles.fieldLabel}>
-                                    Panel Title
-                                  </span>
-                                  <input
-                                    className={styles.input}
-                                    value={automationForm.panelTitle}
-                                    onChange={(event) =>
-                                      updateAutomationField(
-                                        "panelTitle",
-                                        event.target.value,
-                                      )
-                                    }
-                                  />
-                                </label>
-                                <label className={styles.field}>
-                                  <span className={styles.fieldLabel}>
-                                    Panel Subtitle
-                                  </span>
-                                  <input
-                                    className={styles.input}
-                                    value={automationForm.panelSubtitle}
-                                    onChange={(event) =>
-                                      updateAutomationField(
-                                        "panelSubtitle",
-                                        event.target.value,
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                              <div className={styles.automationGroup}>
-                                <div className={styles.automationGroupHeader}>
-                                  <span className={styles.fieldLabel}>
-                                    Setup Commands
-                                  </span>
+                            <p className={styles.upgradeText}>
+                              <strong>Requirement:</strong>{" "}
+                              {upgrade.requirement}
+                            </p>
+                            <p className={styles.upgradeText}>
+                              <strong>Reward:</strong> {upgrade.reward}
+                            </p>
+                            {upgrade.details ? (
+                              <p className={styles.upgradeText}>
+                                {upgrade.details}
+                              </p>
+                            ) : null}
+                            {upgrade.automationEntries.map(
+                              (automationEntry) => (
+                                <div
+                                  className={styles.automationBlock}
+                                  key={automationEntry.id}
+                                >
+                                  <HomebrewAutomationSection
+                                    title={automationEntry.panelTitle}
+                                    subtitle={automationEntry.panelSubtitle}
+                                  >
+                                    {automationEntry.setupCommands.map(
+                                      (command) => (
+                                        <AvraeCommandBlock
+                                          key={command.id}
+                                          label={command.label}
+                                          command={command.command}
+                                        />
+                                      ),
+                                    )}
+                                    {automationEntry.codeBlocks.map(
+                                      (codeBlock) => (
+                                        <AvraeAliasBlock
+                                          key={codeBlock.id}
+                                          title={codeBlock.title}
+                                          code={codeBlock.code}
+                                          downloadName={codeBlock.downloadName}
+                                        />
+                                      ),
+                                    )}
+                                  </HomebrewAutomationSection>
+                                  {isStaff ? (
+                                    <div className={styles.upgradeActions}>
+                                      <button
+                                        className={styles.inlineActionButton}
+                                        type="button"
+                                        onClick={() =>
+                                          beginEditAutomation(
+                                            upgrade.id,
+                                            automationEntry,
+                                          )
+                                        }
+                                      >
+                                        Edit Automation
+                                      </button>
+                                      <button
+                                        className={styles.inlineDangerButton}
+                                        type="button"
+                                        onClick={() =>
+                                          handleDeleteAutomation(
+                                            automationEntry.id,
+                                          )
+                                        }
+                                        disabled={
+                                          deletingAutomationEntryId ===
+                                          automationEntry.id
+                                        }
+                                      >
+                                        {deletingAutomationEntryId ===
+                                        automationEntry.id
+                                          ? "Removing..."
+                                          : "Remove Automation"}
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ),
+                            )}
+                            {isStaff &&
+                            openAutomationUpgradeId === upgrade.id ? (
+                              <form
+                                className={styles.upgradeComposer}
+                                onSubmit={handleAutomationSubmit}
+                              >
+                                <div className={styles.managerRow}>
+                                  <label className={styles.field}>
+                                    <span className={styles.fieldLabel}>
+                                      Panel Title
+                                    </span>
+                                    <input
+                                      className={styles.input}
+                                      value={automationForm.panelTitle}
+                                      onChange={(event) =>
+                                        updateAutomationField(
+                                          "panelTitle",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </label>
+                                  <label className={styles.field}>
+                                    <span className={styles.fieldLabel}>
+                                      Panel Subtitle
+                                    </span>
+                                    <input
+                                      className={styles.input}
+                                      value={automationForm.panelSubtitle}
+                                      onChange={(event) =>
+                                        updateAutomationField(
+                                          "panelSubtitle",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </label>
+                                </div>
+                                <div className={styles.automationGroup}>
+                                  <div className={styles.automationGroupHeader}>
+                                    <span className={styles.fieldLabel}>
+                                      Setup Commands
+                                    </span>
+                                    <button
+                                      className={styles.secondaryButton}
+                                      type="button"
+                                      onClick={addSetupCommandDraft}
+                                    >
+                                      Add Command
+                                    </button>
+                                  </div>
+                                  {automationForm.setupCommands.map((draft) => (
+                                    <div
+                                      className={styles.automationCard}
+                                      key={draft.id}
+                                    >
+                                      <label className={styles.field}>
+                                        <span className={styles.fieldLabel}>
+                                          Label
+                                        </span>
+                                        <input
+                                          className={styles.input}
+                                          value={draft.label}
+                                          onChange={(event) =>
+                                            updateSetupCommandDraft(
+                                              draft.id,
+                                              "label",
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                      <label className={styles.field}>
+                                        <span className={styles.fieldLabel}>
+                                          Command
+                                        </span>
+                                        <textarea
+                                          className={styles.textarea}
+                                          value={draft.command}
+                                          onChange={(event) =>
+                                            updateSetupCommandDraft(
+                                              draft.id,
+                                              "command",
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                      <div className={styles.formActions}>
+                                        <button
+                                          className={styles.secondaryButton}
+                                          type="button"
+                                          onClick={() =>
+                                            removeSetupCommandDraft(draft.id)
+                                          }
+                                        >
+                                          Remove Command
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className={styles.automationGroup}>
+                                  <div className={styles.automationGroupHeader}>
+                                    <span className={styles.fieldLabel}>
+                                      Code Blocks
+                                    </span>
+                                    <button
+                                      className={styles.secondaryButton}
+                                      type="button"
+                                      onClick={addCodeBlockDraft}
+                                    >
+                                      Add Code Block
+                                    </button>
+                                  </div>
+                                  {automationForm.codeBlocks.map((draft) => (
+                                    <div
+                                      className={styles.automationCard}
+                                      key={draft.id}
+                                    >
+                                      <label className={styles.field}>
+                                        <span className={styles.fieldLabel}>
+                                          Title
+                                        </span>
+                                        <input
+                                          className={styles.input}
+                                          value={draft.title}
+                                          onChange={(event) =>
+                                            updateCodeBlockDraft(
+                                              draft.id,
+                                              "title",
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                      <label className={styles.field}>
+                                        <span className={styles.fieldLabel}>
+                                          Download Name
+                                        </span>
+                                        <input
+                                          className={styles.input}
+                                          value={draft.downloadName}
+                                          onChange={(event) =>
+                                            updateCodeBlockDraft(
+                                              draft.id,
+                                              "downloadName",
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                      <label className={styles.field}>
+                                        <span className={styles.fieldLabel}>
+                                          Code
+                                        </span>
+                                        <textarea
+                                          className={styles.textarea}
+                                          value={draft.code}
+                                          onChange={(event) =>
+                                            updateCodeBlockDraft(
+                                              draft.id,
+                                              "code",
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                      <div className={styles.formActions}>
+                                        <button
+                                          className={styles.secondaryButton}
+                                          type="button"
+                                          onClick={() =>
+                                            removeCodeBlockDraft(draft.id)
+                                          }
+                                        >
+                                          Remove Code Block
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className={styles.formActions}>
                                   <button
                                     className={styles.secondaryButton}
                                     type="button"
-                                    onClick={addSetupCommandDraft}
+                                    onClick={resetAutomationForm}
                                   >
-                                    Add Command
+                                    Cancel
                                   </button>
-                                </div>
-                                {automationForm.setupCommands.map((draft) => (
-                                  <div
-                                    className={styles.automationCard}
-                                    key={draft.id}
-                                  >
-                                    <label className={styles.field}>
-                                      <span className={styles.fieldLabel}>
-                                        Label
-                                      </span>
-                                      <input
-                                        className={styles.input}
-                                        value={draft.label}
-                                        onChange={(event) =>
-                                          updateSetupCommandDraft(
-                                            draft.id,
-                                            "label",
-                                            event.target.value,
-                                          )
-                                        }
-                                      />
-                                    </label>
-                                    <label className={styles.field}>
-                                      <span className={styles.fieldLabel}>
-                                        Command
-                                      </span>
-                                      <textarea
-                                        className={styles.textarea}
-                                        value={draft.command}
-                                        onChange={(event) =>
-                                          updateSetupCommandDraft(
-                                            draft.id,
-                                            "command",
-                                            event.target.value,
-                                          )
-                                        }
-                                      />
-                                    </label>
-                                    <div className={styles.formActions}>
-                                      <button
-                                        className={styles.secondaryButton}
-                                        type="button"
-                                        onClick={() =>
-                                          removeSetupCommandDraft(draft.id)
-                                        }
-                                      >
-                                        Remove Command
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                              <div className={styles.automationGroup}>
-                                <div className={styles.automationGroupHeader}>
-                                  <span className={styles.fieldLabel}>
-                                    Code Blocks
-                                  </span>
                                   <button
-                                    className={styles.secondaryButton}
-                                    type="button"
-                                    onClick={addCodeBlockDraft}
+                                    className={styles.primaryButton}
+                                    type="submit"
+                                    disabled={isSubmittingAutomation}
                                   >
-                                    Add Code Block
+                                    {isSubmittingAutomation
+                                      ? editingAutomationEntryId
+                                        ? "Saving..."
+                                        : "Creating..."
+                                      : editingAutomationEntryId
+                                        ? "Save Automation"
+                                        : "Add Automation"}
                                   </button>
                                 </div>
-                                {automationForm.codeBlocks.map((draft) => (
-                                  <div
-                                    className={styles.automationCard}
-                                    key={draft.id}
-                                  >
-                                    <label className={styles.field}>
-                                      <span className={styles.fieldLabel}>
-                                        Title
-                                      </span>
-                                      <input
-                                        className={styles.input}
-                                        value={draft.title}
-                                        onChange={(event) =>
-                                          updateCodeBlockDraft(
-                                            draft.id,
-                                            "title",
-                                            event.target.value,
-                                          )
-                                        }
-                                      />
-                                    </label>
-                                    <label className={styles.field}>
-                                      <span className={styles.fieldLabel}>
-                                        Download Name
-                                      </span>
-                                      <input
-                                        className={styles.input}
-                                        value={draft.downloadName}
-                                        onChange={(event) =>
-                                          updateCodeBlockDraft(
-                                            draft.id,
-                                            "downloadName",
-                                            event.target.value,
-                                          )
-                                        }
-                                      />
-                                    </label>
-                                    <label className={styles.field}>
-                                      <span className={styles.fieldLabel}>
-                                        Code
-                                      </span>
-                                      <textarea
-                                        className={styles.textarea}
-                                        value={draft.code}
-                                        onChange={(event) =>
-                                          updateCodeBlockDraft(
-                                            draft.id,
-                                            "code",
-                                            event.target.value,
-                                          )
-                                        }
-                                      />
-                                    </label>
-                                    <div className={styles.formActions}>
-                                      <button
-                                        className={styles.secondaryButton}
-                                        type="button"
-                                        onClick={() =>
-                                          removeCodeBlockDraft(draft.id)
-                                        }
-                                      >
-                                        Remove Code Block
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                              <div className={styles.formActions}>
-                                <button
-                                  className={styles.secondaryButton}
-                                  type="button"
-                                  onClick={resetAutomationForm}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  className={styles.primaryButton}
-                                  type="submit"
-                                  disabled={isSubmittingAutomation}
-                                >
-                                  {isSubmittingAutomation
-                                    ? editingAutomationEntryId
-                                      ? "Saving..."
-                                      : "Creating..."
-                                    : editingAutomationEntryId
-                                      ? "Save Automation"
-                                      : "Add Automation"}
-                                </button>
-                              </div>
-                            </form>
-                          ) : null}
-                        </section>
-                      ))}
+                              </form>
+                            ) : null}
+                          </section>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                 </article>
