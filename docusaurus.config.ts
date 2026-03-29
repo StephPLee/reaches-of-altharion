@@ -113,6 +113,10 @@ const config: Config = {
               to: "/docs/transformations",
               label: "Transformations",
             },
+            {
+              to: "/character-attributes",
+              label: "Server Stats",
+            },
           ],
         },
         {

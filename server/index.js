@@ -96,6 +96,8 @@ const {
   getCharacter,
   isWestMarchesConfigured,
   listAllCharacters,
+  listCharacterAttributeStats,
+  listGuildRosters,
   listCurrencies,
 } = require("./westmarches");
 
@@ -1273,6 +1275,98 @@ app.get(
           westMarchesError instanceof Error
             ? westMarchesError.message
             : "Failed to load West Marches characters.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/rewards/westmarches/characters/:characterId",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const characterId =
+      typeof req.params.characterId === "string"
+        ? req.params.characterId.trim()
+        : "";
+
+    if (!characterId) {
+      res.status(400).json({ error: "characterId is required." });
+      return;
+    }
+
+    try {
+      const character = await getCharacter(characterId);
+      res.json({ character });
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to load West Marches character detail:",
+        westMarchesError,
+      );
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to load West Marches character detail.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/rewards/westmarches/attribute-stats",
+  requireTrustedOrigin,
+  async (_req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    try {
+      const stats = await listCharacterAttributeStats();
+      res.json(stats);
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to load West Marches attribute statistics:",
+        westMarchesError,
+      );
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to load West Marches attribute statistics.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/rewards/westmarches/guild-rosters",
+  requireTrustedOrigin,
+  async (_req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    try {
+      const rosters = await listGuildRosters();
+      res.json(rosters);
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to load West Marches guild rosters:",
+        westMarchesError,
+      );
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to load West Marches guild rosters.",
       });
     }
   },
