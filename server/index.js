@@ -9,6 +9,7 @@ const {
   authCallbackRateLimitMaxRequests,
   authRateLimitMaxRequests,
   authRateLimitWindowMs,
+  calendarAnnouncementChannelId,
   cookieSecure,
   isProduction,
   oauthReturnToCookieName,
@@ -1026,6 +1027,79 @@ function truncateEmbedFieldValue(value) {
   }
 
   return `${value.slice(0, 1021)}...`;
+}
+
+function truncateEmbedDescription(value) {
+  if (value.length <= 4096) {
+    return value;
+  }
+
+  return `${value.slice(0, 4093)}...`;
+}
+
+function formatCalendarAnnouncementDate(date) {
+  const normalizedDate =
+    typeof date === "string" && date.length >= 10
+      ? `${date.slice(0, 10)}T00:00:00Z`
+      : date;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(normalizedDate));
+}
+
+function formatCalendarAnnouncementDateRange(startDate, endDate) {
+  if (startDate === endDate) {
+    return formatCalendarAnnouncementDate(startDate);
+  }
+
+  return `${formatCalendarAnnouncementDate(startDate)} to ${formatCalendarAnnouncementDate(endDate)}`;
+}
+
+function buildCalendarAnnouncementDescription(event) {
+  const description =
+    typeof event.details === "string" ? event.details.trim() : "";
+
+  return truncateEmbedDescription(description || "No description provided.");
+}
+
+function buildCalendarAnnouncementPayload(event) {
+  return {
+    embeds: [
+      {
+        title: event.title,
+        color: 0x5d8f78,
+        description: buildCalendarAnnouncementDescription(event),
+        fields: [
+          {
+            name: "Dates",
+            value: formatCalendarAnnouncementDateRange(
+              event.startDate,
+              event.endDate,
+            ),
+            inline: false,
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      },
+    ],
+    allowed_mentions: {
+      parse: [],
+    },
+  };
+}
+
+async function notifyCalendarAnnouncement(event) {
+  if (!calendarAnnouncementChannelId) {
+    return;
+  }
+
+  await postChannelMessage(
+    calendarAnnouncementChannelId,
+    buildCalendarAnnouncementPayload(event),
+  );
 }
 
 function buildRewardChannelPayload({ characters, rewardRequest, staffUser }) {
@@ -3057,6 +3131,15 @@ app.post(
         },
         ...getRequestMetadata(req),
       });
+
+      try {
+        await notifyCalendarAnnouncement(event);
+      } catch (discordError) {
+        console.error(
+          "Failed to post calendar announcement to Discord:",
+          discordError,
+        );
+      }
 
       res.status(201).json({ event });
     } catch (calendarError) {
