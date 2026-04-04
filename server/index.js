@@ -24,7 +24,6 @@ const {
   staffRevalidationMinutes,
   sessionCookieName,
   westMarchesGoldCurrencyId,
-  westMarchesRewardChannelId,
   westMarchesScCurrencyId,
 } = require("./config");
 const { recordAuditEvent } = require("./audit");
@@ -1007,28 +1006,6 @@ function normalizeWestMarchesRewardBatchPayload(body) {
   };
 }
 
-function formatRewardAmount(value) {
-  return `+${new Intl.NumberFormat("en-GB").format(value)}`;
-}
-
-function buildRewardCharacterLine(character) {
-  const name =
-    typeof character?.name === "string" && character.name.trim()
-      ? character.name.trim()
-      : character?.id || "Unknown character";
-  const discordId = character?.user?.discordId;
-
-  return discordId ? `${name} <@${discordId}>` : name;
-}
-
-function truncateEmbedFieldValue(value) {
-  if (value.length <= 1024) {
-    return value;
-  }
-
-  return `${value.slice(0, 1021)}...`;
-}
-
 function truncateEmbedDescription(value) {
   if (value.length <= 4096) {
     return value;
@@ -1099,122 +1076,6 @@ async function notifyCalendarAnnouncement(event) {
   await postChannelMessage(
     calendarAnnouncementChannelId,
     buildCalendarAnnouncementPayload(event),
-  );
-}
-
-function buildRewardChannelPayload({ characters, rewardRequest, staffUser }) {
-  const submittedBy =
-    staffUser.globalName?.trim() || staffUser.username || "Unknown staff";
-  const characterLines = characters.map(buildRewardCharacterLine);
-  const mentionIds = [
-    ...new Set(
-      characters
-        .map((character) => character?.user?.discordId)
-        .filter((discordId) => typeof discordId === "string" && discordId),
-    ),
-  ];
-  const fields = [
-    {
-      name: "Characters",
-      value: truncateEmbedFieldValue(characterLines.join("\n") || "Unknown"),
-      inline: false,
-    },
-  ];
-
-  if (
-    typeof rewardRequest.experience === "number" &&
-    rewardRequest.experience > 0
-  ) {
-    fields.push({
-      name: "Exp",
-      value: formatRewardAmount(rewardRequest.experience),
-      inline: true,
-    });
-  }
-
-  if (
-    rewardRequest.currencies &&
-    typeof rewardRequest.currencies === "object" &&
-    westMarchesGoldCurrencyId &&
-    typeof rewardRequest.currencies[westMarchesGoldCurrencyId] === "number"
-  ) {
-    fields.push({
-      name: "Gold",
-      value: formatRewardAmount(
-        rewardRequest.currencies[westMarchesGoldCurrencyId],
-      ),
-      inline: true,
-    });
-  }
-
-  if (
-    rewardRequest.currencies &&
-    typeof rewardRequest.currencies === "object" &&
-    westMarchesScCurrencyId &&
-    typeof rewardRequest.currencies[westMarchesScCurrencyId] === "number"
-  ) {
-    fields.push({
-      name: "Stellar Coins",
-      value: formatRewardAmount(
-        rewardRequest.currencies[westMarchesScCurrencyId],
-      ),
-      inline: true,
-    });
-  }
-
-  fields.push({
-    name: "Reason",
-    value: truncateEmbedFieldValue(
-      rewardRequest.reason || "Rewards calculator submission",
-    ),
-    inline: false,
-  });
-
-  return {
-    embeds: [
-      {
-        title: "Rewards Distributed",
-        color: 0x4aa3ff,
-        fields,
-        footer: {
-          text: `Submitted by ${submittedBy}`,
-        },
-        timestamp: new Date().toISOString(),
-      },
-    ],
-    allowed_mentions: {
-      parse: [],
-      users: mentionIds,
-    },
-  };
-}
-
-async function notifyRewardChannel({ characterIds, rewardRequest, staffUser }) {
-  if (!westMarchesRewardChannelId) {
-    return;
-  }
-
-  const characters = await Promise.all(
-    characterIds.map(async (characterId) => {
-      try {
-        return await getCharacter(characterId);
-      } catch (characterError) {
-        console.warn(
-          "Failed to load West Marches character for Discord notification:",
-          characterError,
-        );
-        return { id: characterId, name: characterId, user: null };
-      }
-    }),
-  );
-
-  await postChannelMessage(
-    westMarchesRewardChannelId,
-    buildRewardChannelPayload({
-      characters,
-      rewardRequest,
-      staffUser,
-    }),
   );
 }
 
@@ -1540,21 +1401,6 @@ app.post(
         ),
       );
 
-      if (westMarchesRewardChannelId) {
-        try {
-          await notifyRewardChannel({
-            characterIds: normalizedPayload.characterIds,
-            rewardRequest: normalizedPayload.reward,
-            staffUser: req.staffUser,
-          });
-        } catch (notificationError) {
-          console.error(
-            "Failed to post reward batch notification to Discord:",
-            notificationError,
-          );
-        }
-      }
-
       await recordAuditEvent({
         action: "westmarches_reward_distribute_batch",
         status: "success",
@@ -1617,21 +1463,6 @@ app.post(
 
     try {
       const reward = await distributeReward(normalizedPayload);
-
-      if (westMarchesRewardChannelId) {
-        try {
-          await notifyRewardChannel({
-            characterIds: [normalizedPayload.characterId],
-            rewardRequest: normalizedPayload.reward,
-            staffUser: req.staffUser,
-          });
-        } catch (notificationError) {
-          console.error(
-            "Failed to post reward notification to Discord:",
-            notificationError,
-          );
-        }
-      }
 
       await recordAuditEvent({
         action: "westmarches_reward_distribute",
