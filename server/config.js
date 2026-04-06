@@ -114,5 +114,7 @@ module.exports = {
   westMarchesApiKey: process.env.WEST_MARCHES_API_KEY || "",
   westMarchesGoldCurrencyId: process.env.WEST_MARCHES_GOLD_CURRENCY_ID || "",
   westMarchesScCurrencyId: process.env.WEST_MARCHES_SC_CURRENCY_ID || "",
+  westMarchesEventCurrencyName:
+    process.env.WEST_MARCHES_EVENT_CURRENCY_NAME || "",
   westMarchesRewardChannelId: process.env.WEST_MARCHES_REWARD_CHANNEL_ID || "",
 };

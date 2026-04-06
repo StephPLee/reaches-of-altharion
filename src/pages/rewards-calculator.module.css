@@ -219,6 +219,35 @@
     box-shadow: 0 0 0 3px rgba(213, 195, 152, 0.12);
 }
 
+.toggleRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 0.85rem;
+    background: rgba(14, 17, 31, 0.78);
+    color: #e7e0f5;
+    cursor: pointer;
+}
+
+.toggleRow input {
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.15rem;
+}
+
+.toggleRow span {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.toggleRow small {
+    color: #cfd5e8;
+    font-size: 0.88rem;
+}
+
 .rewardGrid {
     display: grid;
     grid-template-columns: 1fr;
@@ -230,6 +259,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+
+.rewardGridQuad {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 .rewardGridDouble {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
