@@ -79,6 +79,7 @@ const {
   exchangeCodeForToken,
   fetchDiscordUser,
   fetchGuildMember,
+  fetchGuildRoles,
   memberHasRole,
   postChannelMessage,
 } = require("./discord");
@@ -1087,6 +1088,48 @@ async function notifyCalendarAnnouncement(event) {
   await postChannelMessage(
     calendarAnnouncementChannelId,
     buildCalendarAnnouncementPayload(event),
+  );
+}
+
+function normalizeAnnouncementRoleIds(roleIds) {
+  if (!Array.isArray(roleIds)) {
+    return [];
+  }
+
+  return [...new Set(
+    roleIds.filter(
+      (roleId) => typeof roleId === "string" && /^\d+$/.test(roleId.trim()),
+    ).map((roleId) => roleId.trim()),
+  )];
+}
+
+function buildTextAnnouncementPayload(content, roleIds = []) {
+  const normalizedRoleIds = normalizeAnnouncementRoleIds(roleIds);
+  const messageContent = normalizedRoleIds.length
+    ? content + "\n" + normalizedRoleIds.map((roleId) => `<@&${roleId}>`).join("\n")
+    : content;
+
+  return {
+    content: messageContent,
+    allowed_mentions: normalizedRoleIds.length
+      ? {
+          parse: [],
+          roles: normalizedRoleIds,
+        }
+      : {
+          parse: [],
+        },
+  };
+}
+
+async function notifyTextAnnouncement(content, roleIds = []) {
+  if (!calendarAnnouncementChannelId) {
+    return;
+  }
+
+  await postChannelMessage(
+    calendarAnnouncementChannelId,
+    buildTextAnnouncementPayload(content, roleIds),
   );
 }
 
@@ -2920,6 +2963,125 @@ app.post(
     } catch (logoutError) {
       console.error("Logout failed:", logoutError);
       res.status(500).json({ error: "Failed to log out." });
+    }
+  },
+);
+
+app.get(
+  "/api/admin/discord/roles",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (_req, res) => {
+    try {
+      const roles = await fetchGuildRoles();
+      const normalizedRoles = Array.isArray(roles)
+        ? roles
+            .filter(
+              (role) =>
+                role &&
+                typeof role.id === "string" &&
+                typeof role.name === "string" &&
+                role.name !== "@everyone",
+            )
+            .map((role) => ({
+              id: role.id,
+              name: role.name.trim(),
+              position:
+                typeof role.position === "number" ? role.position : 0,
+            }))
+            .sort(
+              (left, right) =>
+                right.position - left.position ||
+                left.name.localeCompare(right.name, undefined, {
+                  sensitivity: "base",
+                }),
+            )
+        : [];
+
+      res.json({ roles: normalizedRoles });
+    } catch (discordError) {
+      console.error("Failed to load Discord roles:", discordError);
+      res.status(500).json({ error: "Failed to load Discord roles." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/announcements",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const { content, roleIds, roleId } = req.body ?? {};
+
+    if (typeof content !== "string" || !content.trim()) {
+      res.status(400).json({ error: "content is required." });
+      return;
+    }
+
+    const normalizedContent = content.trim();
+    const normalizedRoleIds = normalizeAnnouncementRoleIds(
+      Array.isArray(roleIds)
+        ? roleIds
+        : typeof roleId === "string" && roleId.trim()
+          ? [roleId]
+          : [],
+    );
+    if (normalizedContent.length > 2000) {
+      res.status(400).json({
+        error: "content must be 2000 characters or fewer.",
+      });
+      return;
+    }
+
+    if (!calendarAnnouncementChannelId) {
+      res.status(503).json({
+        error: "Announcement channel is not configured.",
+      });
+      return;
+    }
+
+    try {
+      await notifyTextAnnouncement(normalizedContent, normalizedRoleIds);
+
+      await recordAuditEvent({
+        action: "discord_announcement_create",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          contentLength: normalizedContent.length,
+          roleIds: normalizedRoleIds,
+          preview: normalizedContent.slice(0, 200),
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ ok: true });
+    } catch (announcementError) {
+      console.error(
+        "Failed to post text announcement to Discord:",
+        announcementError,
+      );
+
+      await recordAuditEvent({
+        action: "discord_announcement_create",
+        status: "error",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          contentLength: normalizedContent.length,
+          roleIds: normalizedRoleIds,
+          error:
+            announcementError instanceof Error
+              ? announcementError.message
+              : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(500).json({ error: "Failed to post announcement." });
     }
   },
 );
