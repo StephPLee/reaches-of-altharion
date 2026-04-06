@@ -94,6 +94,7 @@ const {
 const {
   distributeReward,
   getCharacter,
+  getEventCurrencyMapping,
   isWestMarchesConfigured,
   listAllCharacters,
   listCharacterAttributeStats,
@@ -900,8 +901,9 @@ function parseOptionalWholeNumber(value) {
   return Math.trunc(value);
 }
 
-function normalizeWestMarchesRewardPayload(body) {
-  const { characterId, experience, gold, sc, reason, discordId } = body ?? {};
+async function normalizeWestMarchesRewardPayload(body) {
+  const { characterId, experience, gold, sc, reason, discordId, eventRelated } =
+    body ?? {};
 
   if (typeof characterId !== "string" || !characterId.trim()) {
     return { error: "characterId is required." };
@@ -952,6 +954,13 @@ function normalizeWestMarchesRewardPayload(body) {
       };
     }
     currencies[westMarchesScCurrencyId] = normalizedSc;
+
+    const eventCurrency = await getEventCurrencyMapping();
+    if (eventCurrency?.id) {
+      currencies[eventCurrency.id] = eventRelated
+        ? normalizedSc
+        : Math.floor(normalizedSc / 2);
+    }
   }
 
   return {
@@ -970,8 +979,9 @@ function normalizeWestMarchesRewardPayload(body) {
   };
 }
 
-function normalizeWestMarchesRewardBatchPayload(body) {
-  const { characterIds, experience, gold, sc, reason } = body ?? {};
+async function normalizeWestMarchesRewardBatchPayload(body) {
+  const { characterIds, experience, gold, sc, reason, eventRelated } =
+    body ?? {};
 
   if (
     !Array.isArray(characterIds) ||
@@ -986,12 +996,13 @@ function normalizeWestMarchesRewardBatchPayload(body) {
   }
 
   const firstCharacterId = characterIds[0].trim();
-  const normalizedSinglePayload = normalizeWestMarchesRewardPayload({
+  const normalizedSinglePayload = await normalizeWestMarchesRewardPayload({
     characterId: firstCharacterId,
     experience,
     gold,
     sc,
     reason,
+    eventRelated,
   });
 
   if (normalizedSinglePayload.error) {
@@ -1140,13 +1151,15 @@ app.get("/api/starting-graces", async (_req, res) => {
 app.get(
   "/api/rewards/westmarches/status",
   requireTrustedOrigin,
-  requireRewardSubmitSession,
   async (_req, res) => {
+    const eventCurrency = await getEventCurrencyMapping();
+
     res.json({
       configured: isWestMarchesConfigured(),
       currencyMappings: {
         gold: westMarchesGoldCurrencyId || null,
         sc: westMarchesScCurrencyId || null,
+        event: eventCurrency,
       },
     });
   },
@@ -1385,7 +1398,10 @@ app.post(
       return;
     }
 
-    const normalizedPayload = normalizeWestMarchesRewardBatchPayload(req.body);
+    const normalizedPayload = await normalizeWestMarchesRewardBatchPayload(
+      req.body,
+    );
+
     if (normalizedPayload.error) {
       res.status(400).json({ error: normalizedPayload.error });
       return;
@@ -1455,7 +1471,8 @@ app.post(
       return;
     }
 
-    const normalizedPayload = normalizeWestMarchesRewardPayload(req.body);
+    const normalizedPayload = await normalizeWestMarchesRewardPayload(req.body);
+
     if (normalizedPayload.error) {
       res.status(400).json({ error: normalizedPayload.error });
       return;

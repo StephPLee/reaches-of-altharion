@@ -50,6 +50,10 @@ type WestMarchesStatus = {
   currencyMappings: {
     gold: string | null;
     sc: string | null;
+    event: {
+      id: string;
+      name: string;
+    } | null;
   };
 };
 
@@ -297,6 +301,7 @@ export default function RewardsCalculatorPage(): ReactNode {
   const [minutes, setMinutes] = useState("0");
   const [questLevel, setQuestLevel] = useState("6");
   const [players, setPlayers] = useState("5");
+  const [isEventRelated, setIsEventRelated] = useState(false);
   const [rpHours, setRpHours] = useState("0");
   const [rpMinutes, setRpMinutes] = useState("10");
   const [rpLevel, setRpLevel] = useState("4");
@@ -377,8 +382,49 @@ export default function RewardsCalculatorPage(): ReactNode {
   }, [authApiBaseUrl]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadWestMarchesStatus() {
+      try {
+        const response = await fetch(
+          `${authApiBaseUrl}/api/rewards/westmarches/status`,
+          {
+            credentials: "include",
+          },
+        );
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            payload.error || "Failed to load West Marches status.",
+          );
+        }
+
+        if (!cancelled) {
+          setWestMarchesStatus(payload);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setWestMarchesError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Failed to load West Marches status.",
+          );
+        }
+      }
+    }
+
+    loadWestMarchesStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [authApiBaseUrl]);
+
+  useEffect(() => {
     if (!user?.canSubmitRewards) {
       setIsWestMarchesLoading(false);
+      setCharacters([]);
+      setCurrencies([]);
       return;
     }
 
@@ -389,32 +435,21 @@ export default function RewardsCalculatorPage(): ReactNode {
         setIsWestMarchesLoading(true);
         setWestMarchesError("");
 
-        const [statusResponse, charactersResponse, currenciesResponse] =
-          await Promise.all([
-            fetch(`${authApiBaseUrl}/api/rewards/westmarches/status`, {
-              credentials: "include",
-            }),
-            fetch(`${authApiBaseUrl}/api/rewards/westmarches/characters`, {
-              credentials: "include",
-            }),
-            fetch(`${authApiBaseUrl}/api/rewards/westmarches/currencies`, {
-              credentials: "include",
-            }),
-          ]);
+        const [charactersResponse, currenciesResponse] = await Promise.all([
+          fetch(`${authApiBaseUrl}/api/rewards/westmarches/characters`, {
+            credentials: "include",
+          }),
+          fetch(`${authApiBaseUrl}/api/rewards/westmarches/currencies`, {
+            credentials: "include",
+          }),
+        ]);
 
-        const statusPayload = await statusResponse.json().catch(() => ({}));
         const charactersPayload = await charactersResponse
           .json()
           .catch(() => ({}));
         const currenciesPayload = await currenciesResponse
           .json()
           .catch(() => ({}));
-
-        if (!statusResponse.ok) {
-          throw new Error(
-            statusPayload.error || "Failed to load West Marches status.",
-          );
-        }
 
         if (!charactersResponse.ok) {
           throw new Error(
@@ -431,7 +466,6 @@ export default function RewardsCalculatorPage(): ReactNode {
         }
 
         if (!cancelled) {
-          setWestMarchesStatus(statusPayload);
           setCharacters(() => {
             const nextCharacters = Array.isArray(charactersPayload.characters)
               ? charactersPayload.characters
@@ -496,6 +530,20 @@ export default function RewardsCalculatorPage(): ReactNode {
   const dmXp = questDuration * dmRewardRow.xpPerHour;
   const dmGold = questDuration * dmRewardRow.goldPerHour;
   const dmSc = Math.trunc(safeHours) * 2;
+  const eventCurrencyName =
+    westMarchesStatus?.currencyMappings.event?.name?.trim() || "";
+  const hasEventCurrency = Boolean(eventCurrencyName);
+  const playerRf = hasEventCurrency
+    ? isEventRelated
+      ? playerSc
+      : Math.floor(playerSc / 2)
+    : 0;
+  const dmRf = hasEventCurrency
+    ? isEventRelated
+      ? dmSc
+      : Math.floor(dmSc / 2)
+    : 0;
+
 
   const rpXp = Math.round((rpDuration * rpRewardRow.xpPerHour) / 3);
   const rpGold = Math.round((rpDuration * rpRewardRow.goldPerHour) / 3);
@@ -536,6 +584,7 @@ export default function RewardsCalculatorPage(): ReactNode {
             experience: Math.round(playerXp),
             gold: Math.round(playerGold),
             sc: playerSc,
+            eventRelated: isEventRelated,
             reason: playerReason.trim() || playerDefaultReason,
           }
         : target === "dm"
@@ -544,6 +593,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               experience: Math.round(dmXp),
               gold: Math.round(dmGold),
               sc: dmSc,
+              eventRelated: isEventRelated,
               reason: dmReason.trim() || dmDefaultReason,
             }
           : {
@@ -582,6 +632,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               experience: targetConfig.experience,
               gold: targetConfig.gold,
               sc: targetConfig.sc,
+              eventRelated: isEventRelated,
               reason: targetConfig.reason,
             }),
           },
@@ -822,6 +873,24 @@ export default function RewardsCalculatorPage(): ReactNode {
                     />
                   </div>
                 </div>
+                {hasEventCurrency ? (
+                  <label className={styles.toggleRow} htmlFor="event-related">
+                    <input
+                      id="event-related"
+                      type="checkbox"
+                      checked={isEventRelated}
+                      onChange={(event) =>
+                        setIsEventRelated(event.target.checked)
+                      }
+                    />
+                    <span>
+                      Event related quest
+                      <small>
+                        {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"} of SC.
+                      </small>
+                    </span>
+                  </label>
+                ) : null}
               </section>
 
               {!isAuthLoading &&
@@ -849,7 +918,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               <section className={`${styles.panel} ${styles.rewardPanel}`}>
                 <Heading as="h2">Player Rewards</Heading>
                 <div
-                  className={`${styles.rewardGrid} ${styles.rewardGridTriple}`}
+                  className={`${styles.rewardGrid} ${hasEventCurrency ? styles.rewardGridQuad : styles.rewardGridTriple}`}
                 >
                   <div className={styles.rewardCard}>
                     <span className={styles.rewardLabel}>XP</span>
@@ -869,7 +938,20 @@ export default function RewardsCalculatorPage(): ReactNode {
                       {formatReward(playerSc)}
                     </span>
                   </div>
+                  {hasEventCurrency ? (
+                    <div className={styles.rewardCard}>
+                      <span className={styles.rewardLabel}>{eventCurrencyName}</span>
+                      <span className={styles.rewardValue}>
+                        {formatReward(playerRf)}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
+                {hasEventCurrency ? (
+                  <p className={styles.muted}>
+                    {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"} of SC for player rewards.
+                  </p>
+                ) : null}
                 {user?.canSubmitRewards
                   ? renderRewardSubmissionControls(
                       "player",
@@ -884,7 +966,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               <section className={`${styles.panel} ${styles.rewardPanel}`}>
                 <Heading as="h2">DM Rewards</Heading>
                 <div
-                  className={`${styles.rewardGrid} ${styles.rewardGridTriple}`}
+                  className={`${styles.rewardGrid} ${hasEventCurrency ? styles.rewardGridQuad : styles.rewardGridTriple}`}
                 >
                   <div className={styles.rewardCard}>
                     <span className={styles.rewardLabel}>XP</span>
@@ -904,7 +986,20 @@ export default function RewardsCalculatorPage(): ReactNode {
                       {formatReward(dmSc)}
                     </span>
                   </div>
+                  {hasEventCurrency ? (
+                    <div className={styles.rewardCard}>
+                      <span className={styles.rewardLabel}>{eventCurrencyName}</span>
+                      <span className={styles.rewardValue}>
+                        {formatReward(dmRf)}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
+                {hasEventCurrency ? (
+                  <p className={styles.muted}>
+                    {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"} of SC for DM rewards.
+                  </p>
+                ) : null}
                 <p className={styles.muted}>
                   DM rewards use an effective quest level of{" "}
                   <strong>{safeQuestLevel + dmBonusLevel}</strong> based on{" "}

@@ -1,4 +1,8 @@
-const { westMarchesApiBaseUrl, westMarchesApiKey } = require("./config");
+const {
+  westMarchesApiBaseUrl,
+  westMarchesApiKey,
+  westMarchesEventCurrencyName,
+} = require("./config");
 const ATTRIBUTE_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const CHARACTER_DETAIL_BATCH_SIZE = 10;
 const CLASS_ATTRIBUTE_NAME = "class";
@@ -30,6 +34,10 @@ let guildRosterCache = {
   value: null,
 };
 let activeCharacterDetailsCache = {
+  expiresAt: 0,
+  value: null,
+};
+let eventCurrencyCache = {
   expiresAt: 0,
   value: null,
 };
@@ -127,6 +135,44 @@ async function listAllCharacters() {
 async function listCurrencies() {
   const payload = await westMarchesFetch("/currencies");
   return Array.isArray(payload.data) ? payload.data : [];
+}
+
+async function getEventCurrencyMapping() {
+  const currencyName =
+    typeof westMarchesEventCurrencyName === "string"
+      ? westMarchesEventCurrencyName.trim()
+      : "";
+
+  if (!currencyName) {
+    return null;
+  }
+
+  const now = Date.now();
+  if (eventCurrencyCache.value && eventCurrencyCache.expiresAt > now) {
+    return eventCurrencyCache.value;
+  }
+
+  const currencies = await listCurrencies();
+  const match =
+    currencies.find(
+      (currency) =>
+        typeof currency?.name === "string" &&
+        currency.name.trim().localeCompare(currencyName, undefined, {
+          sensitivity: "accent",
+        }) === 0,
+    ) || null;
+
+  eventCurrencyCache = {
+    value: match
+      ? {
+          id: match.id,
+          name: match.name.trim(),
+        }
+      : null,
+    expiresAt: now + ATTRIBUTE_STATS_CACHE_TTL_MS,
+  };
+
+  return eventCurrencyCache.value;
 }
 
 async function getCharacter(characterId) {
@@ -369,4 +415,5 @@ module.exports = {
   listCharacterAttributeStats,
   listGuildRosters,
   listCurrencies,
+  getEventCurrencyMapping,
 };
