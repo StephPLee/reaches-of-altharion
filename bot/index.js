@@ -8,6 +8,7 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 const {
   ActionRowBuilder,
   Client,
+  EmbedBuilder,
   GatewayIntentBits,
   REST,
   Routes,
@@ -234,6 +235,22 @@ async function getRandomMagicItem(rarity) {
   return result.rows[0] ?? null;
 }
 
+function buildMagicItemResultEmbed({ user, rarity, itemName }) {
+  return new EmbedBuilder()
+    .setColor(0x4caf50)
+    .setTitle("Magic Item Draw Complete")
+    .setDescription(
+      `Directive: 1 ${rarity.label.toLowerCase()} roll for ${user}.\n` +
+        `Outcome: **${itemName}**`,
+    )
+    .addFields(
+      { name: "Rarity", value: rarity.label, inline: true },
+      { name: "Result", value: itemName, inline: true },
+    )
+    .setFooter({ text: "Use /magicitem to roll again." })
+    .setTimestamp();
+}
+
 const bot = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
@@ -295,6 +312,20 @@ bot.on("interactionCreate", async (interaction) => {
           buildMagicItemRarityRow(interaction.user.id, selectedRarity),
         ],
       });
+
+      if (interaction.channel) {
+        await interaction.channel.send({
+          content: `${interaction.user} rolled a magic item.`,
+          embeds: [
+            buildMagicItemResultEmbed({
+              user: interaction.user.toString(),
+              rarity,
+              itemName: item.item_label,
+            }),
+          ],
+          allowedMentions: { users: [interaction.user.id] },
+        });
+      }
     } catch (error) {
       console.error("Failed to process magic item select menu:", error);
       if (interaction.deferred || interaction.replied) {
