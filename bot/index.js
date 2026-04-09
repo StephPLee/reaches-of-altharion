@@ -221,11 +221,21 @@ function buildMagicItemRarityRow(discordUserId, selectedRarity = null) {
 async function getRandomMagicItem(rarity) {
   const result = await pool.query(
     `
+    WITH ranked_items AS (
+      SELECT
+        id,
+        name,
+        ROW_NUMBER() OVER (ORDER BY sort_order ASC, id ASC) AS roll_number,
+        COUNT(*) OVER () AS total_count
+      FROM magic_items
+      WHERE rarity = $1
+        AND is_published = true
+    )
     SELECT
-      name AS item_label
-    FROM magic_items
-    WHERE rarity = $1
-      AND is_published = true
+      name AS item_label,
+      roll_number,
+      total_count
+    FROM ranked_items
     ORDER BY RANDOM()
     LIMIT 1
     `,
@@ -235,19 +245,87 @@ async function getRandomMagicItem(rarity) {
   return result.rows[0] ?? null;
 }
 
-function buildMagicItemResultEmbed({ user, rarity, itemName }) {
+function getMagicItemRarityTheme(rarityValue) {
+  switch (rarityValue) {
+    case "common":
+      return {
+        color: 0x9e9e9e,
+        title: "Vault Lot Drawn",
+        flavor:
+          "From the lower cedar racks, the quartermaster produces a serviceable charm fit for a prepared traveler.",
+      };
+    case "uncommon":
+      return {
+        color: 0x43a047,
+        title: "Vault Lot Drawn",
+        flavor:
+          "A brighter glimmer answers the summons as the vault yields a prize of uncommon merit.",
+      };
+    case "rare":
+      return {
+        color: 0x1e88e5,
+        title: "Vault Lot Drawn",
+        flavor:
+          "The warded cabinets part and a rarer treasure is brought forth with due ceremony.",
+      };
+    case "veryrare":
+      return {
+        color: 0x8e24aa,
+        title: "Vault Lot Drawn",
+        flavor:
+          "The deeper sigils awaken. What emerges is no ordinary relic, but a piece of notable power.",
+      };
+    case "legendary":
+      return {
+        color: 0xffb300,
+        title: "Vault Lot Drawn",
+        flavor:
+          "Ancient wards answer the call, and the vault releases a treasure spoken of more often than seen.",
+      };
+    default:
+      return {
+        color: 0x607d8b,
+        title: "Vault Lot Drawn",
+        flavor: "The vault stirs and yields its chosen prize.",
+      };
+  }
+}
+
+function getDisplayName(interaction) {
+  if (interaction.member && "displayName" in interaction.member) {
+    return interaction.member.displayName;
+  }
+
+  return interaction.user.globalName || interaction.user.username;
+}
+
+function buildMagicItemResultEmbed({
+  displayName,
+  userMention,
+  userAvatarUrl,
+  rarity,
+  rollNumber,
+  totalCount,
+  itemName,
+}) {
+  const theme = getMagicItemRarityTheme(rarity.value);
+
   return new EmbedBuilder()
-    .setColor(0x4caf50)
-    .setTitle("Magic Item Draw Complete")
+    .setColor(theme.color)
+    .setAuthor({
+      name: displayName,
+      iconURL: userAvatarUrl,
+    })
+    .setTitle(theme.title)
     .setDescription(
-      `Directive: 1 ${rarity.label.toLowerCase()} roll for ${user}.\n` +
-        `Outcome: **${itemName}**`,
+      `${theme.flavor}\n\nMarked claimant: ${userMention}`,
     )
     .addFields(
       { name: "Rarity", value: rarity.label, inline: true },
-      { name: "Result", value: itemName, inline: true },
+      { name: "Roll", value: `${rollNumber} / ${totalCount}`, inline: true },
+      { name: "Item", value: `**${itemName}**` },
     )
-    .setFooter({ text: "Use /magicitem to roll again." })
+    .setFooter({ text: "The vault stands ready for the next draw." })
     .setTimestamp();
 }
 
@@ -314,12 +392,17 @@ bot.on("interactionCreate", async (interaction) => {
       });
 
       if (interaction.channel) {
+        const displayName = getDisplayName(interaction);
         await interaction.channel.send({
-          content: `${interaction.user} rolled a magic item.`,
+          content: `${interaction.user}`,
           embeds: [
             buildMagicItemResultEmbed({
-              user: interaction.user.toString(),
+              displayName,
+              userMention: interaction.user.toString(),
+              userAvatarUrl: interaction.user.displayAvatarURL(),
               rarity,
+              rollNumber: item.roll_number,
+              totalCount: item.total_count,
               itemName: item.item_label,
             }),
           ],
