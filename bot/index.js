@@ -6,11 +6,13 @@ dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const {
+  ActionRowBuilder,
   Client,
   GatewayIntentBits,
   REST,
   Routes,
   SlashCommandBuilder,
+  StringSelectMenuBuilder,
 } = require("discord.js");
 const { Pool } = require("pg");
 
@@ -45,7 +47,38 @@ const commands = [
   new SlashCommandBuilder()
     .setName("cc-link")
     .setDescription("Get your assigned character creation campaign link."),
+  new SlashCommandBuilder()
+    .setName("magicitem")
+    .setDescription("Roll a random magic item from a selected rarity."),
 ].map((command) => command.toJSON());
+
+const MAGIC_ITEM_RARITIES = [
+  {
+    value: "common",
+    label: "Common",
+    description: "Roll a random common magic item.",
+  },
+  {
+    value: "uncommon",
+    label: "Uncommon",
+    description: "Roll a random uncommon magic item.",
+  },
+  {
+    value: "rare",
+    label: "Rare",
+    description: "Roll a random rare magic item.",
+  },
+  {
+    value: "veryrare",
+    label: "Very Rare",
+    description: "Roll a random very rare magic item.",
+  },
+  {
+    value: "legendary",
+    label: "Legendary",
+    description: "Roll a random legendary magic item.",
+  },
+];
 
 async function registerGuildCommands() {
   const rest = new REST({ version: "10" }).setToken(config.token);
@@ -53,7 +86,7 @@ async function registerGuildCommands() {
     Routes.applicationGuildCommands(config.clientId, config.guildId),
     { body: commands },
   );
-  console.log("Slash command registered: /cc-link");
+  console.log("Slash commands registered: /cc-link, /magicitem");
 }
 
 function hasRequiredRole(interaction) {
@@ -168,6 +201,39 @@ async function getOrAssignCampaign(discordUserId) {
   }
 }
 
+function buildMagicItemRarityRow(discordUserId, selectedRarity = null) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`magicitem:${discordUserId}`)
+    .setPlaceholder("Select a rarity...")
+    .addOptions(
+      MAGIC_ITEM_RARITIES.map((rarity) => ({
+        label: rarity.label,
+        description: rarity.description,
+        value: rarity.value,
+        default: rarity.value === selectedRarity,
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+async function getRandomMagicItem(rarity) {
+  const result = await pool.query(
+    `
+    SELECT
+      name AS item_label
+    FROM magic_items
+    WHERE rarity = $1
+      AND is_published = true
+    ORDER BY RANDOM()
+    LIMIT 1
+    `,
+    [rarity],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 const bot = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
@@ -182,11 +248,72 @@ bot.once("ready", async () => {
 });
 
 bot.on("interactionCreate", async (interaction) => {
-  if (!interaction.isChatInputCommand()) {
+  if (interaction.isStringSelectMenu()) {
+    if (!interaction.customId.startsWith("magicitem:")) {
+      return;
+    }
+
+    const ownerId = interaction.customId.slice("magicitem:".length);
+    if (ownerId !== interaction.user.id) {
+      await interaction.reply({
+        content: "Use your own `/magicitem` command so the menu belongs to you.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      const selectedRarity = interaction.values[0];
+      const rarity = MAGIC_ITEM_RARITIES.find(
+        (entry) => entry.value === selectedRarity,
+      );
+
+      if (!rarity) {
+        await interaction.reply({
+          content: "That rarity is not supported.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const item = await getRandomMagicItem(selectedRarity);
+      if (!item) {
+        await interaction.update({
+          content:
+            `No published magic items are available for **${rarity.label}** yet.`,
+          components: [
+            buildMagicItemRarityRow(interaction.user.id, selectedRarity),
+          ],
+        });
+        return;
+      }
+
+      await interaction.update({
+        content:
+          `**${rarity.label} Magic Item:** ${item.item_label}\nUse the menu to roll again.`,
+        components: [
+          buildMagicItemRarityRow(interaction.user.id, selectedRarity),
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to process magic item select menu:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while rolling your magic item. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while rolling your magic item. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
     return;
   }
 
-  if (interaction.commandName !== "cc-link") {
+  if (!interaction.isChatInputCommand()) {
     return;
   }
 
@@ -195,6 +322,19 @@ bot.on("interactionCreate", async (interaction) => {
       content: "Use this command inside the server.",
       ephemeral: true,
     });
+    return;
+  }
+
+  if (interaction.commandName === "magicitem") {
+    await interaction.reply({
+      content: "Choose a rarity to roll a random magic item.",
+      components: [buildMagicItemRarityRow(interaction.user.id)],
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (interaction.commandName !== "cc-link") {
     return;
   }
 

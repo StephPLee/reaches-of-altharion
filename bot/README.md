@@ -1,6 +1,9 @@
 # CC Link Bot Setup
 
-This bot provides `/cc-link` in your Discord server and returns a single assigned DnD Beyond campaign link from Postgres.
+This bot provides `/cc-link` and `/magicitem` in your Discord server.
+
+- `/cc-link` returns a single assigned DnD Beyond campaign link from Postgres.
+- `/magicitem` opens a rarity dropdown and rolls a random seeded magic item from Postgres.
 
 ## 1) Discord Developer Portal
 
@@ -22,8 +25,10 @@ Make sure these tables exist:
 - `cc_campaigns`
 - `cc_assignments`
 - `cc_audit_log`
+- `magic_items`
 
 Populate `cc_campaigns` with your `CC1..CC15` links.
+Run `sql/016_seed_magic_items.sql` to create and seed the dedicated `magic_items` table.
 
 ## 3) Environment Variables
 
@@ -46,7 +51,7 @@ npm install
 npm run bot:start
 ```
 
-When the bot starts, it auto-registers `/cc-link` in the configured guild.
+When the bot starts, it auto-registers `/cc-link` and `/magicitem` in the configured guild.
 
 ## 5) Deploy on Railway
 
@@ -61,3 +66,4 @@ When the bot starts, it auto-registers `/cc-link` in the configured guild.
 - First `/cc-link` request from a user: assigns least-used active campaign.
 - Later requests from same user: returns same link.
 - Writes events into `cc_audit_log`.
+- `/magicitem` shows a rarity select menu and rolls a random published item from the dedicated `magic_items` table.
