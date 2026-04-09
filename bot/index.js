@@ -81,6 +81,9 @@ const MAGIC_ITEM_RARITIES = [
   },
 ];
 
+const MAGIC_ITEM_RESULT_GIF_URL =
+  "https://cdn.discordapp.com/attachments/1088129532214644776/1465689802887401607/rashaken-idleon.gif";
+
 async function registerGuildCommands() {
   const rest = new REST({ version: "10" }).setToken(config.token);
   await rest.put(
@@ -325,6 +328,7 @@ function buildMagicItemResultEmbed({
       { name: "Roll", value: `${rollNumber} / ${totalCount}`, inline: true },
       { name: "Item", value: `**${itemName}**` },
     )
+    .setThumbnail(MAGIC_ITEM_RESULT_GIF_URL)
     .setFooter({ text: "The vault stands ready for the next draw." })
     .setTimestamp();
 }
@@ -391,9 +395,9 @@ bot.on("interactionCreate", async (interaction) => {
         ],
       });
 
-      if (interaction.channel) {
+      try {
         const displayName = getDisplayName(interaction);
-        await interaction.channel.send({
+        await interaction.followUp({
           content: `${interaction.user}`,
           embeds: [
             buildMagicItemResultEmbed({
@@ -406,8 +410,14 @@ bot.on("interactionCreate", async (interaction) => {
               itemName: item.item_label,
             }),
           ],
-          allowedMentions: { users: [interaction.user.id] },
+          ephemeral: false,
+          allowedMentions: {
+            parse: [],
+            users: [interaction.user.id],
+          },
         });
+      } catch (postError) {
+        console.error("Failed to post public magic item result:", postError);
       }
     } catch (error) {
       console.error("Failed to process magic item select menu:", error);
