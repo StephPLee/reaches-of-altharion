@@ -613,50 +613,48 @@ export default function RewardsCalculatorPage(): ReactNode {
       return;
     }
 
+    const rewards =
+      target === "player"
+        ? targetConfig.characterIds.map((characterId) => ({
+            characterId,
+            experience: targetConfig.experience,
+            gold: targetConfig.gold,
+            sc: targetConfig.sc,
+            eventRelated: targetConfig.eventRelated,
+            reason: targetConfig.reason,
+          }))
+        : [
+            {
+              characterId: targetConfig.characterId,
+              experience: targetConfig.experience,
+              gold: targetConfig.gold,
+              sc: targetConfig.sc,
+              reason: targetConfig.reason,
+              ...(target === "dm"
+                ? { eventRelated: targetConfig.eventRelated }
+                : {}),
+            },
+          ];
+
     try {
       setSubmittingTarget(target);
       setSubmissionError("");
       setSubmissionMessage("");
 
-      if (target === "player") {
-        const response = await fetch(
-          `${authApiBaseUrl}/api/rewards/westmarches/rewards/batch`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              characterIds: targetConfig.characterIds,
-              experience: targetConfig.experience,
-              gold: targetConfig.gold,
-              sc: targetConfig.sc,
-              eventRelated: isEventRelated,
-              reason: targetConfig.reason,
-            }),
+      const response = await fetch(
+        `${authApiBaseUrl}/api/rewards/westmarches/rewards`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(payload.error || "Failed to submit rewards.");
-        }
-      } else {
-        const response = await fetch(
-          `${authApiBaseUrl}/api/rewards/westmarches/rewards`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(targetConfig),
-          },
-        );
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(payload.error || "Failed to submit rewards.");
-        }
+          body: JSON.stringify({ rewards }),
+        },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to submit rewards.");
       }
 
       setSubmissionMessage(

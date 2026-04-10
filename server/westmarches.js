@@ -398,17 +398,17 @@ async function listGuildRosters() {
   return result;
 }
 
-async function distributeReward({ characterId, reward }) {
-  const payload = await westMarchesFetch(`/characters/${characterId}/rewards`, {
+async function distributeRewards(rewards) {
+  const payload = await westMarchesFetch("/rewards", {
     method: "POST",
-    body: JSON.stringify(reward),
+    body: JSON.stringify({ rewards }),
   });
 
-  return payload.data ?? null;
+  return Array.isArray(payload.data) ? payload.data : [];
 }
 
 module.exports = {
-  distributeReward,
+  distributeRewards,
   getCharacter,
   isWestMarchesConfigured,
   listAllCharacters,
