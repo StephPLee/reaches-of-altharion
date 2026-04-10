@@ -93,7 +93,7 @@ const {
   updateUserRoleStatus,
 } = require("./sessions");
 const {
-  distributeReward,
+  distributeRewards,
   getCharacter,
   getEventCurrencyMapping,
   isWestMarchesConfigured,
@@ -902,7 +902,7 @@ function parseOptionalWholeNumber(value) {
   return Math.trunc(value);
 }
 
-async function normalizeWestMarchesRewardPayload(body) {
+async function normalizeWestMarchesRewardEntry(body) {
   const { characterId, experience, gold, sc, reason, discordId, eventRelated } =
     body ?? {};
 
@@ -966,17 +966,15 @@ async function normalizeWestMarchesRewardPayload(body) {
 
   return {
     characterId: characterId.trim(),
-    reward: {
-      ...(normalizedExperience > 0 ? { experience: normalizedExperience } : {}),
-      ...(Object.keys(currencies).length > 0 ? { currencies } : {}),
-      reason:
-        typeof reason === "string" && reason.trim()
-          ? reason.trim().slice(0, 500)
-          : "Rewards calculator submission",
-      ...(typeof discordId === "string" && discordId.trim()
-        ? { discordId: discordId.trim() }
-        : {}),
-    },
+    ...(normalizedExperience > 0 ? { experience: normalizedExperience } : {}),
+    ...(Object.keys(currencies).length > 0 ? { currencies } : {}),
+    reason:
+      typeof reason === "string" && reason.trim()
+        ? reason.trim().slice(0, 500)
+        : "Rewards calculator submission",
+    ...(typeof discordId === "string" && discordId.trim()
+      ? { discordId: discordId.trim() }
+      : {}),
   };
 }
 
@@ -997,7 +995,7 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
   }
 
   const firstCharacterId = characterIds[0].trim();
-  const normalizedSinglePayload = await normalizeWestMarchesRewardPayload({
+  const normalizedRewardEntry = await normalizeWestMarchesRewardEntry({
     characterId: firstCharacterId,
     experience,
     gold,
@@ -1006,16 +1004,69 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
     eventRelated,
   });
 
-  if (normalizedSinglePayload.error) {
-    return normalizedSinglePayload;
+  if (normalizedRewardEntry.error) {
+    return normalizedRewardEntry;
   }
 
   return {
     characterIds: [
       ...new Set(characterIds.map((characterId) => characterId.trim())),
     ],
-    reward: normalizedSinglePayload.reward,
+    reward: {
+      ...(typeof normalizedRewardEntry.experience === "number"
+        ? { experience: normalizedRewardEntry.experience }
+        : {}),
+      ...(normalizedRewardEntry.currencies
+        ? { currencies: normalizedRewardEntry.currencies }
+        : {}),
+      reason: normalizedRewardEntry.reason,
+      ...(normalizedRewardEntry.discordId
+        ? { discordId: normalizedRewardEntry.discordId }
+        : {}),
+    },
   };
+}
+
+async function normalizeWestMarchesBulkRewardsPayload(body) {
+  if (Array.isArray(body?.rewards)) {
+    if (body.rewards.length === 0) {
+      return { error: "rewards must contain at least one reward entry." };
+    }
+
+    const rewards = [];
+
+    for (const rewardBody of body.rewards) {
+      const normalizedReward = await normalizeWestMarchesRewardEntry(rewardBody);
+
+      if (normalizedReward.error) {
+        return normalizedReward;
+      }
+
+      rewards.push(normalizedReward);
+    }
+
+    return { rewards };
+  }
+
+  const normalizedBatchPayload =
+    await normalizeWestMarchesRewardBatchPayload(body);
+
+  if (!normalizedBatchPayload.error) {
+    return {
+      rewards: normalizedBatchPayload.characterIds.map((characterId) => ({
+        characterId,
+        ...normalizedBatchPayload.reward,
+      })),
+    };
+  }
+
+  const normalizedReward = await normalizeWestMarchesRewardEntry(body);
+
+  if (normalizedReward.error) {
+    return normalizedBatchPayload;
+  }
+
+  return { rewards: [normalizedReward] };
 }
 
 function truncateEmbedDescription(value) {
@@ -1441,7 +1492,7 @@ app.post(
       return;
     }
 
-    const normalizedPayload = await normalizeWestMarchesRewardBatchPayload(
+    const normalizedPayload = await normalizeWestMarchesBulkRewardsPayload(
       req.body,
     );
 
@@ -1451,14 +1502,7 @@ app.post(
     }
 
     try {
-      const rewards = await Promise.all(
-        normalizedPayload.characterIds.map((characterId) =>
-          distributeReward({
-            characterId,
-            reward: normalizedPayload.reward,
-          }),
-        ),
-      );
+      const rewards = await distributeRewards(normalizedPayload.rewards);
 
       await recordAuditEvent({
         action: "westmarches_reward_distribute_batch",
@@ -1466,7 +1510,9 @@ app.post(
         userId: req.staffUser.id,
         discordUserId: req.staffUser.discordUserId,
         metadata: {
-          characterIds: normalizedPayload.characterIds,
+          characterIds: normalizedPayload.rewards.map(
+            (reward) => reward.characterId,
+          ),
           rewards,
         },
         ...getRequestMetadata(req),
@@ -1485,7 +1531,9 @@ app.post(
         userId: req.staffUser.id,
         discordUserId: req.staffUser.discordUserId,
         metadata: {
-          characterIds: normalizedPayload.characterIds,
+          characterIds: normalizedPayload.rewards.map(
+            (reward) => reward.characterId,
+          ),
           error:
             westMarchesError instanceof Error
               ? westMarchesError.message
@@ -1514,7 +1562,9 @@ app.post(
       return;
     }
 
-    const normalizedPayload = await normalizeWestMarchesRewardPayload(req.body);
+    const normalizedPayload = await normalizeWestMarchesBulkRewardsPayload(
+      req.body,
+    );
 
     if (normalizedPayload.error) {
       res.status(400).json({ error: normalizedPayload.error });
@@ -1522,7 +1572,8 @@ app.post(
     }
 
     try {
-      const reward = await distributeReward(normalizedPayload);
+      const rewards = await distributeRewards(normalizedPayload.rewards);
+      const [reward] = rewards;
 
       await recordAuditEvent({
         action: "westmarches_reward_distribute",
@@ -1530,13 +1581,17 @@ app.post(
         userId: req.staffUser.id,
         discordUserId: req.staffUser.discordUserId,
         metadata: {
-          characterId: normalizedPayload.characterId,
-          reward,
+          characterIds: normalizedPayload.rewards.map(
+            (entry) => entry.characterId,
+          ),
+          rewards,
         },
         ...getRequestMetadata(req),
       });
 
-      res.status(201).json({ reward });
+      res.status(201).json(
+        normalizedPayload.rewards.length === 1 ? { reward } : { rewards },
+      );
     } catch (westMarchesError) {
       console.error(
         "Failed to distribute West Marches reward:",
@@ -1549,7 +1604,9 @@ app.post(
         userId: req.staffUser.id,
         discordUserId: req.staffUser.discordUserId,
         metadata: {
-          characterId: normalizedPayload.characterId,
+          characterIds: normalizedPayload.rewards.map(
+            (entry) => entry.characterId,
+          ),
           error:
             westMarchesError instanceof Error
               ? westMarchesError.message
