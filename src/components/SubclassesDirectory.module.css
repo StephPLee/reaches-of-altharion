@@ -328,7 +328,11 @@
 }
 
 .sectionBodyCollapsed {
-    display: none;
+    display: none !important;
+}
+
+.sectionBody[hidden] {
+    display: none !important;
 }
 
 .linkList {
