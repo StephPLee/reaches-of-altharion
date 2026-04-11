@@ -970,10 +970,16 @@ export default function BoonsDirectory() {
                     ) : null}
                   </div>
 
+                  {isCollapsed ? (
+                    <p className={styles.collapseStatus}>
+                      Boon collapsed. Use this heading or Expand all to show its details.
+                    </p>
+                  ) : null}
                   <div
                     className={
                       isCollapsed ? styles.boonBodyCollapsed : styles.boonBody
                     }
+                    hidden={isCollapsed}
                   >
                     {isEditingThisBoon ? (
                       renderBoonComposer("Save Boon", "Cancel", resetBoonForm)

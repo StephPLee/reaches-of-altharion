@@ -307,6 +307,12 @@
     gap: 1rem;
 }
 
+.collapseStatus {
+    margin: -0.35rem 0 0.6rem;
+    color: rgba(188, 199, 230, 0.78);
+    font-size: 0.86rem;
+}
+
 .rosterSection {
     display: grid;
     gap: 0.85rem;

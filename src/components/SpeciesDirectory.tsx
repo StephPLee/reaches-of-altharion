@@ -1098,10 +1098,16 @@ export default function SpeciesDirectory({
               </span>
             </Heading>
 
+            {isCollapsed ? (
+              <p className={styles.collapseStatus}>
+                Section collapsed. Use this heading or Expand all to show its links.
+              </p>
+            ) : null}
             <div
               className={`${styles.sectionBody} ${
                 isCollapsed ? styles.sectionBodyCollapsed : ""
               }`}
+              hidden={isCollapsed}
             >
               {isStaff && openComposerParentItemId === -1
                 ? renderComposer(null)

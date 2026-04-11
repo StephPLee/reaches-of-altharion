@@ -870,10 +870,16 @@ export default function SubclassesDirectory({
                   </span>
                 </Heading>
 
+                {collapsed ? (
+                  <p className={styles.collapseStatus}>
+                    Section collapsed. Use this heading or Expand all to show its links.
+                  </p>
+                ) : null}
                 <div
                   className={`${styles.sectionBody} ${
                     collapsed ? styles.sectionBodyCollapsed : ""
                   }`}
+                  hidden={collapsed}
                 >
                   {isStaff && entry && openComposerEntryId === entry.id ? (
                     <form
