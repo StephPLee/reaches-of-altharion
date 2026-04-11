@@ -143,6 +143,7 @@ export default function SpeciesDirectory({
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const [formMessage, setFormMessage] = useState("");
+  const [isSectionCollapsed, setIsSectionCollapsed] = useState(true);
   const [openComposerParentItemId, setOpenComposerParentItemId] = useState<
     number | null
   >(null);
@@ -1011,6 +1012,7 @@ export default function SpeciesDirectory({
   }
 
   const totalCount = entry ? entry.items.length : 0;
+  const isCollapsed = !normalizedQuery && isSectionCollapsed;
 
   return (
     <div className={styles.shell}>
@@ -1026,6 +1028,22 @@ export default function SpeciesDirectory({
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
+          <div className={styles.buttonRow}>
+            <button
+              type="button"
+              className={styles.controlButton}
+              onClick={() => setIsSectionCollapsed(false)}
+            >
+              Expand all
+            </button>
+            <button
+              type="button"
+              className={styles.controlButton}
+              onClick={() => setIsSectionCollapsed(true)}
+            >
+              Collapse all
+            </button>
+          </div>
         </div>
         <p className={styles.searchHint}>{searchHint}</p>
         <p className={styles.count}>Showing 1 section.</p>
@@ -1045,18 +1063,24 @@ export default function SpeciesDirectory({
       {entry ? (
         <div className={styles.contentLayout}>
           <section className={styles.section}>
-            <Heading as="h2" className={styles.sectionHeading}>
+            <Heading
+              as="h2"
+              className={styles.sectionHeading}
+              onClick={() => setIsSectionCollapsed((current) => !current)}
+            >
               <span>{entry.title}</span>
               <span className={styles.sectionHeaderActions}>
                 {isStaff ? (
                   <button
                     type="button"
                     className={styles.headerActionButton}
-                    onClick={() => {
+                    onClick={(event) => {
+                      event.stopPropagation();
                       resetItemForm();
                       setOpenComposerParentItemId((current) =>
                         current === null ? -1 : null,
                       );
+                      setIsSectionCollapsed(false);
                     }}
                   >
                     {openComposerParentItemId === -1 ? "Close" : addRootLabel}
@@ -1074,7 +1098,11 @@ export default function SpeciesDirectory({
               </span>
             </Heading>
 
-            <div className={styles.sectionBody}>
+            <div
+              className={`${styles.sectionBody} ${
+                isCollapsed ? styles.sectionBodyCollapsed : ""
+              }`}
+            >
               {isStaff && openComposerParentItemId === -1
                 ? renderComposer(null)
                 : null}
