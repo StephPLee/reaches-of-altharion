@@ -1150,11 +1150,6 @@ export default function GuildsDirectory() {
                     ) : null}
                   </div>
 
-                  {isCollapsed ? (
-                    <p className={styles.collapseStatus}>
-                      Guild collapsed. Use this heading or Expand all to show its details.
-                    </p>
-                  ) : null}
                   {isEditingThisGuild
                     ? renderGuildComposer(
                         "Save Guild",

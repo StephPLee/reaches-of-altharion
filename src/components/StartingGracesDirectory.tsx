@@ -962,11 +962,6 @@ export default function StartingGracesDirectory() {
                     ) : null}
                   </div>
 
-                  {isCollapsed ? (
-                    <p className={styles.collapseStatus}>
-                      Grace collapsed. Use this heading or Expand all to show its details.
-                    </p>
-                  ) : null}
                   <div
                     className={
                       isCollapsed ? styles.graceBodyCollapsed : styles.graceBody
