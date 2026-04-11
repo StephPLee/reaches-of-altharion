@@ -237,6 +237,12 @@
     display: none;
 }
 
+.collapseStatus {
+    margin: -0.35rem 0 0.6rem;
+    color: rgba(188, 199, 230, 0.78);
+    font-size: 0.86rem;
+}
+
 .content {
     color: rgba(232, 238, 255, 0.92);
 }
