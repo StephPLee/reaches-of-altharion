@@ -233,7 +233,12 @@
 }
 
 .boonBodyCollapsed {
-    display: none;
+    display: none !important;
+}
+
+.boonBody[hidden],
+.boonBodyCollapsed[hidden] {
+    display: none !important;
 }
 
 .collapseStatus {
