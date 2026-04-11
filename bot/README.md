@@ -1,9 +1,10 @@
 # CC Link Bot Setup
 
-This bot provides `/cc-link` and `/magicitem` in your Discord server.
+This bot provides `/cc-link`, `/magicitem`, and `/approve` in your Discord server.
 
 - `/cc-link` returns a single assigned DnD Beyond campaign link from Postgres.
 - `/magicitem` opens a rarity dropdown and rolls a random seeded magic item from Postgres.
+- `/approve` lets staff approve a homebrew link into the site-backed homebrew tables.
 
 ## 1) Discord Developer Portal
 
@@ -25,6 +26,8 @@ Make sure these tables exist:
 - `cc_campaigns`
 - `cc_assignments`
 - `cc_audit_log`
+- `homebrew_entries`
+- `homebrew_section_items`
 - `magic_items`
 
 Populate `cc_campaigns` with your `CC1..CC15` links.
@@ -51,7 +54,7 @@ npm install
 npm run bot:start
 ```
 
-When the bot starts, it auto-registers `/cc-link` and `/magicitem` in the configured guild.
+When the bot starts, it auto-registers `/cc-link`, `/magicitem`, and `/approve` in the configured guild.
 
 ## 5) Deploy on Railway
 
@@ -67,3 +70,5 @@ When the bot starts, it auto-registers `/cc-link` and `/magicitem` in the config
 - Later requests from same user: returns same link.
 - Writes events into `cc_audit_log`.
 - `/magicitem` shows a rarity select menu and rolls a random published item from the dedicated `magic_items` table.
+- `/approve` is gated by `REQUIRED_ROLE_ID`, then prompts for homebrew type. Weapons and wondrous items ask for rarity; spells ask for level; species, feats, and subclasses go straight to a name/URL form.
+- `/approve` writes published rows into `homebrew_entries` and `homebrew_section_items`, avoiding duplicates by matching the target section against the submitted URL or label.

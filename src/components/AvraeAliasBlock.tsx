@@ -52,7 +52,7 @@ export default function AvraeAliasBlock({
 
   return (
     <div className={styles.wrapper}>
-      <details className={styles.aliasBlock} open={defaultOpen}>
+      <details className={styles.aliasBlock} open={defaultOpen || undefined}>
         <summary className={styles.summary}>
           <span className={styles.toggle} aria-hidden="true">
             &gt;

@@ -17,7 +17,7 @@ export default function HomebrewAutomationSection({
 }: HomebrewAutomationSectionProps) {
   return (
     <div className={styles.wrapper}>
-      <details className={styles.section} open={defaultOpen}>
+      <details className={styles.section} open={defaultOpen || undefined}>
         <summary className={styles.summary}>
           <span className={styles.toggle} aria-hidden="true">
             &gt;
