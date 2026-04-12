@@ -51,6 +51,7 @@ const {
   deleteGuild,
   deleteGuildUpgradeAutomation,
   deleteGuildUpgrade,
+  listGuildRosters,
   listGuilds,
   updateGuild,
   updateGuildUpgradeAutomation,
@@ -99,7 +100,6 @@ const {
   isWestMarchesConfigured,
   listAllCharacters,
   listCharacterAttributeStats,
-  listGuildRosters,
   listCurrencies,
 } = require("./westmarches");
 
@@ -1242,6 +1242,23 @@ app.get("/api/starting-graces", async (_req, res) => {
   }
 });
 
+async function handleGuildRostersRequest(_req, res) {
+  try {
+    const rosters = await listGuildRosters();
+    res.json(rosters);
+  } catch (guildRosterError) {
+    console.error("Failed to load guild rosters:", guildRosterError);
+    res.status(500).json({
+      error:
+        guildRosterError instanceof Error
+          ? guildRosterError.message
+          : "Failed to load guild rosters.",
+    });
+  }
+}
+
+app.get("/api/guilds/rosters", requireTrustedOrigin, handleGuildRostersRequest);
+
 app.get(
   "/api/rewards/westmarches/status",
   requireTrustedOrigin,
@@ -1390,28 +1407,7 @@ app.get(
 app.get(
   "/api/rewards/westmarches/guild-rosters",
   requireTrustedOrigin,
-  async (_req, res) => {
-    if (!isWestMarchesConfigured()) {
-      res.status(503).json({ error: "West Marches API is not configured." });
-      return;
-    }
-
-    try {
-      const rosters = await listGuildRosters();
-      res.json(rosters);
-    } catch (westMarchesError) {
-      console.error(
-        "Failed to load West Marches guild rosters:",
-        westMarchesError,
-      );
-      res.status(westMarchesError.status || 500).json({
-        error:
-          westMarchesError instanceof Error
-            ? westMarchesError.message
-            : "Failed to load West Marches guild rosters.",
-      });
-    }
-  },
+  handleGuildRostersRequest,
 );
 
 app.get(

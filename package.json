@@ -8,6 +8,7 @@
     "server:start": "node --watch server/index.js",
     "google:auth": "node scripts/google-oauth-login.mjs",
     "sync:docs": "node scripts/sync-google-docs.mjs",
+    "generate:guild-rosters": "node scripts/generate-guild-roster-import.mjs",
     "build:content": "npm run sync:docs && npm run build",
     "bot:start": "node bot/index.js",
     "build": "docusaurus build",
