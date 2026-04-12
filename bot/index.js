@@ -623,15 +623,6 @@ async function upsertGuildRosterMembership({
       [characterId, discordUserId, characterName],
     );
     const previousMembership = mapGuildRosterMembership(existingResult.rows[0]);
-    if (previousMembership?.guildId === guildId) {
-      await client.query("ROLLBACK");
-      return {
-        membership: previousMembership,
-        previousMembership,
-        cooldownUntil: null,
-      };
-    }
-
     const cooldownUntil = getGuildRosterCooldownUntil(previousMembership);
     if (cooldownUntil) {
       await client.query("ROLLBACK");
@@ -639,6 +630,15 @@ async function upsertGuildRosterMembership({
         membership: previousMembership,
         previousMembership,
         cooldownUntil,
+      };
+    }
+
+    if (previousMembership?.guildId === guildId) {
+      await client.query("ROLLBACK");
+      return {
+        membership: previousMembership,
+        previousMembership,
+        cooldownUntil: null,
       };
     }
 
@@ -1501,6 +1501,17 @@ bot.on("interactionCreate", async (interaction) => {
           characterName,
           discordUserId: interaction.user.id,
         });
+        const cooldownUntil = getGuildRosterCooldownUntil(membership);
+
+        if (cooldownUntil) {
+          await interaction.editReply({
+            content:
+              `**${characterName}** is currently in **${membership.guildName}**. ` +
+              `They can change guild again ${formatDiscordTimestamp(cooldownUntil)}.`,
+            components: [],
+          });
+          return;
+        }
 
         await interaction.editReply({
           content: membership
