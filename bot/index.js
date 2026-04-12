@@ -55,26 +55,64 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-const commands = [
+const COMMAND_DEFINITIONS = [
+  {
+    name: "help",
+    description: "List the bot commands and what they do.",
+    help: "List the bot commands and what they do.",
+  },
+  {
+    name: "cc-link",
+    description: "Get your assigned character creation campaign link.",
+    help: "Get your assigned D&D Beyond character creation campaign link.",
+    requiresRole: true,
+  },
+  {
+    name: "magicitem",
+    description: "Roll a random magic item from a selected rarity.",
+    help: "Open a rarity dropdown and roll a random magic item.",
+  },
+  {
+    name: "approve",
+    description: "Approve a homebrew link for the site.",
+    help: "Staff-only. Approve a homebrew link into the site-backed homebrew lists.",
+    requiresRole: true,
+  },
+  {
+    name: "join-guild",
+    description: "Join or move one of your characters to a guild.",
+    help: "Choose one of your WestMarches.games characters and add or move them to a guild roster.",
+  },
+  {
+    name: "leave-guild",
+    description: "Remove one of your characters from their guild roster.",
+    help: "Remove one of your WestMarches.games characters from their current guild roster.",
+  },
+  {
+    name: "post-guild-rosters",
+    description: "Post or refresh the guild roster messages.",
+    help: "Staff-only. Post or refresh the per-guild roster messages in Discord.",
+    requiresRole: true,
+  },
+  {
+    name: "faq",
+    description: "Show the frequently asked questions.",
+    help: "Show the frequently asked questions.",
+  },
+  {
+    name: "faq-add",
+    description: "Add or update a frequently asked question.",
+    help: "Staff-only. Add or update a FAQ entry without redeploying the bot.",
+    requiresRole: true,
+  },
+];
+
+const commands = COMMAND_DEFINITIONS.map((definition) =>
   new SlashCommandBuilder()
-    .setName("cc-link")
-    .setDescription("Get your assigned character creation campaign link."),
-  new SlashCommandBuilder()
-    .setName("magicitem")
-    .setDescription("Roll a random magic item from a selected rarity."),
-  new SlashCommandBuilder()
-    .setName("approve")
-    .setDescription("Approve a homebrew link for the site."),
-  new SlashCommandBuilder()
-    .setName("join-guild")
-    .setDescription("Join or move one of your characters to a guild."),
-  new SlashCommandBuilder()
-    .setName("leave-guild")
-    .setDescription("Remove one of your characters from their guild roster."),
-  new SlashCommandBuilder()
-    .setName("post-guild-rosters")
-    .setDescription("Post or refresh the guild roster messages."),
-].map((command) => command.toJSON());
+    .setName(definition.name)
+    .setDescription(definition.description)
+    .toJSON(),
+);
 
 const MAGIC_ITEM_RARITIES = [
   {
@@ -180,7 +218,7 @@ async function registerGuildCommands() {
     { body: commands },
   );
   console.log(
-    "Slash commands registered: /cc-link, /magicitem, /approve, /join-guild, /leave-guild, /post-guild-rosters",
+    `Slash commands registered: ${COMMAND_DEFINITIONS.map((command) => `/${command.name}`).join(", ")}`,
   );
 }
 
@@ -203,6 +241,15 @@ function hasRequiredRole(interaction) {
   }
 
   return false;
+}
+
+function buildHelpMessage(interaction) {
+  const canUseRoleCommands = hasRequiredRole(interaction);
+  return COMMAND_DEFINITIONS.filter(
+    (command) => !command.requiresRole || canUseRoleCommands,
+  ).map(
+    (command) => `/${command.name} - ${command.help}`,
+  ).join("\n");
 }
 
 async function getOrAssignCampaign(discordUserId) {
@@ -294,6 +341,193 @@ async function getOrAssignCampaign(discordUserId) {
   } finally {
     client.release();
   }
+}
+
+function truncateValue(value, maxLength) {
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 3)}...`;
+}
+
+async function listFaqEntries() {
+  const result = await pool.query(
+    `
+    SELECT
+      c.id AS category_id,
+      c.name AS category_name,
+      c.description AS category_description,
+      c.sort_order AS category_sort_order,
+      e.id AS entry_id,
+      e.question,
+      e.answer,
+      e.sort_order AS entry_sort_order
+    FROM faq_categories c
+    LEFT JOIN faq_entries e
+      ON e.category_id = c.id
+      AND e.is_published = true
+    ORDER BY
+      c.sort_order ASC,
+      LOWER(c.name) ASC,
+      e.sort_order ASC NULLS LAST,
+      e.id ASC NULLS LAST
+    `,
+  );
+
+  const categories = new Map();
+  for (const row of result.rows) {
+    const categoryId = Number(row.category_id);
+    if (!categories.has(categoryId)) {
+      categories.set(categoryId, {
+        id: categoryId,
+        name: row.category_name,
+        description: row.category_description || "",
+        entries: [],
+      });
+    }
+
+    if (row.entry_id) {
+      categories.get(categoryId).entries.push({
+        id: Number(row.entry_id),
+        question: row.question,
+        answer: row.answer,
+      });
+    }
+  }
+
+  return [...categories.values()];
+}
+
+function buildFaqEmbeds(categories) {
+  if (categories.length === 0) {
+    return [
+      new EmbedBuilder()
+        .setTitle("Frequently Asked Questions")
+        .setDescription("No FAQ entries have been added yet."),
+    ];
+  }
+
+  const embeds = [
+    new EmbedBuilder()
+      .setTitle("Frequently Asked Questions")
+      .setDescription(
+        'This should be your first port of call to check for answers to questions you have. It will be updated as more questions become "frequent".',
+      ),
+  ];
+
+  for (const category of categories) {
+    const embed = new EmbedBuilder().setTitle(category.name);
+    if (category.description) {
+      embed.setDescription(truncateValue(category.description, 4096));
+    }
+
+    for (const entry of category.entries) {
+      embed.addFields({
+        name: truncateValue(entry.question, 256),
+        value: truncateValue(entry.answer, 1024),
+      });
+    }
+
+    if (!category.description && category.entries.length === 0) {
+      embed.setDescription("No entries yet.");
+    }
+
+    embeds.push(embed);
+  }
+
+  return embeds.slice(0, 10);
+}
+
+function buildFaqAddModal(discordUserId) {
+  const modal = new ModalBuilder()
+    .setCustomId(`faq-add-modal:${discordUserId}`)
+    .setTitle("Add FAQ Entry");
+
+  const categoryInput = new TextInputBuilder()
+    .setCustomId("faq-category")
+    .setLabel("Category")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(100);
+
+  const questionInput = new TextInputBuilder()
+    .setCustomId("faq-question")
+    .setLabel("Question")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(200);
+
+  const answerInput = new TextInputBuilder()
+    .setCustomId("faq-answer")
+    .setLabel("Answer")
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(4000);
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(categoryInput),
+    new ActionRowBuilder().addComponents(questionInput),
+    new ActionRowBuilder().addComponents(answerInput),
+  );
+
+  return modal;
+}
+
+async function upsertFaqEntry({ categoryName, question, answer }) {
+  const normalizedCategoryName = categoryName.trim();
+  const normalizedQuestion = question.trim();
+  const normalizedAnswer = answer.trim();
+
+  const result = await pool.query(
+    `
+    WITH category_row AS (
+      INSERT INTO faq_categories (name, sort_order)
+      VALUES (
+        $1,
+        COALESCE((SELECT MAX(sort_order) + 10 FROM faq_categories), 10)
+      )
+      ON CONFLICT (name) DO UPDATE
+      SET updated_at = NOW()
+      RETURNING id, name
+    ),
+    entry_row AS (
+      INSERT INTO faq_entries (
+        category_id,
+        question,
+        answer,
+        sort_order,
+        is_published
+      )
+      SELECT
+        category_row.id,
+        $2,
+        $3,
+        COALESCE(
+          (
+            SELECT MAX(sort_order) + 10
+            FROM faq_entries
+            WHERE category_id = category_row.id
+          ),
+          10
+        ),
+        true
+      FROM category_row
+      ON CONFLICT (category_id, question) DO UPDATE
+      SET
+        answer = EXCLUDED.answer,
+        is_published = true,
+        updated_at = NOW()
+      RETURNING id, question, answer, category_id
+    )
+    SELECT
+      entry_row.id,
+      entry_row.question,
+      entry_row.answer,
+      category_row.name AS category_name
+    FROM entry_row
+    JOIN category_row ON category_row.id = entry_row.category_id
+    `,
+    [normalizedCategoryName, normalizedQuestion, normalizedAnswer],
+  );
+
+  return result.rows[0];
 }
 
 function isWestMarchesConfigured() {
@@ -1915,6 +2149,54 @@ bot.on("interactionCreate", async (interaction) => {
   }
 
   if (interaction.isModalSubmit()) {
+    if (interaction.customId.startsWith("faq-add-modal:")) {
+      const ownerId = interaction.customId.slice("faq-add-modal:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/faq-add` command so the form belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (!hasRequiredRole(interaction)) {
+        await interaction.reply({
+          content: "You do not have the required role to add FAQ entries.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const faqEntry = await upsertFaqEntry({
+          categoryName: interaction.fields.getTextInputValue("faq-category"),
+          question: interaction.fields.getTextInputValue("faq-question"),
+          answer: interaction.fields.getTextInputValue("faq-answer"),
+        });
+
+        await interaction.editReply(
+          `Saved FAQ entry **${faqEntry.question}** under **${faqEntry.category_name}**.`,
+        );
+      } catch (error) {
+        console.error("Failed to process /faq-add modal:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(
+            "Something went wrong while saving that FAQ entry. Please try again.",
+          );
+        } else {
+          await interaction.reply({
+            content:
+              "Something went wrong while saving that FAQ entry. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
     if (!interaction.customId.startsWith("approve-modal:")) {
       return;
     }
@@ -2003,6 +2285,51 @@ bot.on("interactionCreate", async (interaction) => {
       components: [buildMagicItemRarityRow(interaction.user.id)],
       ephemeral: true,
     });
+    return;
+  }
+
+  if (interaction.commandName === "help") {
+    await interaction.reply({
+      content: buildHelpMessage(interaction),
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (interaction.commandName === "faq") {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      const categories = await listFaqEntries();
+      await interaction.editReply({
+        embeds: buildFaqEmbeds(categories),
+      });
+    } catch (error) {
+      console.error("Failed to process /faq:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while loading the FAQ. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content: "Something went wrong while loading the FAQ. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "faq-add") {
+    if (!hasRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "You do not have the required role to add FAQ entries.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await interaction.showModal(buildFaqAddModal(interaction.user.id));
     return;
   }
 
