@@ -40,6 +40,7 @@ Run `sql/016_seed_magic_items.sql` to create and seed the dedicated `magic_items
 Run `sql/017_guild_rosters.sql` to create the guild roster tables.
 Run `npm run generate:guild-rosters -- "C:\Users\Steph\Downloads\guild rosters.csv"` to generate `sql/018_import_existing_guild_rosters.sql` from the Trello CSV using real WestMarches.games character IDs, then run that SQL file.
 Run `sql/019_guild_roster_messages.sql` to create the table that stores the Discord message IDs for per-guild roster posts.
+Run `sql/020_guild_roster_cooldowns.sql` to add the weekly guild-change cooldown timestamp.
 
 ## 3) Environment Variables
 
@@ -87,3 +88,4 @@ When the bot starts, it auto-registers `/cc-link`, `/magicitem`, `/approve`, `/j
 - `/join-guild` fetches active characters whose WestMarches.games `user.discordId` matches the Discord user, prompts for a character and guild, stores the roster membership in Postgres, posts a public confirmation, and edits or creates the relevant roster message.
 - `/leave-guild` verifies the user's active WestMarches.games characters, removes the selected roster membership, posts a public confirmation, and refreshes the relevant roster message.
 - `/post-guild-rosters` posts or refreshes one plain-text Discord message per published guild. Each line is `Character Name <@discord-id>`, with a divider at the end of each guild message. Roster message IDs are stored in `guild_roster_messages`.
+- Characters can only join, leave, or change guild once every 7 days after their first bot-driven roster change. Imported roster rows are not backfilled with a cooldown timestamp, so existing memberships are not blocked immediately.
