@@ -48,6 +48,8 @@ const config = {
   westMarchesApiKey: process.env.WEST_MARCHES_API_KEY || "",
 };
 
+const GUILD_ROSTER_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
 const pool = new Pool({
   connectionString: config.databaseUrl,
   ssl: { rejectUnauthorized: false },
@@ -413,8 +415,27 @@ function mapGuildRosterMembership(row) {
         westMarchesCharacterId: row.westmarches_character_id,
         characterName: row.character_name,
         discordUserId: row.discord_user_id,
+        lastMembershipChangeAt: row.last_membership_change_at,
       }
     : null;
+}
+
+function getGuildRosterCooldownUntil(membership) {
+  if (!membership?.lastMembershipChangeAt) {
+    return null;
+  }
+
+  const lastChangedAt = new Date(membership.lastMembershipChangeAt).getTime();
+  if (Number.isNaN(lastChangedAt)) {
+    return null;
+  }
+
+  const unlocksAt = lastChangedAt + GUILD_ROSTER_CHANGE_COOLDOWN_MS;
+  return unlocksAt > Date.now() ? unlocksAt : null;
+}
+
+function formatDiscordTimestamp(milliseconds) {
+  return `<t:${Math.ceil(milliseconds / 1000)}:R>`;
 }
 
 async function getGuildRosterMembership({
@@ -430,7 +451,8 @@ async function getGuildRosterMembership({
       g.name AS guild_name,
       m.westmarches_character_id,
       m.character_name,
-      m.discord_user_id
+      m.discord_user_id,
+      m.last_membership_change_at
     FROM guild_roster_memberships m
     JOIN guilds g ON g.id = m.guild_id
     WHERE m.westmarches_character_id = $1
@@ -458,7 +480,8 @@ async function listGuildRosterMembershipsForDiscordUser(discordUserId) {
       g.name AS guild_name,
       m.westmarches_character_id,
       m.character_name,
-      m.discord_user_id
+      m.discord_user_id,
+      m.last_membership_change_at
     FROM guild_roster_memberships m
     JOIN guilds g ON g.id = m.guild_id
     WHERE m.discord_user_id = $1
@@ -475,28 +498,76 @@ async function deleteGuildRosterMembership({
   characterName,
   discordUserId,
 }) {
-  const result = await pool.query(
-    `
-    DELETE FROM guild_roster_memberships m
-    USING guilds g
-    WHERE g.id = m.guild_id
-      AND m.discord_user_id = $2
-      AND (
-        m.westmarches_character_id = $1
-        OR LOWER(m.character_name) = LOWER($3)
-      )
-    RETURNING
-      m.id,
-      m.guild_id,
-      g.name AS guild_name,
-      m.westmarches_character_id,
-      m.character_name,
-      m.discord_user_id
-    `,
-    [characterId, discordUserId, characterName],
-  );
+  const client = await pool.connect();
 
-  return mapGuildRosterMembership(result.rows[0]);
+  try {
+    await client.query("BEGIN");
+
+    const existingResult = await client.query(
+      `
+      SELECT
+        m.id,
+        m.guild_id,
+        g.name AS guild_name,
+        m.westmarches_character_id,
+        m.character_name,
+        m.discord_user_id,
+        m.last_membership_change_at
+      FROM guild_roster_memberships m
+      JOIN guilds g ON g.id = m.guild_id
+      WHERE m.discord_user_id = $2
+        AND (
+          m.westmarches_character_id = $1
+          OR LOWER(m.character_name) = LOWER($3)
+        )
+      ORDER BY
+        CASE WHEN m.westmarches_character_id = $1 THEN 0 ELSE 1 END,
+        m.id ASC
+      LIMIT 1
+      `,
+      [characterId, discordUserId, characterName],
+    );
+    const membership = mapGuildRosterMembership(existingResult.rows[0]);
+    const cooldownUntil = getGuildRosterCooldownUntil(membership);
+
+    if (!membership || cooldownUntil) {
+      await client.query("ROLLBACK");
+      return {
+        membership,
+        cooldownUntil,
+      };
+    }
+
+    const deleteResult = await client.query(
+      `
+      DELETE FROM guild_roster_memberships
+      WHERE id = $1
+      RETURNING
+        id,
+        guild_id,
+        westmarches_character_id,
+        character_name,
+        discord_user_id,
+        last_membership_change_at
+      `,
+      [membership.id],
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      membership: mapGuildRosterMembership({
+        ...deleteResult.rows[0],
+        guild_name: membership.guildName,
+      }),
+      cooldownUntil: null,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function upsertGuildRosterMembership({
@@ -535,7 +606,8 @@ async function upsertGuildRosterMembership({
         g.name AS guild_name,
         m.westmarches_character_id,
         m.character_name,
-        m.discord_user_id
+        m.discord_user_id,
+        m.last_membership_change_at
       FROM guild_roster_memberships m
       JOIN guilds g ON g.id = m.guild_id
       WHERE m.westmarches_character_id = $1
@@ -551,6 +623,24 @@ async function upsertGuildRosterMembership({
       [characterId, discordUserId, characterName],
     );
     const previousMembership = mapGuildRosterMembership(existingResult.rows[0]);
+    if (previousMembership?.guildId === guildId) {
+      await client.query("ROLLBACK");
+      return {
+        membership: previousMembership,
+        previousMembership,
+        cooldownUntil: null,
+      };
+    }
+
+    const cooldownUntil = getGuildRosterCooldownUntil(previousMembership);
+    if (cooldownUntil) {
+      await client.query("ROLLBACK");
+      return {
+        membership: previousMembership,
+        previousMembership,
+        cooldownUntil,
+      };
+    }
 
     const membershipResult = previousMembership
       ? await client.query(
@@ -561,6 +651,7 @@ async function upsertGuildRosterMembership({
             westmarches_character_id = $3,
             character_name = $4,
             discord_user_id = $5,
+            last_membership_change_at = NOW(),
             updated_at = NOW()
           WHERE id = $1
           RETURNING
@@ -568,7 +659,8 @@ async function upsertGuildRosterMembership({
             guild_id,
             westmarches_character_id,
             character_name,
-            discord_user_id
+            discord_user_id,
+            last_membership_change_at
           `,
           [
             previousMembership.id,
@@ -592,13 +684,15 @@ async function upsertGuildRosterMembership({
             guild_id = EXCLUDED.guild_id,
             character_name = EXCLUDED.character_name,
             discord_user_id = EXCLUDED.discord_user_id,
+            last_membership_change_at = NOW(),
             updated_at = NOW()
           RETURNING
             id,
             guild_id,
             westmarches_character_id,
             character_name,
-            discord_user_id
+            discord_user_id,
+            last_membership_change_at
           `,
           [guildId, characterId, characterName, discordUserId],
         );
@@ -1493,11 +1587,21 @@ bot.on("interactionCreate", async (interaction) => {
           return;
         }
 
-        const { membership, previousMembership } = result;
+        const { membership, previousMembership, cooldownUntil } = result;
 
         if (previousMembership?.guildId === membership.guildId) {
           await interaction.editReply({
             content: `**${characterName}** is already in **${membership.guildName}**.`,
+            components: [],
+          });
+          return;
+        }
+
+        if (cooldownUntil) {
+          await interaction.editReply({
+            content:
+              `**${characterName}** changed guild recently. ` +
+              `They can change guild again ${formatDiscordTimestamp(cooldownUntil)}.`,
             components: [],
           });
           return;
@@ -1574,15 +1678,26 @@ bot.on("interactionCreate", async (interaction) => {
           return;
         }
 
-        const membership = await deleteGuildRosterMembership({
+        const deleteResult = await deleteGuildRosterMembership({
           characterId: character.id,
           characterName: formatCharacterName(character),
           discordUserId: interaction.user.id,
         });
+        const { membership, cooldownUntil } = deleteResult;
 
         if (!membership) {
           await interaction.editReply({
             content: `**${formatCharacterName(character)}** is not currently in a guild roster.`,
+            components: [],
+          });
+          return;
+        }
+
+        if (cooldownUntil) {
+          await interaction.editReply({
+            content:
+              `**${membership.characterName}** changed guild recently. ` +
+              `They can leave or change guild again ${formatDiscordTimestamp(cooldownUntil)}.`,
             components: [],
           });
           return;
