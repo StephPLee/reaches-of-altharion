@@ -275,7 +275,7 @@ export default function GuildsDirectory() {
         setGuildRostersLoading(true);
         setGuildRostersError("");
         const response = await fetch(
-          `${authApiBaseUrl}/api/rewards/westmarches/guild-rosters`,
+          `${authApiBaseUrl}/api/guilds/rosters`,
         );
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));

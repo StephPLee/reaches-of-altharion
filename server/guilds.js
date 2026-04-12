@@ -207,6 +207,45 @@ async function listGuilds() {
   return guilds;
 }
 
+async function listGuildRosters() {
+  const result = await pool.query(
+    `
+    SELECT
+      g.id AS guild_id,
+      g.name AS guild_name,
+      g.sort_order,
+      m.character_name
+    FROM guilds g
+    LEFT JOIN guild_roster_memberships m ON m.guild_id = g.id
+    WHERE g.is_published = true
+    ORDER BY g.sort_order ASC, LOWER(g.name) ASC, LOWER(m.character_name) ASC NULLS LAST
+    `,
+  );
+
+  const rostersByGuildId = new Map();
+
+  for (const row of result.rows) {
+    const guildId = Number(row.guild_id);
+    if (!rostersByGuildId.has(guildId)) {
+      rostersByGuildId.set(guildId, {
+        guildName: row.guild_name,
+        memberCount: 0,
+        members: [],
+      });
+    }
+
+    if (row.character_name) {
+      const roster = rostersByGuildId.get(guildId);
+      roster.members.push(row.character_name);
+      roster.memberCount += 1;
+    }
+  }
+
+  return {
+    rosters: [...rostersByGuildId.values()],
+  };
+}
+
 async function upsertGuildUpgradeAutomation(
   client,
   {
@@ -653,6 +692,7 @@ module.exports = {
   deleteGuild,
   deleteGuildUpgradeAutomation,
   deleteGuildUpgrade,
+  listGuildRosters,
   listGuilds,
   updateGuild,
   updateGuildUpgradeAutomation,

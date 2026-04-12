@@ -40,6 +40,12 @@ const config = {
   guildId: process.env.DISCORD_GUILD_ID,
   databaseUrl: process.env.DATABASE_URL,
   requiredRoleId: process.env.REQUIRED_ROLE_ID || "",
+  guildRosterChannelId: process.env.GUILD_ROSTER_CHANNEL_ID || "",
+  westMarchesApiBaseUrl: (
+    process.env.WEST_MARCHES_API_BASE_URL ||
+    "https://www.westmarches.games/api/v1"
+  ).replace(/\/$/, ""),
+  westMarchesApiKey: process.env.WEST_MARCHES_API_KEY || "",
 };
 
 const pool = new Pool({
@@ -57,6 +63,15 @@ const commands = [
   new SlashCommandBuilder()
     .setName("approve")
     .setDescription("Approve a homebrew link for the site."),
+  new SlashCommandBuilder()
+    .setName("join-guild")
+    .setDescription("Join or move one of your characters to a guild."),
+  new SlashCommandBuilder()
+    .setName("leave-guild")
+    .setDescription("Remove one of your characters from their guild roster."),
+  new SlashCommandBuilder()
+    .setName("post-guild-rosters")
+    .setDescription("Post or refresh the guild roster messages."),
 ].map((command) => command.toJSON());
 
 const MAGIC_ITEM_RARITIES = [
@@ -162,7 +177,9 @@ async function registerGuildCommands() {
     Routes.applicationGuildCommands(config.clientId, config.guildId),
     { body: commands },
   );
-  console.log("Slash commands registered: /cc-link, /magicitem, /approve");
+  console.log(
+    "Slash commands registered: /cc-link, /magicitem, /approve, /join-guild, /leave-guild, /post-guild-rosters",
+  );
 }
 
 function hasRequiredRole(interaction) {
@@ -275,6 +292,559 @@ async function getOrAssignCampaign(discordUserId) {
   } finally {
     client.release();
   }
+}
+
+function isWestMarchesConfigured() {
+  return Boolean(config.westMarchesApiBaseUrl && config.westMarchesApiKey);
+}
+
+async function westMarchesFetch(path, init = {}) {
+  if (!isWestMarchesConfigured()) {
+    throw new Error("West Marches API is not configured.");
+  }
+
+  const response = await fetch(`${config.westMarchesApiBaseUrl}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${config.westMarchesApiKey}`,
+      Accept: "application/json",
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...(init.headers || {}),
+    },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error =
+      typeof payload?.error === "string" && payload.error
+        ? payload.error
+        : `West Marches request failed (${response.status}).`;
+    const requestError = new Error(error);
+    requestError.status = response.status;
+    requestError.payload = payload;
+    throw requestError;
+  }
+
+  return payload;
+}
+
+async function listAllWestMarchesCharacters() {
+  const pageSize = 500;
+  let page = 1;
+  let totalPages = 1;
+  const characters = [];
+
+  while (page <= totalPages) {
+    const payload = await westMarchesFetch(
+      `/characters?page=${page}&pageSize=${pageSize}`,
+    );
+    const nextCharacters = Array.isArray(payload.data) ? payload.data : [];
+    characters.push(...nextCharacters);
+
+    totalPages =
+      typeof payload?.pagination?.totalPages === "number" &&
+      payload.pagination.totalPages > 0
+        ? payload.pagination.totalPages
+        : 1;
+    page += 1;
+  }
+
+  return characters;
+}
+
+function isActiveWestMarchesCharacter(character) {
+  return (
+    typeof character?.status !== "string" ||
+    character.status.toUpperCase() !== "RETIRED"
+  );
+}
+
+function formatCharacterName(character) {
+  return typeof character?.name === "string" ? character.name.trim() : "";
+}
+
+async function listOwnedActiveWestMarchesCharacters(discordUserId) {
+  const characters = await listAllWestMarchesCharacters();
+  return characters
+    .filter(
+      (character) =>
+        isActiveWestMarchesCharacter(character) &&
+        character?.user?.discordId === discordUserId &&
+        typeof character?.id === "string" &&
+        formatCharacterName(character),
+    )
+    .sort((left, right) =>
+      formatCharacterName(left).localeCompare(formatCharacterName(right), undefined, {
+        sensitivity: "base",
+      }),
+    );
+}
+
+async function getOwnedActiveWestMarchesCharacter(discordUserId, characterId) {
+  const characters = await listOwnedActiveWestMarchesCharacters(discordUserId);
+  return characters.find((character) => character.id === characterId) || null;
+}
+
+async function listPublishedGuilds() {
+  const result = await pool.query(
+    `
+    SELECT id, name, slug, sort_order
+    FROM guilds
+    WHERE is_published = true
+    ORDER BY sort_order ASC, LOWER(name) ASC, id ASC
+    `,
+  );
+
+  return result.rows.map((row) => ({
+    id: Number(row.id),
+    name: row.name,
+    slug: row.slug,
+    sortOrder: row.sort_order,
+  }));
+}
+
+function mapGuildRosterMembership(row) {
+  return row
+    ? {
+        id: Number(row.id),
+        guildId: Number(row.guild_id),
+        guildName: row.guild_name,
+        westMarchesCharacterId: row.westmarches_character_id,
+        characterName: row.character_name,
+        discordUserId: row.discord_user_id,
+      }
+    : null;
+}
+
+async function getGuildRosterMembership({
+  characterId,
+  characterName,
+  discordUserId,
+}) {
+  const result = await pool.query(
+    `
+    SELECT
+      m.id,
+      m.guild_id,
+      g.name AS guild_name,
+      m.westmarches_character_id,
+      m.character_name,
+      m.discord_user_id
+    FROM guild_roster_memberships m
+    JOIN guilds g ON g.id = m.guild_id
+    WHERE m.westmarches_character_id = $1
+      OR (
+        m.discord_user_id = $2
+        AND LOWER(m.character_name) = LOWER($3)
+      )
+    ORDER BY
+      CASE WHEN m.westmarches_character_id = $1 THEN 0 ELSE 1 END,
+      m.id ASC
+    LIMIT 1
+    `,
+    [characterId, discordUserId, characterName],
+  );
+
+  return mapGuildRosterMembership(result.rows[0]);
+}
+
+async function listGuildRosterMembershipsForDiscordUser(discordUserId) {
+  const result = await pool.query(
+    `
+    SELECT
+      m.id,
+      m.guild_id,
+      g.name AS guild_name,
+      m.westmarches_character_id,
+      m.character_name,
+      m.discord_user_id
+    FROM guild_roster_memberships m
+    JOIN guilds g ON g.id = m.guild_id
+    WHERE m.discord_user_id = $1
+    ORDER BY LOWER(m.character_name) ASC, m.id ASC
+    `,
+    [discordUserId],
+  );
+
+  return result.rows.map(mapGuildRosterMembership);
+}
+
+async function deleteGuildRosterMembership({
+  characterId,
+  characterName,
+  discordUserId,
+}) {
+  const result = await pool.query(
+    `
+    DELETE FROM guild_roster_memberships m
+    USING guilds g
+    WHERE g.id = m.guild_id
+      AND m.discord_user_id = $2
+      AND (
+        m.westmarches_character_id = $1
+        OR LOWER(m.character_name) = LOWER($3)
+      )
+    RETURNING
+      m.id,
+      m.guild_id,
+      g.name AS guild_name,
+      m.westmarches_character_id,
+      m.character_name,
+      m.discord_user_id
+    `,
+    [characterId, discordUserId, characterName],
+  );
+
+  return mapGuildRosterMembership(result.rows[0]);
+}
+
+async function upsertGuildRosterMembership({
+  guildId,
+  characterId,
+  characterName,
+  discordUserId,
+}) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const guildResult = await client.query(
+      `
+      SELECT id, name
+      FROM guilds
+      WHERE id = $1
+        AND is_published = true
+      LIMIT 1
+      `,
+      [guildId],
+    );
+    const guild = guildResult.rows[0];
+
+    if (!guild) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const existingResult = await client.query(
+      `
+      SELECT
+        m.id,
+        m.guild_id,
+        g.name AS guild_name,
+        m.westmarches_character_id,
+        m.character_name,
+        m.discord_user_id
+      FROM guild_roster_memberships m
+      JOIN guilds g ON g.id = m.guild_id
+      WHERE m.westmarches_character_id = $1
+        OR (
+          m.discord_user_id = $2
+          AND LOWER(m.character_name) = LOWER($3)
+        )
+      ORDER BY
+        CASE WHEN m.westmarches_character_id = $1 THEN 0 ELSE 1 END,
+        m.id ASC
+      LIMIT 1
+      `,
+      [characterId, discordUserId, characterName],
+    );
+    const previousMembership = mapGuildRosterMembership(existingResult.rows[0]);
+
+    const membershipResult = previousMembership
+      ? await client.query(
+          `
+          UPDATE guild_roster_memberships
+          SET
+            guild_id = $2,
+            westmarches_character_id = $3,
+            character_name = $4,
+            discord_user_id = $5,
+            updated_at = NOW()
+          WHERE id = $1
+          RETURNING
+            id,
+            guild_id,
+            westmarches_character_id,
+            character_name,
+            discord_user_id
+          `,
+          [
+            previousMembership.id,
+            guildId,
+            characterId,
+            characterName,
+            discordUserId,
+          ],
+        )
+      : await client.query(
+          `
+          INSERT INTO guild_roster_memberships (
+            guild_id,
+            westmarches_character_id,
+            character_name,
+            discord_user_id
+          )
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (westmarches_character_id) DO UPDATE
+          SET
+            guild_id = EXCLUDED.guild_id,
+            character_name = EXCLUDED.character_name,
+            discord_user_id = EXCLUDED.discord_user_id,
+            updated_at = NOW()
+          RETURNING
+            id,
+            guild_id,
+            westmarches_character_id,
+            character_name,
+            discord_user_id
+          `,
+          [guildId, characterId, characterName, discordUserId],
+        );
+
+    await client.query("COMMIT");
+
+    return {
+      membership: {
+        ...mapGuildRosterMembership({
+          ...membershipResult.rows[0],
+          guild_name: guild.name,
+        }),
+      },
+      previousMembership,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function listGuildRosterRows() {
+  const result = await pool.query(
+    `
+    SELECT
+      g.id AS guild_id,
+      g.name AS guild_name,
+      g.sort_order,
+      m.character_name,
+      m.discord_user_id
+    FROM guilds g
+    LEFT JOIN guild_roster_memberships m ON m.guild_id = g.id
+    WHERE g.is_published = true
+    ORDER BY g.sort_order ASC, LOWER(g.name) ASC, LOWER(m.character_name) ASC NULLS LAST
+    `,
+  );
+
+  const guilds = new Map();
+  for (const row of result.rows) {
+    const guildId = Number(row.guild_id);
+    if (!guilds.has(guildId)) {
+      guilds.set(guildId, {
+        id: guildId,
+        name: row.guild_name,
+        members: [],
+      });
+    }
+
+    if (row.character_name) {
+      guilds.get(guildId).members.push({
+        characterName: row.character_name,
+        discordUserId: row.discord_user_id,
+      });
+    }
+  }
+
+  return [...guilds.values()];
+}
+
+const GUILD_ROSTER_DIVIDER = "----------------------------------------";
+
+function formatRosterLine(member) {
+  return `${member.characterName} <@${member.discordUserId}>`;
+}
+
+function buildGuildRosterMessage(roster) {
+  const lines = [`**${roster.name}**`];
+  const members = roster.members.map(formatRosterLine);
+  const footerLines = [GUILD_ROSTER_DIVIDER];
+  let length =
+    lines.join("\n").length + footerLines.join("\n").length + 2;
+
+  if (members.length === 0) {
+    members.push("No active guild members listed yet.");
+  }
+
+  for (const memberLine of members) {
+    if (length + memberLine.length + 1 > 1900) {
+      lines.push("...and more.");
+      break;
+    }
+
+    lines.push(memberLine);
+    length += memberLine.length + 1;
+  }
+
+  lines.push(...footerLines);
+  return lines.join("\n");
+}
+
+async function getGuildRosterTargetChannel(interaction) {
+  const targetChannelId = config.guildRosterChannelId || interaction.channelId;
+  const targetChannel = await interaction.client.channels.fetch(targetChannelId);
+  if (!targetChannel?.send) {
+    throw new Error("Guild roster channel is not a text channel.");
+  }
+
+  return {
+    targetChannel,
+    targetChannelId,
+  };
+}
+
+async function updateGuildRosterMessages(interaction, guildIds = null) {
+  const rosters = await listGuildRosterRows();
+  const guildIdSet = guildIds
+    ? new Set(guildIds.filter((guildId) => Number.isInteger(guildId)))
+    : null;
+  const rostersToUpdate = guildIdSet
+    ? rosters.filter((roster) => guildIdSet.has(roster.id))
+    : rosters;
+  const messageResult = await pool.query(
+    `
+    SELECT guild_id, discord_channel_id, discord_message_id
+    FROM guild_roster_messages
+    `,
+  );
+  const messagesByGuildId = new Map(
+    messageResult.rows.map((row) => [
+      Number(row.guild_id),
+      {
+        channelId: row.discord_channel_id,
+        messageId: row.discord_message_id,
+      },
+    ]),
+  );
+  const createdOrUpdated = [];
+
+  for (const roster of rostersToUpdate) {
+    const content = buildGuildRosterMessage(roster);
+    const existingMessage = messagesByGuildId.get(roster.id);
+    try {
+      if (existingMessage) {
+        const channel = await interaction.client.channels.fetch(
+          existingMessage.channelId,
+        );
+        if (!channel?.messages) {
+          throw new Error("Stored guild roster channel is not a text channel.");
+        }
+
+        const message = await channel.messages.fetch(existingMessage.messageId);
+        await message.edit({
+          content,
+          allowedMentions: { parse: [] },
+        });
+        createdOrUpdated.push(roster.name);
+        continue;
+      }
+    } catch (error) {
+      console.error(
+        `Failed to edit guild roster message for ${roster.name}; creating a new one:`,
+        error,
+      );
+    }
+
+    const { targetChannel, targetChannelId } =
+      await getGuildRosterTargetChannel(interaction);
+    const message = await targetChannel.send({
+      content,
+      allowedMentions: { parse: [] },
+    });
+
+    await pool.query(
+      `
+      INSERT INTO guild_roster_messages (
+        guild_id,
+        discord_channel_id,
+        discord_message_id
+      )
+      VALUES ($1, $2, $3)
+      ON CONFLICT (guild_id) DO UPDATE
+      SET
+        discord_channel_id = EXCLUDED.discord_channel_id,
+        discord_message_id = EXCLUDED.discord_message_id,
+        updated_at = NOW()
+      `,
+      [roster.id, targetChannelId, message.id],
+    );
+    createdOrUpdated.push(roster.name);
+  }
+
+  return createdOrUpdated;
+}
+
+function buildJoinGuildCharacterRow(discordUserId, characters) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`join-guild-character:${discordUserId}`)
+    .setPlaceholder("Choose your character...")
+    .addOptions(
+      characters.slice(0, 25).map((character) => ({
+        label: formatCharacterName(character).slice(0, 100),
+        value: character.id,
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+function buildLeaveGuildCharacterRow(discordUserId, memberships) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`leave-guild-character:${discordUserId}`)
+    .setPlaceholder("Choose your character...")
+    .addOptions(
+      memberships.slice(0, 25).map((membership) => ({
+        label: membership.characterName.slice(0, 100),
+        description: `Currently in ${membership.guildName}`.slice(0, 100),
+        value: membership.westMarchesCharacterId,
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+function buildJoinGuildGuildRow(discordUserId, characterId, guilds, currentGuildId) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`join-guild-guild:${discordUserId}:${characterId}`)
+    .setPlaceholder("Choose a guild...")
+    .addOptions(
+      guilds.map((guild) => ({
+        label: guild.name.slice(0, 100),
+        value: String(guild.id),
+        default: guild.id === currentGuildId,
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+function parseJoinGuildGuildCustomId(customId) {
+  const prefix = "join-guild-guild:";
+  if (!customId.startsWith(prefix)) {
+    return null;
+  }
+
+  const remainder = customId.slice(prefix.length);
+  const separatorIndex = remainder.indexOf(":");
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  return {
+    ownerId: remainder.slice(0, separatorIndex),
+    characterId: remainder.slice(separatorIndex + 1),
+  };
 }
 
 function buildMagicItemRarityRow(discordUserId, selectedRarity = null) {
@@ -794,6 +1364,263 @@ bot.on("interactionCreate", async (interaction) => {
       return;
     }
 
+    if (interaction.customId.startsWith("join-guild-character:")) {
+      const ownerId = interaction.customId.slice("join-guild-character:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/join-guild` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const character = await getOwnedActiveWestMarchesCharacter(
+          interaction.user.id,
+          characterId,
+        );
+
+        if (!character) {
+          await interaction.editReply({
+            content:
+              "I could not find that active character under your Discord account.",
+            components: [],
+          });
+          return;
+        }
+
+        const guilds = await listPublishedGuilds();
+        if (guilds.length === 0) {
+          await interaction.editReply({
+            content: "No published guilds are available yet.",
+            components: [],
+          });
+          return;
+        }
+
+        const characterName = formatCharacterName(character);
+        const membership = await getGuildRosterMembership({
+          characterId: character.id,
+          characterName,
+          discordUserId: interaction.user.id,
+        });
+
+        await interaction.editReply({
+          content: membership
+            ? `**${characterName}** is currently in **${membership.guildName}**. Choose a different guild if you want to move them.`
+            : `Choose the guild **${characterName}** should join.`,
+          components: [
+            buildJoinGuildGuildRow(
+              interaction.user.id,
+              character.id,
+              guilds,
+              membership?.guildId ?? null,
+            ),
+          ],
+        });
+      } catch (error) {
+        console.error("Failed to process /join-guild character select:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content:
+              "Something went wrong while loading guild choices. Please try again.",
+            components: [],
+          });
+        } else {
+          await interaction.reply({
+            content:
+              "Something went wrong while loading guild choices. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("join-guild-guild:")) {
+      const parsedCustomId = parseJoinGuildGuildCustomId(interaction.customId);
+      if (!parsedCustomId || parsedCustomId.ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/join-guild` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const guildId = Number(interaction.values[0]);
+        if (!Number.isInteger(guildId) || guildId <= 0) {
+          await interaction.editReply({
+            content: "That guild selection is not valid.",
+            components: [],
+          });
+          return;
+        }
+
+        const character = await getOwnedActiveWestMarchesCharacter(
+          interaction.user.id,
+          parsedCustomId.characterId,
+        );
+
+        if (!character) {
+          await interaction.editReply({
+            content:
+              "I could not find that active character under your Discord account.",
+            components: [],
+          });
+          return;
+        }
+
+        const characterName = formatCharacterName(character);
+        const result = await upsertGuildRosterMembership({
+          guildId,
+          characterId: character.id,
+          characterName,
+          discordUserId: interaction.user.id,
+        });
+
+        if (!result) {
+          await interaction.editReply({
+            content: "That guild is not available.",
+            components: [],
+          });
+          return;
+        }
+
+        const { membership, previousMembership } = result;
+
+        if (previousMembership?.guildId === membership.guildId) {
+          await interaction.editReply({
+            content: `**${characterName}** is already in **${membership.guildName}**.`,
+            components: [],
+          });
+          return;
+        }
+
+        await updateGuildRosterMessages(
+          interaction,
+          [
+            previousMembership?.guildId,
+            membership.guildId,
+          ].filter(Boolean),
+        );
+
+        await interaction.editReply({
+          content: previousMembership
+            ? `Moved **${characterName}** from **${previousMembership.guildName}** to **${membership.guildName}**.`
+            : `Added **${characterName}** to **${membership.guildName}**.`,
+          components: [],
+        });
+
+        if (interaction.channel?.send) {
+          await interaction.channel.send({
+            content: previousMembership
+              ? `**${characterName}** has moved from **${previousMembership.guildName}** to **${membership.guildName}**.`
+              : `**${characterName}** has joined **${membership.guildName}**.`,
+            allowedMentions: { parse: [] },
+          });
+        }
+      } catch (error) {
+        console.error("Failed to process /join-guild guild select:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content:
+              "Something went wrong while updating the guild roster. Please try again.",
+            components: [],
+          });
+        } else {
+          await interaction.reply({
+            content:
+              "Something went wrong while updating the guild roster. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("leave-guild-character:")) {
+      const ownerId = interaction.customId.slice("leave-guild-character:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/leave-guild` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const character = await getOwnedActiveWestMarchesCharacter(
+          interaction.user.id,
+          characterId,
+        );
+
+        if (!character) {
+          await interaction.editReply({
+            content:
+              "I could not find that active character under your Discord account.",
+            components: [],
+          });
+          return;
+        }
+
+        const membership = await deleteGuildRosterMembership({
+          characterId: character.id,
+          characterName: formatCharacterName(character),
+          discordUserId: interaction.user.id,
+        });
+
+        if (!membership) {
+          await interaction.editReply({
+            content: `**${formatCharacterName(character)}** is not currently in a guild roster.`,
+            components: [],
+          });
+          return;
+        }
+
+        await updateGuildRosterMessages(interaction, [membership.guildId]);
+
+        await interaction.editReply({
+          content: `Removed **${membership.characterName}** from **${membership.guildName}**.`,
+          components: [],
+        });
+
+        if (interaction.channel?.send) {
+          await interaction.channel.send({
+            content: `**${membership.characterName}** has left **${membership.guildName}**.`,
+            allowedMentions: { parse: [] },
+          });
+        }
+      } catch (error) {
+        console.error("Failed to process /leave-guild character select:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content:
+              "Something went wrong while updating the guild roster. Please try again.",
+            components: [],
+          });
+        } else {
+          await interaction.reply({
+            content:
+              "Something went wrong while updating the guild roster. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
     if (!interaction.customId.startsWith("magicitem:")) {
       return;
     }
@@ -972,6 +1799,156 @@ bot.on("interactionCreate", async (interaction) => {
       components: [buildMagicItemRarityRow(interaction.user.id)],
       ephemeral: true,
     });
+    return;
+  }
+
+  if (interaction.commandName === "join-guild") {
+    if (!isWestMarchesConfigured()) {
+      await interaction.reply({
+        content:
+          "West Marches API access is not configured, so I cannot load your characters yet.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const characters = await listOwnedActiveWestMarchesCharacters(
+        interaction.user.id,
+      );
+
+      if (characters.length === 0) {
+        await interaction.editReply(
+          "I could not find any active WestMarches.games characters linked to your Discord account.",
+        );
+        return;
+      }
+
+      const visibleCharacters = characters.slice(0, 25);
+      const overflowText =
+        characters.length > visibleCharacters.length
+          ? `\n\nI found ${characters.length} active characters. Discord menus can only show 25 options, so only the first 25 by name are listed.`
+          : "";
+
+      await interaction.editReply({
+        content: `Choose the character you want to add to a guild.${overflowText}`,
+        components: [
+          buildJoinGuildCharacterRow(interaction.user.id, visibleCharacters),
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to process /join-guild:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while loading your characters. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while loading your characters. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "leave-guild") {
+    if (!isWestMarchesConfigured()) {
+      await interaction.reply({
+        content:
+          "West Marches API access is not configured, so I cannot verify your characters yet.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const [characters, memberships] = await Promise.all([
+        listOwnedActiveWestMarchesCharacters(interaction.user.id),
+        listGuildRosterMembershipsForDiscordUser(interaction.user.id),
+      ]);
+      const ownedCharacterIds = new Set(
+        characters.map((character) => character.id),
+      );
+      const leaveOptions = memberships.filter((membership) =>
+        ownedCharacterIds.has(membership.westMarchesCharacterId),
+      );
+
+      if (leaveOptions.length === 0) {
+        await interaction.editReply(
+          "I could not find any of your active characters in a guild roster.",
+        );
+        return;
+      }
+
+      const visibleMemberships = leaveOptions.slice(0, 25);
+      const overflowText =
+        leaveOptions.length > visibleMemberships.length
+          ? `\n\nI found ${leaveOptions.length} rostered active characters. Discord menus can only show 25 options, so only the first 25 by name are listed.`
+          : "";
+
+      await interaction.editReply({
+        content: `Choose the character you want to remove from their guild.${overflowText}`,
+        components: [
+          buildLeaveGuildCharacterRow(interaction.user.id, visibleMemberships),
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to process /leave-guild:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while loading your guild roster entries. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while loading your guild roster entries. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "post-guild-rosters") {
+    if (!hasRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "You do not have the required role to post guild rosters.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      const updatedGuilds = await updateGuildRosterMessages(interaction);
+      await interaction.editReply(
+        updatedGuilds.length
+          ? `Posted or refreshed ${updatedGuilds.length} guild roster messages.`
+          : "No published guild rosters were found to post.",
+      );
+    } catch (error) {
+      console.error("Failed to process /post-guild-rosters:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while posting the guild rosters. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while posting the guild rosters. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
     return;
   }
 

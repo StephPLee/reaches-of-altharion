@@ -29,10 +29,6 @@ let attributeStatsCache = {
   expiresAt: 0,
   value: null,
 };
-let guildRosterCache = {
-  expiresAt: 0,
-  value: null,
-};
 let activeCharacterDetailsCache = {
   expiresAt: 0,
   value: null,
@@ -67,10 +63,6 @@ function normalizeAttributeName(attributeName) {
   return typeof attributeName === "string"
     ? attributeName.trim().toLowerCase()
     : "";
-}
-
-function normalizeRosterValue(value) {
-  return typeof value === "string" ? value.trim() : "";
 }
 
 function isWestMarchesConfigured() {
@@ -322,82 +314,6 @@ async function listCharacterAttributeStats() {
   return result;
 }
 
-async function listGuildRosters() {
-  const now = Date.now();
-  if (guildRosterCache.value && guildRosterCache.expiresAt > now) {
-    return guildRosterCache.value;
-  }
-
-  const { details } = await listActiveCharacterDetails();
-  const guildNames = new Set(["guild", "guilds"]);
-  const rosters = new Map();
-
-  for (const character of details) {
-    const characterName =
-      typeof character?.name === "string" ? character.name.trim() : "";
-    if (!characterName) {
-      continue;
-    }
-
-    const attributeValues = Array.isArray(character?.attributeValues)
-      ? character.attributeValues
-      : [];
-
-    for (const attributeValue of attributeValues) {
-      const attributeName = normalizeAttributeName(
-        attributeValue?.attribute?.name,
-      );
-      if (!guildNames.has(attributeName)) {
-        continue;
-      }
-
-      const valueTexts = Array.isArray(attributeValue?.valueTexts)
-        ? attributeValue.valueTexts
-        : [];
-
-      for (const rawValue of valueTexts) {
-        const guildName = normalizeRosterValue(
-          typeof rawValue === "string" ? rawValue : String(rawValue || ""),
-        );
-        if (!guildName) {
-          continue;
-        }
-
-        if (!rosters.has(guildName)) {
-          rosters.set(guildName, new Set());
-        }
-
-        rosters.get(guildName).add(characterName);
-      }
-    }
-  }
-
-  const result = {
-    rosters: [...rosters.entries()]
-      .map(([guildName, members]) => ({
-        guildName,
-        memberCount: members.size,
-        members: [...members].sort((left, right) =>
-          left.localeCompare(right, undefined, { sensitivity: "base" }),
-        ),
-      }))
-      .sort(
-        (left, right) =>
-          right.memberCount - left.memberCount ||
-          left.guildName.localeCompare(right.guildName, undefined, {
-            sensitivity: "base",
-          }),
-      ),
-  };
-
-  guildRosterCache = {
-    value: result,
-    expiresAt: now + ATTRIBUTE_STATS_CACHE_TTL_MS,
-  };
-
-  return result;
-}
-
 async function distributeRewards(rewards) {
   const payload = await westMarchesFetch("/rewards", {
     method: "POST",
@@ -413,7 +329,6 @@ module.exports = {
   isWestMarchesConfigured,
   listAllCharacters,
   listCharacterAttributeStats,
-  listGuildRosters,
   listCurrencies,
   getEventCurrencyMapping,
 };
