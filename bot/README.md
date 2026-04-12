@@ -1,7 +1,10 @@
 # CC Link Bot Setup
 
-This bot provides `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, and `/post-guild-rosters` in your Discord server.
+This bot provides `/help`, `/faq`, `/faq-add`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, and `/post-guild-rosters` in your Discord server.
 
+- `/help` lists the bot commands and what they do.
+- `/faq` shows the frequently asked questions from Postgres.
+- `/faq-add` lets staff add or update a FAQ entry without redeploying.
 - `/cc-link` returns a single assigned DnD Beyond campaign link from Postgres.
 - `/magicitem` opens a rarity dropdown and rolls a random seeded magic item from Postgres.
 - `/approve` lets staff approve a homebrew link into the site-backed homebrew tables.
@@ -34,6 +37,8 @@ Make sure these tables exist:
 - `magic_items`
 - `guild_roster_memberships`
 - `guild_roster_messages`
+- `faq_categories`
+- `faq_entries`
 
 Populate `cc_campaigns` with your `CC1..CC15` links.
 Run `sql/016_seed_magic_items.sql` to create and seed the dedicated `magic_items` table.
@@ -41,6 +46,8 @@ Run `sql/017_guild_rosters.sql` to create the guild roster tables.
 Run `npm run generate:guild-rosters -- "C:\Users\Steph\Downloads\guild rosters.csv"` to generate `sql/018_import_existing_guild_rosters.sql` from the Trello CSV using real WestMarches.games character IDs, then run that SQL file.
 Run `sql/019_guild_roster_messages.sql` to create the table that stores the Discord message IDs for per-guild roster posts.
 Run `sql/020_guild_roster_cooldowns.sql` to add the weekly guild-change cooldown timestamp.
+Run `sql/021_guild_roster_persistent_cooldowns.sql` so cooldowns survive a character leaving their guild.
+Run `sql/022_faq_schema.sql` to create and seed the FAQ tables.
 
 ## 3) Environment Variables
 
@@ -67,7 +74,7 @@ npm install
 npm run bot:start
 ```
 
-When the bot starts, it auto-registers `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, and `/post-guild-rosters` in the configured guild.
+When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, and `/post-guild-rosters` in the configured guild.
 
 ## 5) Deploy on Railway
 
@@ -82,10 +89,13 @@ When the bot starts, it auto-registers `/cc-link`, `/magicitem`, `/approve`, `/j
 - First `/cc-link` request from a user: assigns least-used active campaign.
 - Later requests from same user: returns same link.
 - Writes events into `cc_audit_log`.
+- `/help` is generated from the shared command definition list in `bot/index.js`, so command descriptions stay in one place.
+- `/faq` reads published FAQ categories and entries from Postgres.
+- `/faq-add` is gated by `REQUIRED_ROLE_ID` and opens a modal for category, question, and answer. If the question already exists in that category, it updates the answer.
 - `/magicitem` shows a rarity select menu and rolls a random published item from the dedicated `magic_items` table.
 - `/approve` is gated by `REQUIRED_ROLE_ID`, then prompts for homebrew type. Weapons and wondrous items ask for rarity; spells ask for level; species, feats, and subclasses go straight to a name/URL form.
 - `/approve` writes published rows into `homebrew_entries` and `homebrew_section_items`, avoiding duplicates by matching the target section against the submitted URL or label.
 - `/join-guild` fetches active characters whose WestMarches.games `user.discordId` matches the Discord user, prompts for a character and guild, stores the roster membership in Postgres, posts a public confirmation, and edits or creates the relevant roster message.
 - `/leave-guild` verifies the user's active WestMarches.games characters, removes the selected roster membership, posts a public confirmation, and refreshes the relevant roster message.
 - `/post-guild-rosters` posts or refreshes one plain-text Discord message per published guild. Each line is `Character Name <@discord-id>`, with a divider at the end of each guild message. Roster message IDs are stored in `guild_roster_messages`.
-- Characters can only join, leave, or change guild once every 7 days after their first bot-driven roster change. Imported roster rows are not backfilled with a cooldown timestamp, so existing memberships are not blocked immediately.
+- Characters can only join, leave, or change guild once every 7 days after their first bot-driven roster change. Cooldowns persist after leaving, so a character cannot leave and immediately join a different guild. Imported roster rows are not backfilled with a cooldown timestamp, so existing memberships are not blocked immediately.
