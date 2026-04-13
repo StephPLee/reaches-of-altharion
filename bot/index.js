@@ -73,6 +73,21 @@ const COMMAND_DEFINITIONS = [
     help: "Open a rarity dropdown and roll a random magic item.",
   },
   {
+    name: "characters",
+    description: "List your WestMarches.games characters.",
+    help: "List your WestMarches.games characters with their class and level. Use the visibility option to share it publicly.",
+    buildCommand: (command) =>
+      command.addStringOption((option) =>
+        option
+          .setName("visibility")
+          .setDescription("Who should see the character list?")
+          .addChoices(
+            { name: "Private", value: "private" },
+            { name: "Public", value: "public" },
+          ),
+      ),
+  },
+  {
     name: "approve",
     description: "Approve a homebrew link for the site.",
     help: "Staff-only. Approve a homebrew link into the site-backed homebrew lists.",
@@ -107,12 +122,16 @@ const COMMAND_DEFINITIONS = [
   },
 ];
 
-const commands = COMMAND_DEFINITIONS.map((definition) =>
-  new SlashCommandBuilder()
+const commands = COMMAND_DEFINITIONS.map((definition) => {
+  const command = new SlashCommandBuilder()
     .setName(definition.name)
-    .setDescription(definition.description)
-    .toJSON(),
-);
+    .setDescription(definition.description);
+
+  return (definition.buildCommand
+    ? definition.buildCommand(command)
+    : command
+  ).toJSON();
+});
 
 const MAGIC_ITEM_RARITIES = [
   {
@@ -590,9 +609,15 @@ async function listAllWestMarchesCharacters() {
 }
 
 function isActiveWestMarchesCharacter(character) {
+  const normalizedStatus =
+    typeof character?.status === "string"
+      ? character.status.trim().toUpperCase()
+      : "";
+
   return (
-    typeof character?.status !== "string" ||
-    character.status.toUpperCase() !== "RETIRED"
+    normalizedStatus !== "RETIRED" &&
+    normalizedStatus !== "DELETED" &&
+    normalizedStatus !== "ARCHIVED"
   );
 }
 
@@ -620,6 +645,89 @@ async function listOwnedActiveWestMarchesCharacters(discordUserId) {
 async function getOwnedActiveWestMarchesCharacter(discordUserId, characterId) {
   const characters = await listOwnedActiveWestMarchesCharacters(discordUserId);
   return characters.find((character) => character.id === characterId) || null;
+}
+
+async function getWestMarchesCharacter(characterId) {
+  const payload = await westMarchesFetch(`/characters/${characterId}`);
+  return payload.data ?? null;
+}
+
+function formatCharacterClass(character) {
+  if (typeof character?.class === "string" && character.class.trim()) {
+    return character.class.trim();
+  }
+
+  const attributeValues = Array.isArray(character?.attributeValues)
+    ? character.attributeValues
+    : [];
+
+  for (const attributeValue of attributeValues) {
+    const attributeName =
+      typeof attributeValue?.attribute?.name === "string"
+        ? attributeValue.attribute.name.trim().toLowerCase()
+        : "";
+
+    if (!["class", "classes"].includes(attributeName)) {
+      continue;
+    }
+
+    const valueTexts = Array.isArray(attributeValue?.valueTexts)
+      ? attributeValue.valueTexts
+      : [];
+    const classText = valueTexts
+      .map((value) => (typeof value === "string" ? value.trim() : String(value || "")))
+      .filter(Boolean)
+      .join(", ");
+
+    if (classText) {
+      return classText;
+    }
+  }
+
+  return "Unknown class";
+}
+
+async function listOwnedCharacterSummaries(discordUserId) {
+  const characters = await listOwnedActiveWestMarchesCharacters(discordUserId);
+  const details = await Promise.all(
+    characters.map(async (character) => {
+      try {
+        return (await getWestMarchesCharacter(character.id)) || character;
+      } catch (error) {
+        console.error(
+          `Failed to load WestMarches character details for ${character.id}:`,
+          error,
+        );
+        return character;
+      }
+    }),
+  );
+
+  return details.map((character, index) => {
+    const fallbackCharacter = characters[index];
+    return {
+      id: character?.id || fallbackCharacter.id,
+      name: formatCharacterName(character) || formatCharacterName(fallbackCharacter),
+      className: formatCharacterClass(character),
+      level:
+        character?.level ?? fallbackCharacter?.level ?? "Unknown level",
+    };
+  });
+}
+
+function buildCharacterListEmbed({ displayName, characters }) {
+  const description = characters.length
+    ? characters
+        .map(
+          (character) =>
+            `**${character.name}** - ${character.className} - Level ${character.level}`,
+        )
+        .join("\n")
+    : "No active WestMarches.games characters were found for this Discord account.";
+
+  return new EmbedBuilder()
+    .setTitle(`${displayName}'s Characters`)
+    .setDescription(truncateValue(description, 4096));
 }
 
 async function listPublishedGuilds() {
@@ -2293,6 +2401,51 @@ bot.on("interactionCreate", async (interaction) => {
       content: buildHelpMessage(interaction),
       ephemeral: true,
     });
+    return;
+  }
+
+  if (interaction.commandName === "characters") {
+    if (!isWestMarchesConfigured()) {
+      await interaction.reply({
+        content:
+          "West Marches API access is not configured, so I cannot load your characters yet.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const visibility =
+      interaction.options.getString("visibility") === "public"
+        ? "public"
+        : "private";
+    const isPublic = visibility === "public";
+
+    try {
+      await interaction.deferReply({ ephemeral: !isPublic });
+      const characters = await listOwnedCharacterSummaries(interaction.user.id);
+      await interaction.editReply({
+        embeds: [
+          buildCharacterListEmbed({
+            displayName: getDisplayName(interaction),
+            characters,
+          }),
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to process /characters:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while loading your characters. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while loading your characters. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
     return;
   }
 
