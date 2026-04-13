@@ -1,10 +1,11 @@
 # CC Link Bot Setup
 
-This bot provides `/help`, `/faq`, `/faq-add`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, and `/post-guild-rosters` in your Discord server.
+This bot provides `/help`, `/faq`, `/faq-add`, `/characters`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, and `/post-guild-rosters` in your Discord server.
 
 - `/help` lists the bot commands and what they do.
 - `/faq` shows the frequently asked questions from Postgres.
 - `/faq-add` lets staff add or update a FAQ entry without redeploying.
+- `/characters` lists your WestMarches.games characters, class, and level.
 - `/cc-link` returns a single assigned DnD Beyond campaign link from Postgres.
 - `/magicitem` opens a rarity dropdown and rolls a random seeded magic item from Postgres.
 - `/approve` lets staff approve a homebrew link into the site-backed homebrew tables.
@@ -74,7 +75,7 @@ npm install
 npm run bot:start
 ```
 
-When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, and `/post-guild-rosters` in the configured guild.
+When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/characters`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, and `/post-guild-rosters` in the configured guild.
 
 ## 5) Deploy on Railway
 
@@ -92,6 +93,7 @@ When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/cc-link`, 
 - `/help` is generated from the shared command definition list in `bot/index.js`, so command descriptions stay in one place.
 - `/faq` reads published FAQ categories and entries from Postgres.
 - `/faq-add` is gated by `REQUIRED_ROLE_ID` and opens a modal for category, question, and answer. If the question already exists in that category, it updates the answer.
+- `/characters` fetches the user's active WestMarches.games characters and shows class and level. Its `visibility` option defaults to private and can be set to public.
 - `/magicitem` shows a rarity select menu and rolls a random published item from the dedicated `magic_items` table.
 - `/approve` is gated by `REQUIRED_ROLE_ID`, then prompts for homebrew type. Weapons and wondrous items ask for rarity; spells ask for level; species, feats, and subclasses go straight to a name/URL form.
 - `/approve` writes published rows into `homebrew_entries` and `homebrew_section_items`, avoiding duplicates by matching the target section against the submitted URL or label.
