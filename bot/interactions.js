@@ -999,7 +999,7 @@ async function handleInteraction(interaction) {
     const reason = interaction.options.getString("reason")?.trim() || null;
 
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: isHeal });
       const boss = await recordBossHpEntry({
         discordUserId: interaction.user.id,
         amount,
@@ -1013,9 +1013,11 @@ async function handleInteraction(interaction) {
       }
 
       await postOrRefreshBossStatus(interaction, boss);
-      await interaction.editReply(
-        `${isHeal ? "Restored" : "Recorded"} ${formatBossHp(amount)} HP ${isHeal ? "to" : "against"} **${boss.name}**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`,
-      );
+      const updateMessage = isHeal
+        ? `Restored ${formatBossHp(amount)} HP to **${boss.name}**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`
+        : `The Voice of Altharion calls the strike true: **${boss.name}** suffers **${formatBossHp(amount)} damage**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`;
+
+      await interaction.editReply(updateMessage);
     } catch (error) {
       console.error(`Failed to process /${interaction.commandName}:`, error);
       if (interaction.deferred || interaction.replied) {
