@@ -41,6 +41,10 @@ const config = {
   databaseUrl: process.env.DATABASE_URL,
   requiredRoleId: process.env.REQUIRED_ROLE_ID || "",
   guildRosterChannelId: process.env.GUILD_ROSTER_CHANNEL_ID || "",
+  bossStatusChannelId: process.env.BOSS_STATUS_CHANNEL_ID || "",
+  publicSiteUrl: (
+    process.env.PUBLIC_SITE_URL || "https://reachesofaltharion.com"
+  ).replace(/\/$/, ""),
   westMarchesApiBaseUrl: (
     process.env.WEST_MARCHES_API_BASE_URL ||
     "https://www.westmarches.games/api/v1"
@@ -108,6 +112,95 @@ const COMMAND_DEFINITIONS = [
     description: "Post or refresh the guild roster messages.",
     help: "Staff-only. Post or refresh the per-guild roster messages in Discord.",
     requiresRole: true,
+  },
+  {
+    name: "boss-start",
+    description: "Start a manual server boss fight.",
+    help: "Staff-only. Start a manual server boss fight with a name and maximum HP.",
+    requiresRole: true,
+    buildCommand: (command) =>
+      command
+        .addStringOption((option) =>
+          option
+            .setName("name")
+            .setDescription("The boss name.")
+            .setRequired(true)
+            .setMaxLength(100),
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName("max-hp")
+            .setDescription("The boss maximum HP.")
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(Number.MAX_SAFE_INTEGER),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("image-url")
+            .setDescription("Optional public image URL for the boss embed.")
+            .setMaxLength(500),
+        ),
+  },
+  {
+    name: "boss-post",
+    description: "Post or refresh the active boss status message.",
+    help: "Staff-only. Post or refresh the public active boss status message.",
+    requiresRole: true,
+  },
+  {
+    name: "boss-damage",
+    description: "Record manual damage against the active boss.",
+    help: "Staff-only. Record manual damage against the active boss.",
+    requiresRole: true,
+    buildCommand: (command) =>
+      command
+        .addIntegerOption((option) =>
+          option
+            .setName("amount")
+            .setDescription("Damage dealt.")
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(Number.MAX_SAFE_INTEGER),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("reason")
+            .setDescription("Optional note for the damage log.")
+            .setMaxLength(500),
+        ),
+  },
+  {
+    name: "boss-heal",
+    description: "Restore HP to the active boss for corrections.",
+    help: "Staff-only. Restore HP to the active boss for corrections.",
+    requiresRole: true,
+    buildCommand: (command) =>
+      command
+        .addIntegerOption((option) =>
+          option
+            .setName("amount")
+            .setDescription("HP to restore.")
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(Number.MAX_SAFE_INTEGER),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("reason")
+            .setDescription("Optional note for the healing log.")
+            .setMaxLength(500),
+        ),
+  },
+  {
+    name: "boss-status",
+    description: "Show the active boss status.",
+    help: "Show the active boss status.",
+  },
+  {
+    name: "boss-log",
+    description: "Show recent active boss damage entries.",
+    help: "Show recent active boss damage entries.",
   },
   {
     name: "faq",
@@ -364,6 +457,271 @@ async function getOrAssignCampaign(discordUserId) {
 
 function truncateValue(value, maxLength) {
   return value.length <= maxLength ? value : `${value.slice(0, maxLength - 3)}...`;
+}
+
+function formatBossHp(value) {
+  return BigInt(value).toLocaleString("en-US");
+}
+
+function normalizeBossImageUrl(imageUrl) {
+  const trimmed = typeof imageUrl === "string" ? imageUrl.trim() : "";
+  const defaultPath = "/img/events/direbunny.jpg";
+  const value = trimmed || defaultPath;
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  const pathPart = value.startsWith("/") ? value : `/${value}`;
+  return `${config.publicSiteUrl}${pathPart}`;
+}
+
+function mapBossRow(row) {
+  return row
+    ? {
+        id: Number(row.id),
+        name: row.name,
+        maxHp: BigInt(row.max_hp),
+        currentHp: BigInt(row.current_hp),
+        imageUrl: row.image_url,
+        statusChannelId: row.status_channel_id,
+        statusMessageId: row.status_message_id,
+        isActive: row.is_active,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }
+    : null;
+}
+
+function buildBossHpBar(currentHp, maxHp, width = 20) {
+  const safeMaxHp = maxHp > 0n ? maxHp : 1n;
+  const clampedCurrentHp =
+    currentHp < 0n ? 0n : currentHp > safeMaxHp ? safeMaxHp : currentHp;
+  const filled = Number((clampedCurrentHp * BigInt(width)) / safeMaxHp);
+  const empty = width - filled;
+
+  return `[ ${"█".repeat(filled)}${"-".repeat(empty)} ] ${formatBossHp(clampedCurrentHp)}/${formatBossHp(safeMaxHp)}`;
+}
+
+function buildBossStatusEmbed(boss) {
+  const damageDealt = boss.maxHp - boss.currentHp;
+  const progressPercent = Number((damageDealt * 10000n) / boss.maxHp) / 100;
+
+  return new EmbedBuilder()
+    .setTitle(boss.name)
+    .setDescription(
+      [
+        buildBossHpBar(boss.currentHp, boss.maxHp),
+        "",
+        `Damage dealt: ${formatBossHp(damageDealt)} (${progressPercent.toFixed(2)}%)`,
+        boss.currentHp === 0n ? "The boss has been defeated." : "The fight continues.",
+      ].join("\n"),
+    )
+    .setImage(normalizeBossImageUrl(boss.imageUrl))
+    .setColor(boss.currentHp === 0n ? 0x4caf50 : 0xb73a3a)
+    .setTimestamp(new Date(boss.updatedAt || Date.now()));
+}
+
+function buildBossLogEmbed(boss, entries) {
+  const lines = entries.map((entry) => {
+    const sign = entry.entryType === "heal" ? "+" : "-";
+    const reason = entry.reason ? ` - ${truncateValue(entry.reason, 160)}` : "";
+    return `<t:${Math.floor(new Date(entry.createdAt).getTime() / 1000)}:R> ${sign}${formatBossHp(entry.amount)} by <@${entry.discordUserId}>${reason}`;
+  });
+
+  return new EmbedBuilder()
+    .setTitle(`${boss.name} Log`)
+    .setDescription(lines.length ? lines.join("\n") : "No entries recorded yet.")
+    .setColor(0xb73a3a);
+}
+
+async function getActiveBoss(client = pool, { lock = false } = {}) {
+  const result = await client.query(
+    `
+    SELECT
+      id,
+      name,
+      max_hp,
+      current_hp,
+      image_url,
+      status_channel_id,
+      status_message_id,
+      is_active,
+      created_at,
+      updated_at
+    FROM event_bosses
+    WHERE is_active = TRUE
+    ORDER BY created_at DESC
+    LIMIT 1
+    ${lock ? "FOR UPDATE" : ""}
+    `,
+  );
+
+  return mapBossRow(result.rows[0]);
+}
+
+async function startBossFight({ name, maxHp, imageUrl }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `
+      UPDATE event_bosses
+      SET is_active = FALSE, updated_at = NOW()
+      WHERE is_active = TRUE
+      `,
+    );
+
+    const result = await client.query(
+      `
+      INSERT INTO event_bosses (name, max_hp, current_hp, image_url)
+      VALUES ($1, $2, $2, $3)
+      RETURNING
+        id,
+        name,
+        max_hp,
+        current_hp,
+        image_url,
+        status_channel_id,
+        status_message_id,
+        is_active,
+        created_at,
+        updated_at
+      `,
+      [name, maxHp.toString(), imageUrl || null],
+    );
+
+    await client.query("COMMIT");
+    return mapBossRow(result.rows[0]);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function recordBossHpEntry({ discordUserId, amount, entryType, reason }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const boss = await getActiveBoss(client, { lock: true });
+    if (!boss) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const nextHp =
+      entryType === "heal"
+        ? boss.currentHp + amount > boss.maxHp
+          ? boss.maxHp
+          : boss.currentHp + amount
+        : boss.currentHp - amount < 0n
+          ? 0n
+          : boss.currentHp - amount;
+
+    const result = await client.query(
+      `
+      UPDATE event_bosses
+      SET current_hp = $2, updated_at = NOW()
+      WHERE id = $1
+      RETURNING
+        id,
+        name,
+        max_hp,
+        current_hp,
+        image_url,
+        status_channel_id,
+        status_message_id,
+        is_active,
+        created_at,
+        updated_at
+      `,
+      [boss.id, nextHp.toString()],
+    );
+
+    await client.query(
+      `
+      INSERT INTO event_boss_damage_log (
+        boss_id,
+        discord_user_id,
+        amount,
+        entry_type,
+        reason
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      `,
+      [
+        boss.id,
+        discordUserId,
+        amount.toString(),
+        entryType,
+        reason?.trim() || null,
+      ],
+    );
+
+    await client.query("COMMIT");
+    return mapBossRow(result.rows[0]);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function listBossLogEntries(bossId, limit = 10) {
+  const result = await pool.query(
+    `
+    SELECT discord_user_id, amount, entry_type, reason, created_at
+    FROM event_boss_damage_log
+    WHERE boss_id = $1
+    ORDER BY created_at DESC, id DESC
+    LIMIT $2
+    `,
+    [bossId, limit],
+  );
+
+  return result.rows.map((row) => ({
+    discordUserId: row.discord_user_id,
+    amount: BigInt(row.amount),
+    entryType: row.entry_type,
+    reason: row.reason,
+    createdAt: row.created_at,
+  }));
+}
+
+async function postOrRefreshBossStatus(interaction, boss) {
+  const embed = buildBossStatusEmbed(boss);
+  const targetChannelId =
+    boss.statusChannelId || config.bossStatusChannelId || interaction.channelId;
+  const targetChannel = await interaction.client.channels.fetch(targetChannelId);
+
+  if (!targetChannel?.send || !targetChannel.messages) {
+    throw new Error("Boss status channel is not a text channel.");
+  }
+
+  if (boss.statusMessageId) {
+    try {
+      const message = await targetChannel.messages.fetch(boss.statusMessageId);
+      await message.edit({ embeds: [embed] });
+      return { channelId: targetChannelId, messageId: message.id, created: false };
+    } catch (error) {
+      console.error("Failed to edit boss status message; creating a new one:", error);
+    }
+  }
+
+  const message = await targetChannel.send({ embeds: [embed] });
+  await pool.query(
+    `
+    UPDATE event_bosses
+    SET status_channel_id = $2, status_message_id = $3, updated_at = NOW()
+    WHERE id = $1
+    `,
+    [boss.id, targetChannelId, message.id],
+  );
+
+  return { channelId: targetChannelId, messageId: message.id, created: true };
 }
 
 async function listFaqEntries() {
@@ -2628,6 +2986,200 @@ bot.on("interactionCreate", async (interaction) => {
         await interaction.reply({
           content:
             "Something went wrong while posting the guild rosters. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "boss-start") {
+    if (!hasRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "You do not have the required role to start a boss fight.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const name = interaction.options.getString("name", true).trim();
+    const maxHp = BigInt(interaction.options.getInteger("max-hp", true));
+    const imageUrl = interaction.options.getString("image-url")?.trim() || null;
+
+    if (!name) {
+      await interaction.reply({
+        content: "Boss name is required.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      const boss = await startBossFight({ name, maxHp, imageUrl });
+      const status = await postOrRefreshBossStatus(interaction, boss);
+      await interaction.editReply(
+        `Started **${boss.name}** with ${formatBossHp(boss.maxHp)} HP and ${status.created ? "posted" : "refreshed"} the boss status message.`,
+      );
+    } catch (error) {
+      console.error("Failed to process /boss-start:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while starting the boss fight. Please check that the boss tables exist and try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while starting the boss fight. Please check that the boss tables exist and try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "boss-post") {
+    if (!hasRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "You do not have the required role to post the boss status.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      const boss = await getActiveBoss();
+      if (!boss) {
+        await interaction.editReply("No active boss fight is configured.");
+        return;
+      }
+
+      const status = await postOrRefreshBossStatus(interaction, boss);
+      await interaction.editReply(
+        `${status.created ? "Posted" : "Refreshed"} the boss status message for **${boss.name}**.`,
+      );
+    } catch (error) {
+      console.error("Failed to process /boss-post:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while posting the boss status. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while posting the boss status. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (
+    interaction.commandName === "boss-damage" ||
+    interaction.commandName === "boss-heal"
+  ) {
+    const isHeal = interaction.commandName === "boss-heal";
+    if (!hasRequiredRole(interaction)) {
+      await interaction.reply({
+        content: `You do not have the required role to ${isHeal ? "heal" : "damage"} the boss.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const amount = BigInt(interaction.options.getInteger("amount", true));
+    const reason = interaction.options.getString("reason")?.trim() || null;
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      const boss = await recordBossHpEntry({
+        discordUserId: interaction.user.id,
+        amount,
+        entryType: isHeal ? "heal" : "damage",
+        reason,
+      });
+
+      if (!boss) {
+        await interaction.editReply("No active boss fight is configured.");
+        return;
+      }
+
+      await postOrRefreshBossStatus(interaction, boss);
+      await interaction.editReply(
+        `${isHeal ? "Restored" : "Recorded"} ${formatBossHp(amount)} HP ${isHeal ? "to" : "against"} **${boss.name}**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`,
+      );
+    } catch (error) {
+      console.error(`Failed to process /${interaction.commandName}:`, error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while updating the boss HP. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while updating the boss HP. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "boss-status") {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      const boss = await getActiveBoss();
+      if (!boss) {
+        await interaction.editReply("No active boss fight is configured.");
+        return;
+      }
+
+      await interaction.editReply({ embeds: [buildBossStatusEmbed(boss)] });
+    } catch (error) {
+      console.error("Failed to process /boss-status:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while loading the boss status. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while loading the boss status. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "boss-log") {
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      const boss = await getActiveBoss();
+      if (!boss) {
+        await interaction.editReply("No active boss fight is configured.");
+        return;
+      }
+
+      const entries = await listBossLogEntries(boss.id);
+      await interaction.editReply({ embeds: [buildBossLogEmbed(boss, entries)] });
+    } catch (error) {
+      console.error("Failed to process /boss-log:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while loading the boss log. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while loading the boss log. Please try again.",
           ephemeral: true,
         });
       }
