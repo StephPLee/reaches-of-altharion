@@ -103,7 +103,7 @@ When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/characters
 - First `/cc-link` request from a user: assigns least-used active campaign.
 - Later requests from same user: returns same link.
 - Writes events into `cc_audit_log`.
-- `/help` is generated from the shared command definition list in `bot/index.js`, so command descriptions stay in one place.
+- `/help` is generated from the shared command definition list in `bot/commands.js`, so command descriptions stay in one place.
 - `/faq` reads published FAQ categories and entries from Postgres.
 - `/faq-add` is gated by `REQUIRED_ROLE_ID` and opens a modal for category, question, and answer. If the question already exists in that category, it updates the answer.
 - `/characters` fetches the user's active WestMarches.games characters and shows class and level. Its `visibility` option defaults to private and can be set to public.
