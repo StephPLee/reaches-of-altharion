@@ -1,6 +1,6 @@
 # CC Link Bot Setup
 
-This bot provides `/help`, `/faq`, `/faq-add`, `/characters`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, and manual boss fight commands in your Discord server.
+This bot provides `/help`, `/faq`, `/faq-add`, `/characters`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/rp`, and manual boss fight commands in your Discord server.
 
 - `/help` lists the bot commands and what they do.
 - `/faq` shows the frequently asked questions from Postgres.
@@ -12,6 +12,7 @@ This bot provides `/help`, `/faq`, `/faq-add`, `/characters`, `/cc-link`, `/magi
 - `/join-guild` lets players add or move one of their WestMarches.games characters to a guild roster.
 - `/leave-guild` lets players remove one of their WestMarches.games characters from its guild roster.
 - `/post-guild-rosters` lets staff post or refresh the per-guild roster messages.
+- `/rp` tracks active roleplay time in the current channel or thread.
 - `/boss-start` lets staff start a manual server boss fight.
 - `/boss-post` lets staff post or refresh the public boss status message.
 - `/boss-damage` lets staff record manual damage against the active boss.
@@ -48,6 +49,7 @@ Make sure these tables exist:
 - `faq_entries`
 - `event_bosses`
 - `event_boss_damage_log`
+- `rp_sessions`
 
 Populate `cc_campaigns` with your `CC1..CC15` links.
 Run `sql/016_seed_magic_items.sql` to create and seed the dedicated `magic_items` table.
@@ -58,6 +60,7 @@ Run `sql/020_guild_roster_cooldowns.sql` to add the weekly guild-change cooldown
 Run `sql/021_guild_roster_persistent_cooldowns.sql` so cooldowns survive a character leaving their guild.
 Run `sql/022_faq_schema.sql` to create and seed the FAQ tables.
 Run `sql/023_event_bosses.sql` to create the manual boss fight tables.
+Run `sql/024_rp_sessions.sql` to create the RP timer table.
 
 ## 3) Environment Variables
 
@@ -88,7 +91,7 @@ npm install
 npm run bot:start
 ```
 
-When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/characters`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/boss-start`, `/boss-post`, `/boss-damage`, `/boss-heal`, `/boss-status`, and `/boss-log` in the configured guild.
+When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/characters`, `/cc-link`, `/magicitem`, `/approve`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/rp`, `/boss-start`, `/boss-post`, `/boss-damage`, `/boss-heal`, `/boss-status`, and `/boss-log` in the configured guild.
 
 ## 5) Deploy on Railway
 
@@ -114,6 +117,7 @@ When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/characters
 - `/leave-guild` verifies the user's active WestMarches.games characters, removes the selected roster membership, posts a public confirmation, and refreshes the relevant roster message.
 - `/post-guild-rosters` posts or refreshes one plain-text Discord message per published guild. Each line is `Character Name <@discord-id>`, with a divider at the end of each guild message. Roster message IDs are stored in `guild_roster_messages`.
 - Characters can only join, leave, or change guild once every 7 days after their first bot-driven roster change. Cooldowns persist after leaving, so a character cannot leave and immediately join a different guild. Imported roster rows are not backfilled with a cooldown timestamp, so existing memberships are not blocked immediately.
+- `/rp start`, `/rp pause`, `/rp resume`, `/rp end`, and `/rp status` track one open RP timer per channel or thread. The starter or staff can pause, resume, or end it, and each command posts a public update where it was used.
 - `/boss-start` deactivates any previous active boss, creates a new boss at full HP, and posts its public status embed.
 - `/boss-damage` and `/boss-heal` write entries to `event_boss_damage_log`, update `event_bosses.current_hp`, and refresh the stored public boss status message.
 - Boss status embeds use the configured image URL, or the default site asset `/img/events/direbunny.jpg`.

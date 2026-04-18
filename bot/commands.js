@@ -57,6 +57,38 @@ const COMMAND_DEFINITIONS = [
     requiresRole: true,
   },
   {
+    name: "rp",
+    description: "Track active roleplay time in this channel or thread.",
+    help: "Track active roleplay time with start, pause, resume, end, and status subcommands.",
+    buildCommand: (command) =>
+      command
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("start")
+            .setDescription("Start tracking active roleplay time here."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("pause")
+            .setDescription("Pause the active roleplay timer here."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("resume")
+            .setDescription("Resume the paused roleplay timer here."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("end")
+            .setDescription("End the roleplay timer here and show the total."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("status")
+            .setDescription("Show the current roleplay timer status here."),
+        ),
+  },
+  {
     name: "boss-start",
     description: "Start a manual server boss fight.",
     help: "Staff-only. Start a manual server boss fight with a name and maximum HP.",
