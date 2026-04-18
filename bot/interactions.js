@@ -48,6 +48,7 @@ const {
   buildApproveDetailRow,
   buildApproveModal,
   categoryNeedsDetail,
+  categoryUsesMarkdown,
   getApproveTarget,
   getCategory,
 } = require("./services/approval");
@@ -628,18 +629,29 @@ async function handleInteraction(interaction) {
       await interaction.deferReply({ ephemeral: true });
 
       const name = interaction.fields.getTextInputValue("homebrew-name");
-      const url = interaction.fields.getTextInputValue("homebrew-url");
+      const usesMarkdown = categoryUsesMarkdown(category);
+      const url = usesMarkdown
+        ? null
+        : interaction.fields.getTextInputValue("homebrew-url");
+      const contentMarkdown = usesMarkdown
+        ? interaction.fields.getTextInputValue("homebrew-markdown")
+        : null;
       const approval = await approveHomebrew({
         category,
         detailValue: detailValue === "none" ? "" : detailValue,
         name,
         url,
+        contentMarkdown,
       });
 
       await interaction.editReply(
-        approval.created
-          ? `Approved **${approval.label}** under **${approval.title}**.\n${approval.href}`
-          : `That homebrew was already listed under **${approval.title}** as **${approval.label}**.\n${approval.href}`,
+        usesMarkdown
+          ? approval.created
+            ? `Approved **${approval.label}** under **${approval.categoryLabel}**.\n${approval.sitePath}`
+            : `Updated existing **${approval.label}** under **${approval.categoryLabel}**.\n${approval.sitePath}`
+          : approval.created
+            ? `Approved **${approval.label}** under **${approval.title}**.\n${approval.href}`
+            : `That homebrew was already listed under **${approval.title}** as **${approval.label}**.\n${approval.href}`,
       );
 
       if (approval.created && interaction.channel?.send) {
@@ -661,6 +673,8 @@ async function handleInteraction(interaction) {
       const message =
         error instanceof TypeError
           ? "That URL is not valid. Please run `/approve` again with a full URL."
+          : error.message === "invalid_markdown_homebrew"
+            ? "The name and markdown text are required. Please run `/approve` again with both fields filled in."
           : "Something went wrong while approving that homebrew. Please try again.";
 
       if (interaction.deferred || interaction.replied) {

@@ -8,7 +8,7 @@ This bot provides `/help`, `/faq`, `/faq-add`, `/characters`, `/cc-link`, `/magi
 - `/characters` lists your WestMarches.games characters, class, and level.
 - `/cc-link` returns a single assigned DnD Beyond campaign link from Postgres.
 - `/magicitem` opens a rarity dropdown and rolls a random seeded magic item from Postgres.
-- `/approve` lets staff approve a homebrew link into the site-backed homebrew tables.
+- `/approve` lets staff approve a homebrew link or markdown-backed boon/grace into the site-backed homebrew tables.
 - `/join-guild` lets players add or move one of their WestMarches.games characters to a guild roster.
 - `/leave-guild` lets players remove one of their WestMarches.games characters from its guild roster.
 - `/post-guild-rosters` lets staff post or refresh the per-guild roster messages.
@@ -111,7 +111,7 @@ When the bot starts, it auto-registers `/help`, `/faq`, `/faq-add`, `/characters
 - `/faq-add` is gated by `REQUIRED_ROLE_ID` and opens a modal for category, question, and answer. If the question already exists in that category, it updates the answer.
 - `/characters` fetches the user's active WestMarches.games characters and shows class and level. Its `visibility` option defaults to private and can be set to public.
 - `/magicitem` shows a rarity select menu and rolls a random published item from the dedicated `magic_items` table.
-- `/approve` is gated by `REQUIRED_ROLE_ID`, then prompts for homebrew type. Weapons and wondrous items ask for rarity; spells ask for level; species, feats, and subclasses go straight to a name/URL form.
+- `/approve` is gated by `REQUIRED_ROLE_ID`, then prompts for homebrew type. Weapons and wondrous items ask for rarity; spells ask for level; species, feats, and subclasses go straight to a name/URL form. Boons and starting graces use a name/markdown form and are saved directly to their dedicated tables.
 - `/approve` writes published rows into `homebrew_entries` and `homebrew_section_items`, avoiding duplicates by matching the target section against the submitted URL or label.
 - `/join-guild` fetches active characters whose WestMarches.games `user.discordId` matches the Discord user, prompts for a character and guild, stores the roster membership in Postgres, posts a public confirmation, and edits or creates the relevant roster message.
 - `/leave-guild` verifies the user's active WestMarches.games characters, removes the selected roster membership, posts a public confirmation, and refreshes the relevant roster message.
