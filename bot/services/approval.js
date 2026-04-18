@@ -38,6 +38,16 @@ const APPROVE_CATEGORIES = [
     label: "Spells",
     description: "Approve a homebrew spell.",
   },
+  {
+    value: "starting-graces",
+    label: "Starting Graces",
+    description: "Approve a starting grace.",
+  },
+  {
+    value: "boons",
+    label: "Boons",
+    description: "Approve a boon.",
+  },
 ];
 
 const APPROVE_RARITIES = [
@@ -113,6 +123,10 @@ function buildApproveDetailRow(discordUserId, category) {
 
 function categoryNeedsDetail(category) {
   return ["weapons", "wondrous-items", "spells"].includes(category);
+}
+
+function categoryUsesMarkdown(category) {
+  return ["starting-graces", "boons"].includes(category);
 }
 
 function getCategory(categoryValue) {
@@ -224,6 +238,7 @@ function buildApproveModal(discordUserId, category, detailValue = "none") {
   const title = target?.detailLabel
     ? `Approve ${target.detailLabel} ${target.categoryLabel}`
     : `Approve ${target?.categoryLabel ?? "Homebrew"}`;
+  const usesMarkdown = categoryUsesMarkdown(category);
 
   const modal = new ModalBuilder()
     .setCustomId(`approve-modal:${discordUserId}:${category}:${detailValue}`)
@@ -236,16 +251,16 @@ function buildApproveModal(discordUserId, category, detailValue = "none") {
     .setRequired(true)
     .setMaxLength(200);
 
-  const urlInput = new TextInputBuilder()
-    .setCustomId("homebrew-url")
-    .setLabel("D&D Beyond URL")
-    .setStyle(TextInputStyle.Short)
+  const contentInput = new TextInputBuilder()
+    .setCustomId(usesMarkdown ? "homebrew-markdown" : "homebrew-url")
+    .setLabel(usesMarkdown ? "Markdown text" : "D&D Beyond URL")
+    .setStyle(usesMarkdown ? TextInputStyle.Paragraph : TextInputStyle.Short)
     .setRequired(true)
-    .setMaxLength(500);
+    .setMaxLength(usesMarkdown ? 4000 : 500);
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(nameInput),
-    new ActionRowBuilder().addComponents(urlInput),
+    new ActionRowBuilder().addComponents(contentInput),
   );
 
   return modal;
@@ -255,12 +270,16 @@ function buildApprovalAnnouncement(approval, approver) {
   const location = approval.detailLabel
     ? `${approval.detailLabel} ${approval.categoryLabel}`
     : approval.categoryLabel;
+  const approvedItem = approval.href
+    ? `[${approval.label}](<${approval.href}>)`
+    : `**${approval.label}**`;
+  const siteLine = approval.sitePath ? `\nSite path: ${approval.sitePath}` : "";
 
   return {
     content:
-      `**Homebrew approved:** [${approval.label}](<${approval.href}>)\n` +
+      `**Homebrew approved:** ${approvedItem}\n` +
       `Category: ${location}\n` +
-      `Approved by: ${approver}`,
+      `Approved by: ${approver}${siteLine}`,
     allowedMentions: {
       parse: [],
     },
@@ -278,7 +297,112 @@ function normalizeHomebrewUrl(url) {
   return parsed.toString();
 }
 
-async function approveHomebrew({ category, detailValue, name, url }) {
+function getMarkdownApproveTarget(category) {
+  const categoryConfig = getCategory(category);
+
+  if (category === "starting-graces") {
+    return {
+      table: "starting_graces",
+      categoryLabel: categoryConfig.label,
+      sitePathPrefix: "/docs/homebrew/starting-graces#grace-",
+    };
+  }
+
+  if (category === "boons") {
+    return {
+      table: "boons",
+      categoryLabel: categoryConfig.label,
+      sitePathPrefix: "/docs/homebrew/boons#boon-",
+    };
+  }
+
+  return null;
+}
+
+async function approveMarkdownHomebrew({ category, name, contentMarkdown }) {
+  const target = getMarkdownApproveTarget(category);
+
+  if (!target) {
+    throw new Error("unsupported_markdown_approve_target");
+  }
+
+  const title = name.trim();
+  const markdown = contentMarkdown.trim();
+  const slug = slugify(title);
+
+  if (!title || !slug || !markdown) {
+    throw new Error("invalid_markdown_homebrew");
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const existingResult = await client.query(
+      `
+      SELECT id
+      FROM ${target.table}
+      WHERE slug = $1 OR LOWER(title) = LOWER($2)
+      LIMIT 1
+      `,
+      [slug, title],
+    );
+
+    const existingId = existingResult.rows[0]?.id;
+    const result = existingId
+      ? await client.query(
+          `
+          UPDATE ${target.table}
+          SET
+            title = $2,
+            slug = $3,
+            content_markdown = $4,
+            is_published = true,
+            updated_at = NOW()
+          WHERE id = $1
+          RETURNING id, title, slug, content_markdown
+          `,
+          [existingId, title, slug, markdown],
+        )
+      : await client.query(
+          `
+          INSERT INTO ${target.table} (
+            title,
+            slug,
+            content_markdown,
+            sort_order,
+            is_published
+          )
+          VALUES ($1, $2, $3, 0, true)
+          RETURNING id, title, slug, content_markdown
+          `,
+          [title, slug, markdown],
+        );
+
+    await client.query("COMMIT");
+
+    return {
+      categoryLabel: target.categoryLabel,
+      detailLabel: "",
+      label: result.rows[0].title,
+      slug: result.rows[0].slug,
+      sitePath: `${target.sitePathPrefix}${result.rows[0].slug}`,
+      created: !existingId,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function approveHomebrew({ category, detailValue, name, url, contentMarkdown }) {
+  if (categoryUsesMarkdown(category)) {
+    return approveMarkdownHomebrew({ category, name, contentMarkdown });
+  }
+
   const target = getApproveTarget(category, detailValue);
 
   if (!target) {
@@ -378,6 +502,7 @@ module.exports = {
   buildApproveDetailRow,
   buildApproveModal,
   categoryNeedsDetail,
+  categoryUsesMarkdown,
   getApproveTarget,
   getCategory,
 };

@@ -48,6 +48,7 @@ const {
   buildApproveDetailRow,
   buildApproveModal,
   categoryNeedsDetail,
+  categoryUsesMarkdown,
   getApproveTarget,
   getCategory,
 } = require("./services/approval");
@@ -57,6 +58,43 @@ const {
   buildMagicItemResultEmbed,
   getRandomMagicItem,
 } = require("./services/magicItems");
+const {
+  endRpSession,
+  formatRpDuration,
+  getRpSessionStatus,
+  pauseRpSession,
+  resumeRpSession,
+  startRpSession,
+} = require("./services/rpSessions");
+
+function getRpContext(interaction) {
+  return {
+    guildId: interaction.guildId,
+    channelId: interaction.channelId,
+    userId: interaction.user.id,
+    canManageAny: hasRequiredRole(interaction),
+  };
+}
+
+
+function buildRpStatusText(session) {
+  if (!session) {
+    return "No RP timer is active in this channel or thread.";
+  }
+
+  const state =
+    session.status === "active"
+      ? "active and counting"
+      : session.status === "paused"
+        ? "paused"
+        : "ended";
+
+  return [
+    `RP timer is **${state}**.`,
+    `Started by <@${session.startedByDiscordUserId}>.`,
+    `Active time so far: **${formatRpDuration(session.activeSeconds)}**.`,
+  ].join("\n");
+}
 
 async function handleInteraction(interaction) {
   if (interaction.isStringSelectMenu()) {
@@ -591,18 +629,29 @@ async function handleInteraction(interaction) {
       await interaction.deferReply({ ephemeral: true });
 
       const name = interaction.fields.getTextInputValue("homebrew-name");
-      const url = interaction.fields.getTextInputValue("homebrew-url");
+      const usesMarkdown = categoryUsesMarkdown(category);
+      const url = usesMarkdown
+        ? null
+        : interaction.fields.getTextInputValue("homebrew-url");
+      const contentMarkdown = usesMarkdown
+        ? interaction.fields.getTextInputValue("homebrew-markdown")
+        : null;
       const approval = await approveHomebrew({
         category,
         detailValue: detailValue === "none" ? "" : detailValue,
         name,
         url,
+        contentMarkdown,
       });
 
       await interaction.editReply(
-        approval.created
-          ? `Approved **${approval.label}** under **${approval.title}**.\n${approval.href}`
-          : `That homebrew was already listed under **${approval.title}** as **${approval.label}**.\n${approval.href}`,
+        usesMarkdown
+          ? approval.created
+            ? `Approved **${approval.label}** under **${approval.categoryLabel}**.\n${approval.sitePath}`
+            : `Updated existing **${approval.label}** under **${approval.categoryLabel}**.\n${approval.sitePath}`
+          : approval.created
+            ? `Approved **${approval.label}** under **${approval.title}**.\n${approval.href}`
+            : `That homebrew was already listed under **${approval.title}** as **${approval.label}**.\n${approval.href}`,
       );
 
       if (approval.created && interaction.channel?.send) {
@@ -624,6 +673,8 @@ async function handleInteraction(interaction) {
       const message =
         error instanceof TypeError
           ? "That URL is not valid. Please run `/approve` again with a full URL."
+          : error.message === "invalid_markdown_homebrew"
+            ? "The name and markdown text are required. Please run `/approve` again with both fields filled in."
           : "Something went wrong while approving that homebrew. Please try again.";
 
       if (interaction.deferred || interaction.replied) {
@@ -889,6 +940,159 @@ async function handleInteraction(interaction) {
         await interaction.reply({
           content:
             "Something went wrong while posting the guild rosters. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "rp") {
+    const subcommand = interaction.options.getSubcommand();
+    const rpContext = getRpContext(interaction);
+
+    try {
+      await interaction.deferReply();
+
+      if (subcommand === "start") {
+        const result = await startRpSession(rpContext);
+
+        if (result.status === "already_open") {
+          const session = await getRpSessionStatus(rpContext);
+          await interaction.editReply(
+            [
+              "An RP timer is already open in this channel or thread.",
+              buildRpStatusText(session),
+            ].join("\n"),
+          );
+          return;
+        }
+
+        await interaction.editReply(
+          [
+            `RP tracking started by <@${interaction.user.id}>.`,
+            "Active roleplay time is now counting.",
+            "Use `/rp pause` when the scene stops and `/rp end` when it is finished.",
+          ].join("\n"),
+        );
+        return;
+      }
+
+      if (subcommand === "pause") {
+        const result = await pauseRpSession(rpContext);
+
+        if (result.status === "not_found") {
+          await interaction.editReply(
+            "No RP timer is active in this channel or thread. Use `/rp start` to begin one.",
+          );
+          return;
+        }
+
+        if (result.status === "not_allowed") {
+          await interaction.editReply(
+            `Only <@${result.session.startedByDiscordUserId}> or staff can pause this RP timer.`,
+          );
+          return;
+        }
+
+        if (result.status === "already_paused") {
+          await interaction.editReply(
+            [
+              "The RP timer is already paused.",
+              `Active time so far: **${formatRpDuration(result.session.activeSeconds)}**.`,
+            ].join("\n"),
+          );
+          return;
+        }
+
+        await interaction.editReply(
+          [
+            `RP tracking paused by <@${interaction.user.id}>.`,
+            `Active time so far: **${formatRpDuration(result.session.activeSeconds)}**.`,
+            "Use `/rp resume` when roleplay starts again.",
+          ].join("\n"),
+        );
+        return;
+      }
+
+      if (subcommand === "resume") {
+        const result = await resumeRpSession(rpContext);
+
+        if (result.status === "not_found") {
+          await interaction.editReply(
+            "No RP timer is paused in this channel or thread. Use `/rp start` to begin one.",
+          );
+          return;
+        }
+
+        if (result.status === "not_allowed") {
+          await interaction.editReply(
+            `Only <@${result.session.startedByDiscordUserId}> or staff can resume this RP timer.`,
+          );
+          return;
+        }
+
+        if (result.status === "already_active") {
+          await interaction.editReply(
+            [
+              "The RP timer is already active and counting.",
+              `Active time so far: **${formatRpDuration(result.session.activeSeconds)}** before this active stretch.`,
+            ].join("\n"),
+          );
+          return;
+        }
+
+        await interaction.editReply(
+          [
+            `RP tracking resumed by <@${interaction.user.id}>.`,
+            "Active roleplay time is counting again.",
+            `Previously counted time: **${formatRpDuration(result.session.activeSeconds)}**.`,
+          ].join("\n"),
+        );
+        return;
+      }
+
+      if (subcommand === "end") {
+        const result = await endRpSession(rpContext);
+
+        if (result.status === "not_found") {
+          await interaction.editReply(
+            "No RP timer is active in this channel or thread.",
+          );
+          return;
+        }
+
+        if (result.status === "not_allowed") {
+          await interaction.editReply(
+            `Only <@${result.session.startedByDiscordUserId}> or staff can end this RP timer.`,
+          );
+          return;
+        }
+
+        await interaction.editReply(
+          [
+            `RP tracking ended by <@${interaction.user.id}>.`,
+            `Total active roleplay time: **${formatRpDuration(result.session.activeSeconds)}**.`,
+          ].join("\n"),
+        );
+        return;
+      }
+
+      if (subcommand === "status") {
+        const session = await getRpSessionStatus(rpContext);
+        await interaction.editReply(buildRpStatusText(session));
+      }
+    } catch (error) {
+      console.error("Failed to process /rp:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while updating the RP timer. Please check that the RP session table exists and try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while updating the RP timer. Please check that the RP session table exists and try again.",
           ephemeral: true,
         });
       }
