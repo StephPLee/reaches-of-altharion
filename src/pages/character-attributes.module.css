@@ -84,6 +84,30 @@
     color: #d7ddef;
 }
 
+.levelChartPanel {
+    margin-top: 1rem;
+}
+
+.levelChartTitle {
+    margin: 0 0 0.65rem;
+    color: #f0e8fb;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: clamp(1.8rem, 3vw, 2.45rem);
+    line-height: 1.05;
+}
+
+.levelChartWrap {
+    height: 26rem;
+    padding: 1.2rem 1rem 1rem;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.95rem;
+    background: linear-gradient(
+        180deg,
+        rgba(19, 23, 42, 0.92),
+        rgba(12, 15, 28, 0.9)
+    );
+}
+
 .attributeGrid {
     display: grid;
     grid-template-columns: 1fr;
@@ -258,6 +282,11 @@
 
     .attributeBarChart {
         min-height: 18rem;
+    }
+
+    .levelChartWrap {
+        height: 20rem;
+        padding: 0.85rem 0.5rem 0.7rem;
     }
 
     .attributeLegend {
