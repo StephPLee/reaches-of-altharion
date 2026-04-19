@@ -52,9 +52,11 @@ Just copy the full multiline command and Avrae will roll the appropriate number 
 
 ### Background
 
-When choosing your background, we use Tasha’s rules so you may choose any allowed feat not strictly the predetermined origin feat. 
+When choosing your background, we use Tasha’s rules so you may choose any feat where the only prerequisite is being at least 4th level and not strictly the predetermined origin feat. 
 
-All backgrounds give your choice of \+2/+1 or \+1/+1/+1 to any stats
+All backgrounds give your choice of \+2/+1 or \+1/+1/+1 to any stats. 
+
+You can do this by either creating a custom background from the 2014 Tasha's rules, or by using one of the 2014 backgrounds and choosing a feat manually in the character's sheet. 
 
 ### Starting Grace
 

@@ -29,8 +29,15 @@ type AttributeStat = {
   options: AttributeStatOption[];
 };
 
+type CharacterLevelStat = {
+  level: number;
+  count: number;
+  percentage: number;
+};
+
 type WestMarchesAttributeStats = {
   totalCharacters: number;
+  levels?: CharacterLevelStat[];
   attributes: AttributeStat[];
 };
 
@@ -211,6 +218,100 @@ function renderAttributeChart(attribute: AttributeStat) {
   );
 }
 
+function renderLevelChart(levels: CharacterLevelStat[]) {
+  const chartData: ChartData<"bar", number[], string> = {
+    labels: levels.map((level) => `lvl ${level.level}`),
+    datasets: [
+      {
+        data: levels.map((level) => level.count),
+        backgroundColor: "rgba(190, 176, 138, 0.82)",
+        borderColor: "rgba(233, 221, 186, 0.58)",
+        borderWidth: 1,
+        borderRadius: 3,
+        maxBarThickness: 42,
+      },
+    ],
+  };
+  const chartOptions: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        callbacks: {
+          label(tooltipItem) {
+            const value = Number(tooltipItem.raw || 0);
+            const level = levels[tooltipItem.dataIndex];
+            return `${value} character${value === 1 ? "" : "s"} (${level?.percentage ?? 0}%)`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: "character level",
+          color: "#f0e8fb",
+          font: {
+            size: 18,
+            weight: "bold",
+            family: '"Cormorant Garamond", "Garamond", "Times New Roman", serif',
+          },
+        },
+        ticks: {
+          color: "#ece2ff",
+          maxRotation: 0,
+          autoSkip: false,
+        },
+        grid: {
+          display: false,
+        },
+        border: {
+          color: "rgba(233, 221, 186, 0.48)",
+        },
+      },
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: "Number of Characters",
+          color: "#f0e8fb",
+          font: {
+            size: 14,
+            weight: "bold",
+          },
+        },
+        ticks: {
+          color: "#d7ddef",
+          precision: 0,
+        },
+        grid: {
+          color: "rgba(190, 176, 138, 0.14)",
+        },
+        border: {
+          color: "rgba(233, 221, 186, 0.48)",
+        },
+      },
+    },
+  };
+
+  return (
+    <article className={styles.levelChartPanel}>
+      <h2 className={styles.levelChartTitle}>Character Levels</h2>
+      <div className={styles.levelChartWrap}>
+        <Bar
+          data={chartData}
+          options={chartOptions}
+          aria-label="Character level distribution bar chart"
+        />
+      </div>
+    </article>
+  );
+}
+
 export default function CharacterAttributesPage(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
@@ -293,6 +394,9 @@ export default function CharacterAttributesPage(): ReactNode {
             ) : null}
             {attributeStats ? (
               <>
+                {attributeStats.levels?.length
+                  ? renderLevelChart(attributeStats.levels)
+                  : null}
                 <p className={styles.attributeSummary}>
                   Active characters counted:{" "}
                   <strong>{attributeStats.totalCharacters}</strong>

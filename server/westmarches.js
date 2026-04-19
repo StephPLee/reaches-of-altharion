@@ -6,6 +6,8 @@ const {
 const ATTRIBUTE_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const CHARACTER_DETAIL_BATCH_SIZE = 10;
 const CLASS_ATTRIBUTE_NAME = "class";
+const CHARACTER_LEVEL_MIN = 1;
+const CHARACTER_LEVEL_MAX = 20;
 const CLASS_ATTRIBUTE_OPTIONS = [
   "Barbarian",
   "Bard",
@@ -63,6 +65,18 @@ function normalizeAttributeName(attributeName) {
   return typeof attributeName === "string"
     ? attributeName.trim().toLowerCase()
     : "";
+}
+
+function normalizeCharacterLevel(character) {
+  const rawLevel = character?.level;
+  const level =
+    typeof rawLevel === "number" ? rawLevel : Number.parseInt(rawLevel, 10);
+
+  return Number.isInteger(level) &&
+    level >= CHARACTER_LEVEL_MIN &&
+    level <= CHARACTER_LEVEL_MAX
+    ? level
+    : null;
 }
 
 function isWestMarchesConfigured() {
@@ -226,6 +240,19 @@ async function listCharacterAttributeStats() {
 
   const { activeCharacters, details } = await listActiveCharacterDetails();
   const attributeCounts = new Map();
+  const levelCounts = new Map(
+    Array.from(
+      { length: CHARACTER_LEVEL_MAX - CHARACTER_LEVEL_MIN + 1 },
+      (_value, index) => [CHARACTER_LEVEL_MIN + index, 0],
+    ),
+  );
+
+  for (const character of activeCharacters) {
+    const level = normalizeCharacterLevel(character);
+    if (level !== null) {
+      levelCounts.set(level, (levelCounts.get(level) || 0) + 1);
+    }
+  }
 
   for (const character of details) {
     const attributeValues = Array.isArray(character?.attributeValues)
@@ -281,6 +308,14 @@ async function listCharacterAttributeStats() {
 
   const result = {
     totalCharacters: activeCharacters.length,
+    levels: [...levelCounts.entries()].map(([level, count]) => ({
+      level,
+      count,
+      percentage:
+        activeCharacters.length > 0
+          ? Number(((count / activeCharacters.length) * 100).toFixed(1))
+          : 0,
+    })),
     attributes: [...attributeCounts.values()]
       .map((attribute) => ({
         attributeName: attribute.attributeName,
