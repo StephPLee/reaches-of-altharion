@@ -132,6 +132,8 @@ async function handleInteraction(interaction) {
           content:
             category === "spells"
               ? "Choose the spell level."
+              : category === "subclasses"
+                ? "Choose the class this subclass belongs to."
               : "Choose the item rarity.",
           components: [buildApproveDetailRow(interaction.user.id, category)],
         });

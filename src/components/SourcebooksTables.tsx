@@ -1,12 +1,34 @@
-import { useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import styles from "./SourcebooksTables.module.css";
 
 type SourcebookRow = {
+  id?: number;
+  listType?: "allowed" | "not_allowed";
   title: string;
   publisher: string;
   type: string;
   edition: string;
+  sortOrder?: number;
+  isPublished?: boolean;
+};
+
+type SessionUser = {
+  id?: number;
+  username: string;
+  globalName: string | null;
+  isStaff: boolean;
+};
+
+type SourcebookFormState = {
+  listType: "allowed" | "not_allowed";
+  title: string;
+  publisher: string;
+  type: string;
+  edition: string;
+  sortOrder: string;
 };
 
 const NOT_ALLOWED_BOOKS: SourcebookRow[] = [
@@ -361,7 +383,37 @@ function matchesSearch(row: SourcebookRow, query: string) {
   return haystack.includes(query);
 }
 
-function SourcebookTable({ books }: { books: SourcebookRow[] }) {
+function getAuthApiBaseUrl(siteConfig): string {
+  const configuredBaseUrl = siteConfig.customFields?.authApiBaseUrl;
+  return typeof configuredBaseUrl === "string"
+    ? configuredBaseUrl.replace(/\/$/, "")
+    : "";
+}
+
+function createEmptyForm(listType: "allowed" | "not_allowed"): SourcebookFormState {
+  return {
+    listType,
+    title: "",
+    publisher: "",
+    type: "",
+    edition: "",
+    sortOrder: "0",
+  };
+}
+
+function SourcebookTable({
+  books,
+  isStaff,
+  onEdit,
+  onDelete,
+  deletingId,
+}: {
+  books: SourcebookRow[];
+  isStaff: boolean;
+  onEdit: (book: SourcebookRow) => void;
+  onDelete: (book: SourcebookRow) => void;
+  deletingId: number | null;
+}) {
   return (
     <table>
       <thead>
@@ -370,15 +422,38 @@ function SourcebookTable({ books }: { books: SourcebookRow[] }) {
           <th>Publisher</th>
           <th>Type</th>
           <th>Edition</th>
+          {isStaff ? <th>Actions</th> : null}
         </tr>
       </thead>
       <tbody>
         {books.map((book) => (
-          <tr key={book.title}>
+          <tr key={book.id ?? `${book.title}-${book.publisher}`}>
             <td>{book.title}</td>
             <td>{book.publisher}</td>
             <td>{book.type}</td>
             <td>{book.edition}</td>
+            {isStaff ? (
+              <td>
+                <div className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.inlineButton}
+                    disabled={!book.id}
+                    onClick={() => onEdit(book)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.inlineDangerButton}
+                    disabled={!book.id || deletingId === book.id}
+                    onClick={() => onDelete(book)}
+                  >
+                    {deletingId === book.id ? "Removing..." : "Remove"}
+                  </button>
+                </div>
+              </td>
+            ) : null}
           </tr>
         ))}
       </tbody>
@@ -387,19 +462,364 @@ function SourcebookTable({ books }: { books: SourcebookRow[] }) {
 }
 
 export default function SourcebooksTables() {
+  const { siteConfig } = useDocusaurusContext();
+  const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
   const [search, setSearch] = useState("");
+  const [allowedBooks, setAllowedBooks] = useState<SourcebookRow[]>(ALLOWED_BOOKS);
+  const [notAllowedBooks, setNotAllowedBooks] =
+    useState<SourcebookRow[]>(NOT_ALLOWED_BOOKS);
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [formOpenFor, setFormOpenFor] = useState<"allowed" | "not_allowed" | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formMessage, setFormMessage] = useState("");
+  const [formError, setFormError] = useState("");
+  const [form, setForm] = useState<SourcebookFormState>(createEmptyForm("allowed"));
   const normalizedSearch = search.trim().toLowerCase();
+  const isStaff = Boolean(currentUser?.isStaff);
+
+  async function refreshSourcebooks(useAdminEndpoint = isStaff) {
+    const response = await fetch(
+      `${authApiBaseUrl}${useAdminEndpoint ? "/api/admin/sourcebooks" : "/api/sourcebooks"}`,
+      useAdminEndpoint ? { credentials: "include" } : undefined,
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to load sourcebooks (${response.status}).`);
+    }
+
+    const payload = await response.json();
+    setAllowedBooks(Array.isArray(payload.allowed) ? payload.allowed : []);
+    setNotAllowedBooks(
+      Array.isArray(payload.notAllowed) ? payload.notAllowed : [],
+    );
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSourcebooks() {
+      try {
+        setLoading(true);
+        const response = await fetch(`${authApiBaseUrl}/api/sourcebooks`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to load sourcebooks (${response.status}).`);
+        }
+
+        const payload = await response.json();
+
+        if (!cancelled) {
+          setAllowedBooks(Array.isArray(payload.allowed) ? payload.allowed : []);
+          setNotAllowedBooks(
+            Array.isArray(payload.notAllowed) ? payload.notAllowed : [],
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setAllowedBooks(ALLOWED_BOOKS);
+          setNotAllowedBooks(NOT_ALLOWED_BOOKS);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSourcebooks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authApiBaseUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      try {
+        const response = await fetch(`${authApiBaseUrl}/api/me`, {
+          credentials: "include",
+        });
+
+        if (response.status === 401) {
+          if (!cancelled) {
+            setCurrentUser(null);
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Failed to load auth session (${response.status}).`);
+        }
+
+        const payload = await response.json();
+        if (!cancelled) {
+          setCurrentUser(payload.authenticated ? payload.user : null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCurrentUser(null);
+        }
+      }
+    }
+
+    loadSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authApiBaseUrl]);
+
+  useEffect(() => {
+    if (!isStaff) {
+      return;
+    }
+
+    refreshSourcebooks(true).catch(() => undefined);
+  }, [authApiBaseUrl, isStaff]);
 
   const filteredNotAllowed = useMemo(
     () =>
-      NOT_ALLOWED_BOOKS.filter((book) => matchesSearch(book, normalizedSearch)),
-    [normalizedSearch],
+      notAllowedBooks.filter((book) => matchesSearch(book, normalizedSearch)),
+    [normalizedSearch, notAllowedBooks],
   );
 
   const filteredAllowed = useMemo(
-    () => ALLOWED_BOOKS.filter((book) => matchesSearch(book, normalizedSearch)),
-    [normalizedSearch],
+    () => allowedBooks.filter((book) => matchesSearch(book, normalizedSearch)),
+    [normalizedSearch, allowedBooks],
   );
+
+  function updateFormField(field: keyof SourcebookFormState, value: string) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function openCreateForm(listType: "allowed" | "not_allowed") {
+    setFormOpenFor(listType);
+    setEditingId(null);
+    setForm(createEmptyForm(listType));
+    setFormMessage("");
+    setFormError("");
+  }
+
+  function beginEditing(book: SourcebookRow) {
+    if (!book.id || !book.listType) {
+      return;
+    }
+
+    setFormOpenFor(book.listType);
+    setEditingId(book.id);
+    setForm({
+      listType: book.listType,
+      title: book.title,
+      publisher: book.publisher,
+      type: book.type,
+      edition: book.edition,
+      sortOrder: String(book.sortOrder ?? 0),
+    });
+    setFormMessage("");
+    setFormError("");
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormMessage("");
+    setFormError("");
+
+    if (!form.title.trim()) {
+      setFormError("Title is required.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const isEditing = editingId !== null;
+      const response = await fetch(
+        isEditing
+          ? `${authApiBaseUrl}/api/admin/sourcebooks/${editingId}`
+          : `${authApiBaseUrl}/api/admin/sourcebooks`,
+        {
+          method: isEditing ? "PATCH" : "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            listType: form.listType,
+            title: form.title.trim(),
+            publisher: form.publisher.trim(),
+            type: form.type.trim(),
+            edition: form.edition.trim(),
+            sortOrder: Number.parseInt(form.sortOrder, 10) || 0,
+            isPublished: true,
+          }),
+        },
+      );
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to save sourcebook.");
+      }
+
+      await refreshSourcebooks(true);
+      setFormMessage(isEditing ? "Sourcebook updated." : "Sourcebook added.");
+      setEditingId(null);
+      setForm(createEmptyForm(form.listType));
+    } catch (submitError) {
+      setFormError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save sourcebook.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete(book: SourcebookRow) {
+    if (!book.id) {
+      return;
+    }
+
+    setFormMessage("");
+    setFormError("");
+
+    try {
+      setDeletingId(book.id);
+      const response = await fetch(
+        `${authApiBaseUrl}/api/admin/sourcebooks/${book.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Failed to remove sourcebook.");
+      }
+
+      await refreshSourcebooks(true);
+      setFormMessage("Sourcebook removed.");
+    } catch (deleteError) {
+      setFormError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to remove sourcebook.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  function renderStaffForm(listType: "allowed" | "not_allowed") {
+    if (!isStaff || formOpenFor !== listType) {
+      return null;
+    }
+
+    return (
+      <form className={styles.editorPanel} onSubmit={handleSubmit}>
+        <div className={styles.editorGrid}>
+          <label className={styles.field}>
+            <span>List</span>
+            <select
+              className={styles.input}
+              value={form.listType}
+              onChange={(event) =>
+                updateFormField(
+                  "listType",
+                  event.target.value as "allowed" | "not_allowed",
+                )
+              }
+            >
+              <option value="allowed">Allowed Reference List</option>
+              <option value="not_allowed">Not Allowed</option>
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span>Title</span>
+            <input
+              className={styles.input}
+              value={form.title}
+              onChange={(event) => updateFormField("title", event.target.value)}
+              required
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Publisher</span>
+            <input
+              className={styles.input}
+              value={form.publisher}
+              onChange={(event) =>
+                updateFormField("publisher", event.target.value)
+              }
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Type</span>
+            <input
+              className={styles.input}
+              value={form.type}
+              onChange={(event) => updateFormField("type", event.target.value)}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Edition</span>
+            <input
+              className={styles.input}
+              value={form.edition}
+              onChange={(event) =>
+                updateFormField("edition", event.target.value)
+              }
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Sort Order</span>
+            <input
+              className={styles.input}
+              type="number"
+              value={form.sortOrder}
+              onChange={(event) =>
+                updateFormField("sortOrder", event.target.value)
+              }
+            />
+          </label>
+        </div>
+        {formMessage ? <p className={styles.success}>{formMessage}</p> : null}
+        {formError ? <p className={styles.error}>{formError}</p> : null}
+        <div className={styles.editorActions}>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={() => {
+              setFormOpenFor(null);
+              setEditingId(null);
+            }}
+          >
+            Close
+          </button>
+          <button
+            type="submit"
+            className={styles.primaryButton}
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? "Saving..."
+              : editingId !== null
+                ? "Save Changes"
+                : "Add Sourcebook"}
+          </button>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <>
@@ -419,6 +839,7 @@ export default function SourcebooksTables() {
           The search filters both the not allowed list and the allowed reference
           list.
         </p>
+        {loading ? <p className={styles.searchHint}>Loading sourcebooks...</p> : null}
       </div>
 
       <div className={styles.section}>
@@ -428,11 +849,29 @@ export default function SourcebooksTables() {
           partnered content is generally permitted.
         </p>
         <p className={styles.count}>
-          Showing {filteredNotAllowed.length} of {NOT_ALLOWED_BOOKS.length} not
+          Showing {filteredNotAllowed.length} of {notAllowedBooks.length} not
           allowed entries.
         </p>
+        {isStaff ? (
+          <div className={styles.editorActions}>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => openCreateForm("not_allowed")}
+            >
+              Add Not Allowed Entry
+            </button>
+          </div>
+        ) : null}
+        {renderStaffForm("not_allowed")}
         {filteredNotAllowed.length > 0 ? (
-          <SourcebookTable books={filteredNotAllowed} />
+          <SourcebookTable
+            books={filteredNotAllowed}
+            isStaff={isStaff}
+            onEdit={beginEditing}
+            onDelete={handleDelete}
+            deletingId={deletingId}
+          />
         ) : (
           <p className={styles.emptyState}>
             No not allowed entries match that search.
@@ -447,11 +886,29 @@ export default function SourcebooksTables() {
           allowed to use.
         </p>
         <p className={styles.count}>
-          Showing {filteredAllowed.length} of {ALLOWED_BOOKS.length} allowed
+          Showing {filteredAllowed.length} of {allowedBooks.length} allowed
           reference entries.
         </p>
+        {isStaff ? (
+          <div className={styles.editorActions}>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => openCreateForm("allowed")}
+            >
+              Add Allowed Entry
+            </button>
+          </div>
+        ) : null}
+        {renderStaffForm("allowed")}
         {filteredAllowed.length > 0 ? (
-          <SourcebookTable books={filteredAllowed} />
+          <SourcebookTable
+            books={filteredAllowed}
+            isStaff={isStaff}
+            onEdit={beginEditing}
+            onDelete={handleDelete}
+            deletingId={deletingId}
+          />
         ) : (
           <p className={styles.emptyState}>
             No allowed entries match that search.

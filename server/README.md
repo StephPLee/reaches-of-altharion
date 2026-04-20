@@ -6,7 +6,12 @@
 - `POST /auth/logout`
 - `GET /api/me`
 - `GET /api/calendar`
+- `GET /api/sourcebooks`
 - `POST /api/admin/calendar`
+- `GET /api/admin/sourcebooks`
+- `POST /api/admin/sourcebooks`
+- `PATCH /api/admin/sourcebooks/:sourcebookId`
+- `DELETE /api/admin/sourcebooks/:sourcebookId`
 
 ## Required env
 

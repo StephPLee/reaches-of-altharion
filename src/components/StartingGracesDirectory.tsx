@@ -205,6 +205,203 @@ function renderGraceContent(markdown: string) {
   return nodes;
 }
 
+function SvgFlowNode({
+  x,
+  y,
+  width,
+  height,
+  children,
+  tone = "neutral",
+  compact = false,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  children: React.ReactNode;
+  tone?: "neutral" | "success" | "danger";
+  compact?: boolean;
+}) {
+  const toneClass = tone === "neutral" ? "" : styles[`flowNode${tone}`];
+  const textClass = compact
+    ? `${styles.flowNodeText} ${styles.flowNodeTextCompact}`.trim()
+    : styles.flowNodeText;
+
+  return (
+    <g>
+      <rect
+        className={`${styles.flowNode} ${toneClass}`.trim()}
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx="10"
+      />
+      <foreignObject
+        x={x + 12}
+        y={y + 10}
+        width={width - 24}
+        height={height - 20}
+      >
+        <div className={textClass}>{children}</div>
+      </foreignObject>
+    </g>
+  );
+}
+
+function WarlordsBannerFlowchart() {
+  return (
+    <section
+      className={styles.flowchartPanel}
+      aria-labelledby="warlords-banner-flowchart-title"
+    >
+      <h3
+        id="warlords-banner-flowchart-title"
+        className={styles.flowchartTitle}
+      >
+        Warlord&apos;s Banner Flowchart
+      </h3>
+      <div className={styles.flowchartStack}>
+        <svg
+          className={styles.flowSvg}
+          viewBox="0 0 1040 780"
+          role="img"
+          aria-label="Flowchart for deciding whether an effect works with Warlord's Banner"
+        >
+          <path
+            className={styles.flowConnector}
+            d="M520 90 V125 H250 V160 M520 125 H790 V160"
+          />
+          <path
+            className={styles.flowConnector}
+            d="M250 240 V285 H150 V330 M250 285 H350 V330"
+          />
+          <path
+            className={styles.flowConnector}
+            d="M790 250 V295 H650 V340 M790 295 H930 V330"
+          />
+          <path
+            className={styles.flowConnector}
+            d="M650 430 V470 H590 V510 M650 470 H790 V510"
+          />
+          <path
+            className={styles.flowConnector}
+            d="M590 600 V635 H510 V670 M590 635 H670 V670"
+          />
+
+          <text className={styles.flowSvgLabel} x="232" y="121">
+            Yes
+          </text>
+          <text className={styles.flowSvgLabel} x="774" y="121">
+            No
+          </text>
+          <text className={styles.flowSvgLabel} x="132" y="281">
+            Yes
+          </text>
+          <text className={styles.flowSvgLabel} x="334" y="281">
+            No
+          </text>
+          <text className={styles.flowSvgLabel} x="632" y="291">
+            Yes
+          </text>
+          <text className={styles.flowSvgLabel} x="914" y="281">
+            No
+          </text>
+          <text className={styles.flowSvgLabel} x="572" y="466">
+            Yes
+          </text>
+          <text className={styles.flowSvgLabel} x="774" y="466">
+            No
+          </text>
+          <text className={styles.flowSvgLabel} x="492" y="631">
+            Yes
+          </text>
+          <text className={styles.flowSvgLabel} x="654" y="631">
+            No
+          </text>
+
+          <SvgFlowNode x={400} y={20} width={240} height={70}>
+            Is it from <strong>your spell?</strong>
+          </SvgFlowNode>
+          <SvgFlowNode x={100} y={160} width={300} height={80}>
+            Does the spell target only you or are you the sole beneficiary of
+            it?
+          </SvgFlowNode>
+          <SvgFlowNode x={620} y={160} width={340} height={90}>
+            Is it your class feature, feat, or similar ability?
+          </SvgFlowNode>
+          <SvgFlowNode x={40} y={330} width={220} height={70} tone="success">
+            It will Warlord&apos;s Presence
+          </SvgFlowNode>
+          <SvgFlowNode x={270} y={330} width={220} height={70} tone="danger">
+            It will NOT Warlord&apos;s Banner
+          </SvgFlowNode>
+          <SvgFlowNode x={505} y={340} width={290} height={90}>
+            Does the effect refer to &quot;you&quot; as the one receiving the
+            benefit?
+          </SvgFlowNode>
+          <SvgFlowNode x={820} y={330} width={220} height={70} tone="danger">
+            It will NOT Warlord&apos;s Presence
+          </SvgFlowNode>
+          <SvgFlowNode x={455} y={510} width={270} height={90}>
+            Does it benefit/target you as one of its beneficiaries?
+          </SvgFlowNode>
+          <SvgFlowNode x={740} y={510} width={220} height={70} tone="danger">
+            It will NOT Warlord&apos;s Presence
+          </SvgFlowNode>
+          <SvgFlowNode x={400} y={670} width={220} height={70} tone="success">
+            It will Warlord&apos;s Presence
+          </SvgFlowNode>
+          <SvgFlowNode x={640} y={670} width={220} height={70} tone="danger">
+            It will NOT Warlord&apos;s Presence
+          </SvgFlowNode>
+        </svg>
+
+        <svg
+          className={styles.flowSvg}
+          viewBox="0 0 760 610"
+          role="img"
+          aria-label="Flowchart for external sources and Warlord's Banner"
+        >
+          <path className={styles.flowConnector} d="M380 90 V160" />
+          <path
+            className={styles.flowConnector}
+            d="M380 240 V295 H230 V330 M380 295 H530 V330"
+          />
+
+          <text className={styles.flowSvgLabel} x="398" y="130">
+            Yes
+          </text>
+          <text className={styles.flowSvgLabel} x="212" y="291">
+            Yes
+          </text>
+          <text className={styles.flowSvgLabel} x="514" y="291">
+            No
+          </text>
+
+          <SvgFlowNode x={230} y={20} width={300} height={70}>
+            Is it from a potion, magic item or other external source*
+          </SvgFlowNode>
+          <SvgFlowNode x={250} y={160} width={260} height={80}>
+            Is it from a magic item that you are attuned to?
+          </SvgFlowNode>
+          <SvgFlowNode x={120} y={330} width={220} height={80} tone="success">
+            It will Warlord&apos;s Banner if the rest of the flowchart applies.
+          </SvgFlowNode>
+          <SvgFlowNode x={420} y={330} width={220} height={70} tone="danger">
+            It will NOT Warlord&apos;s Presence
+          </SvgFlowNode>
+          <SvgFlowNode x={210} y={455} width={340} height={125} compact>
+            * Spell Scrolls allow you to cast spells. Those spells can then be
+            shared with Warlord&apos;s Presence, if the rest of the flowchart
+            applies, treated as if they are your spells.
+          </SvgFlowNode>
+        </svg>
+      </div>
+    </section>
+  );
+}
+
 function mapSetupCommandToDraft(
   command: AutomationSetupCommand,
 ): SetupCommandDraft {
@@ -978,6 +1175,9 @@ export default function StartingGracesDirectory() {
                       <>
                         <div className={styles.content}>
                           {renderGraceContent(grace.contentMarkdown)}
+                          {grace.slug === "warlords-banner" ? (
+                            <WarlordsBannerFlowchart />
+                          ) : null}
                         </div>
 
                         {grace.automationEntries.map((automationEntry) => (

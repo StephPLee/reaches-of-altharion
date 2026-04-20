@@ -83,6 +83,111 @@ const APPROVE_SPELL_LEVELS = [
   { value: "9th", label: "9th Level", title: "9th Level Spells", sortOrder: 100 },
 ];
 
+const APPROVE_SUBCLASS_CLASSES = [
+  {
+    value: "artificer",
+    label: "Artificer",
+    title: "Artificer | Specialists",
+    sortOrder: 10,
+  },
+  {
+    value: "barbarian",
+    label: "Barbarian",
+    title: "Barbarian | Paths",
+    sortOrder: 20,
+  },
+  {
+    value: "bard",
+    label: "Bard",
+    title: "Bard | Colleges",
+    sortOrder: 30,
+  },
+  {
+    value: "blood-hunter",
+    label: "Blood Hunter",
+    title: "Blood Hunter | Orders",
+    sortOrder: 40,
+  },
+  {
+    value: "cleric",
+    label: "Cleric",
+    title: "Cleric | Domains",
+    sortOrder: 50,
+  },
+  {
+    value: "druid",
+    label: "Druid",
+    title: "Druid | Circles",
+    sortOrder: 60,
+  },
+  {
+    value: "fighter",
+    label: "Fighter",
+    title: "Fighter | Martial Archetypes",
+    sortOrder: 70,
+  },
+  {
+    value: "gunslinger",
+    label: "Gunslinger",
+    title: "Gunslinger | ???",
+    sortOrder: 80,
+  },
+  {
+    value: "illrigger",
+    label: "Illrigger",
+    title: "Illrigger | Diabolic Contracts",
+    sortOrder: 90,
+  },
+  {
+    value: "monk",
+    label: "Monk",
+    title: "Monk | Warriors",
+    sortOrder: 100,
+  },
+  {
+    value: "monster-hunter",
+    label: "Monster Hunter",
+    title: "Monster Hunter | Hunting Guilds",
+    sortOrder: 110,
+  },
+  {
+    value: "paladin",
+    label: "Paladin",
+    title: "Paladin | Oaths",
+    sortOrder: 120,
+  },
+  {
+    value: "ranger",
+    label: "Ranger",
+    title: "Ranger | Conclaves",
+    sortOrder: 130,
+  },
+  {
+    value: "rogue",
+    label: "Rogue",
+    title: "Rogue | Roguish Archetypes",
+    sortOrder: 140,
+  },
+  {
+    value: "sorcerer",
+    label: "Sorcerer",
+    title: "Sorcerer | Bloodlines",
+    sortOrder: 150,
+  },
+  {
+    value: "warlock",
+    label: "Warlock",
+    title: "Warlock | Patrons",
+    sortOrder: 160,
+  },
+  {
+    value: "wizard",
+    label: "Wizard",
+    title: "Wizard | Schools",
+    sortOrder: 170,
+  },
+];
+
 
 function buildApproveCategoryRow(discordUserId) {
   const menu = new StringSelectMenuBuilder()
@@ -96,13 +201,26 @@ function buildApproveCategoryRow(discordUserId) {
 function buildApproveDetailRow(discordUserId, category) {
   const menu = new StringSelectMenuBuilder()
     .setCustomId(`approve-detail:${discordUserId}:${category}`)
-    .setPlaceholder(category === "spells" ? "Choose a spell level..." : "Choose a rarity...");
+    .setPlaceholder(
+      category === "spells"
+        ? "Choose a spell level..."
+        : category === "subclasses"
+          ? "Choose the parent class..."
+          : "Choose a rarity...",
+    );
 
   if (category === "spells") {
     menu.addOptions(
       APPROVE_SPELL_LEVELS.map((level) => ({
         label: level.label,
         value: level.value,
+      })),
+    );
+  } else if (category === "subclasses") {
+    menu.addOptions(
+      APPROVE_SUBCLASS_CLASSES.map((subclassClass) => ({
+        label: subclassClass.label,
+        value: subclassClass.value,
       })),
     );
   } else {
@@ -122,7 +240,7 @@ function buildApproveDetailRow(discordUserId, category) {
 }
 
 function categoryNeedsDetail(category) {
-  return ["weapons", "wondrous-items", "spells"].includes(category);
+  return ["weapons", "wondrous-items", "spells", "subclasses"].includes(category);
 }
 
 function categoryUsesMarkdown(category) {
@@ -136,6 +254,12 @@ function getCategory(categoryValue) {
 function getDetail(category, detailValue) {
   if (category === "spells") {
     return APPROVE_SPELL_LEVELS.find((level) => level.value === detailValue);
+  }
+
+  if (category === "subclasses") {
+    return APPROVE_SUBCLASS_CLASSES.find(
+      (subclassClass) => subclassClass.value === detailValue,
+    );
   }
 
   const rarities =
@@ -209,6 +333,23 @@ function getApproveTarget(category, detailValue = "") {
       labelSuffix: `${level.label} Spell`,
       categoryLabel: categoryConfig.label,
       detailLabel: level.label,
+    };
+  }
+
+  if (category === "subclasses") {
+    const subclassClass = getDetail(category, detailValue);
+    if (!subclassClass) {
+      return null;
+    }
+
+    return {
+      section: category,
+      title: subclassClass.title,
+      slug: slugify(subclassClass.title),
+      sortOrder: subclassClass.sortOrder,
+      labelSuffix: "",
+      categoryLabel: categoryConfig.label,
+      detailLabel: subclassClass.label,
     };
   }
 
@@ -416,28 +557,68 @@ async function approveHomebrew({ category, detailValue, name, url, contentMarkdo
   try {
     await client.query("BEGIN");
 
-    const entryResult = await client.query(
+    const existingEntryResult = await client.query(
       `
-      INSERT INTO homebrew_entries (
-        section,
-        title,
-        slug,
-        body_markdown,
-        sort_order,
-        is_published
-      )
-      VALUES ($1, $2, $3, '', $4, true)
-      ON CONFLICT (slug) DO UPDATE
-      SET
-        title = EXCLUDED.title,
-        sort_order = EXCLUDED.sort_order,
-        is_published = true,
-        updated_at = NOW()
-      RETURNING id
+      SELECT id
+      FROM homebrew_entries
+      WHERE section = $1
+        AND (
+          slug = $2
+          OR LOWER(title) = LOWER($3)
+        )
+      ORDER BY
+        CASE
+          WHEN LOWER(title) = LOWER($3) THEN 0
+          ELSE 1
+        END,
+        id ASC
+      LIMIT 1
       `,
-      [target.section, target.title, target.slug, target.sortOrder],
+      [target.section, target.slug, target.title],
     );
-    const homebrewEntryId = entryResult.rows[0].id;
+
+    let homebrewEntryId = existingEntryResult.rows[0]?.id ?? null;
+
+    if (homebrewEntryId) {
+      const entryResult = await client.query(
+        `
+        UPDATE homebrew_entries
+        SET
+          title = $2,
+          sort_order = $3,
+          is_published = true,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING id
+        `,
+        [homebrewEntryId, target.title, target.sortOrder],
+      );
+      homebrewEntryId = entryResult.rows[0].id;
+    } else {
+      const entryResult = await client.query(
+        `
+        INSERT INTO homebrew_entries (
+          section,
+          title,
+          slug,
+          body_markdown,
+          sort_order,
+          is_published
+        )
+        VALUES ($1, $2, $3, '', $4, true)
+        ON CONFLICT (slug) DO UPDATE
+        SET
+          section = EXCLUDED.section,
+          title = EXCLUDED.title,
+          sort_order = EXCLUDED.sort_order,
+          is_published = true,
+          updated_at = NOW()
+        RETURNING id
+        `,
+        [target.section, target.title, target.slug, target.sortOrder],
+      );
+      homebrewEntryId = entryResult.rows[0].id;
+    }
 
     const itemResult = await client.query(
       `
