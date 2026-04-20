@@ -67,6 +67,12 @@ const {
   updateStartingGraceAutomation,
 } = require("./starting-graces");
 const {
+  createSourcebook,
+  deleteSourcebook,
+  listSourcebooks,
+  updateSourcebook,
+} = require("./sourcebooks");
+const {
   createBoon,
   createBoonAutomation,
   deleteBoon,
@@ -667,6 +673,50 @@ function normalizeHomebrewAutomationPayload(body) {
   };
 }
 
+function normalizeSourcebookPayload(body) {
+  const {
+    listType,
+    title,
+    publisher,
+    type,
+    edition,
+    sortOrder,
+    isPublished,
+  } = body ?? {};
+
+  if (
+    !["allowed", "not_allowed"].includes(listType) ||
+    typeof title !== "string" ||
+    !title.trim()
+  ) {
+    return {
+      error: "listType and title are required.",
+    };
+  }
+
+  const parsedSortOrder =
+    typeof sortOrder === "number" && Number.isFinite(sortOrder)
+      ? Math.trunc(sortOrder)
+      : 0;
+
+  return {
+    listType,
+    title: title.trim(),
+    publisher: typeof publisher === "string" ? publisher.trim() : "",
+    type: typeof type === "string" ? type.trim() : "",
+    edition: typeof edition === "string" ? edition.trim() : "",
+    sortOrder: parsedSortOrder,
+    isPublished: isPublished !== false,
+  };
+}
+
+function groupSourcebooks(entries) {
+  return {
+    allowed: entries.filter((entry) => entry.listType === "allowed"),
+    notAllowed: entries.filter((entry) => entry.listType === "not_allowed"),
+  };
+}
+
 function normalizeGuildUpgradeAutomationPayload(body) {
   const {
     guildUpgradeId,
@@ -1209,6 +1259,16 @@ app.get("/api/homebrew/:section", async (req, res) => {
   } catch (homebrewError) {
     console.error("Failed to load homebrew entries:", homebrewError);
     res.status(500).json({ error: "Failed to load homebrew entries." });
+  }
+});
+
+app.get("/api/sourcebooks", async (_req, res) => {
+  try {
+    const sourcebooks = await listSourcebooks();
+    res.json(groupSourcebooks(sourcebooks));
+  } catch (sourcebookError) {
+    console.error("Failed to load sourcebooks:", sourcebookError);
+    res.status(500).json({ error: "Failed to load sourcebooks." });
   }
 });
 
@@ -3056,6 +3116,152 @@ app.get(
     } catch (discordError) {
       console.error("Failed to load Discord roles:", discordError);
       res.status(500).json({ error: "Failed to load Discord roles." });
+    }
+  },
+);
+
+app.get(
+  "/api/admin/sourcebooks",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (_req, res) => {
+    try {
+      const sourcebooks = await listSourcebooks({ includeUnpublished: true });
+      res.json(groupSourcebooks(sourcebooks));
+    } catch (sourcebookError) {
+      console.error("Failed to load admin sourcebooks:", sourcebookError);
+      res.status(500).json({ error: "Failed to load sourcebooks." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/sourcebooks",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const normalizedPayload = normalizeSourcebookPayload(req.body);
+
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const sourcebook = await createSourcebook({
+        ...normalizedPayload,
+        createdByUserId: req.staffUser.id,
+      });
+
+      await recordAuditEvent({
+        action: "sourcebook_create",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          sourcebookId: sourcebook.id,
+          listType: sourcebook.listType,
+          title: sourcebook.title,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ sourcebook });
+    } catch (sourcebookError) {
+      console.error("Failed to create sourcebook:", sourcebookError);
+      res.status(500).json({ error: "Failed to create sourcebook." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/sourcebooks/:sourcebookId",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const sourcebookId = Number(req.params.sourcebookId);
+    const normalizedPayload = normalizeSourcebookPayload(req.body);
+
+    if (!Number.isInteger(sourcebookId) || sourcebookId <= 0) {
+      res.status(400).json({ error: "Invalid sourcebook id." });
+      return;
+    }
+
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const sourcebook = await updateSourcebook({
+        sourcebookId,
+        ...normalizedPayload,
+        updatedByUserId: req.staffUser.id,
+      });
+
+      if (!sourcebook) {
+        res.status(404).json({ error: "Sourcebook not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "sourcebook_update",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          sourcebookId: sourcebook.id,
+          listType: sourcebook.listType,
+          title: sourcebook.title,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ sourcebook });
+    } catch (sourcebookError) {
+      console.error("Failed to update sourcebook:", sourcebookError);
+      res.status(500).json({ error: "Failed to update sourcebook." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/sourcebooks/:sourcebookId",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const sourcebookId = Number(req.params.sourcebookId);
+
+    if (!Number.isInteger(sourcebookId) || sourcebookId <= 0) {
+      res.status(400).json({ error: "Invalid sourcebook id." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteSourcebook(sourcebookId);
+
+      if (!deleted) {
+        res.status(404).json({ error: "Sourcebook not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "sourcebook_delete",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { sourcebookId },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(204).end();
+    } catch (sourcebookError) {
+      console.error("Failed to delete sourcebook:", sourcebookError);
+      res.status(500).json({ error: "Failed to delete sourcebook." });
     }
   },
 );
