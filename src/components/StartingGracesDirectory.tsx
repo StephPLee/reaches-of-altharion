@@ -321,7 +321,7 @@ function WarlordsBannerFlowchart() {
           </text>
 
           <SvgFlowNode x={400} y={20} width={240} height={70}>
-            Is it from <strong>your spell?</strong>
+            Is it from <strong> your </strong>spell?
           </SvgFlowNode>
           <SvgFlowNode x={100} y={160} width={300} height={80}>
             Does the spell target only you or are you the sole beneficiary of
