@@ -423,7 +423,7 @@ async function listGuildRosterRows() {
     FROM guilds g
     LEFT JOIN guild_roster_memberships m ON m.guild_id = g.id
     WHERE g.is_published = true
-    ORDER BY g.sort_order ASC, LOWER(g.name) ASC, LOWER(m.character_name) ASC NULLS LAST
+    ORDER BY LOWER(g.name) ASC, g.id ASC, LOWER(m.character_name) ASC NULLS LAST
     `,
   );
 
