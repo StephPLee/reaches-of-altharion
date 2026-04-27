@@ -180,13 +180,7 @@ const COMMAND_DEFINITIONS = [
   {
     name: "faq",
     description: "Show the frequently asked questions.",
-    help: "Show the frequently asked questions.",
-  },
-  {
-    name: "faq-add",
-    description: "Add or update a frequently asked question.",
-    help: "Staff-only. Add or update a FAQ entry without redeploying the bot.",
-    requiresRole: true,
+    help: "Show the site-backed frequently asked questions.",
   },
 ];
 

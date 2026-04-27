@@ -1,10 +1,4 @@
-﻿const {
-  ActionRowBuilder,
-  EmbedBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-} = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const pool = require("../db");
 const { truncateValue } = require("../utils");
 
@@ -56,7 +50,6 @@ async function listFaqEntries() {
   return [...categories.values()];
 }
 
-
 function buildFaqEmbeds(categories) {
   if (categories.length === 0) {
     return [
@@ -97,107 +90,7 @@ function buildFaqEmbeds(categories) {
   return embeds.slice(0, 10);
 }
 
-
-function buildFaqAddModal(discordUserId) {
-  const modal = new ModalBuilder()
-    .setCustomId(`faq-add-modal:${discordUserId}`)
-    .setTitle("Add FAQ Entry");
-
-  const categoryInput = new TextInputBuilder()
-    .setCustomId("faq-category")
-    .setLabel("Category")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(100);
-
-  const questionInput = new TextInputBuilder()
-    .setCustomId("faq-question")
-    .setLabel("Question")
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true)
-    .setMaxLength(200);
-
-  const answerInput = new TextInputBuilder()
-    .setCustomId("faq-answer")
-    .setLabel("Answer")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true)
-    .setMaxLength(4000);
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(categoryInput),
-    new ActionRowBuilder().addComponents(questionInput),
-    new ActionRowBuilder().addComponents(answerInput),
-  );
-
-  return modal;
-}
-
-
-async function upsertFaqEntry({ categoryName, question, answer }) {
-  const normalizedCategoryName = categoryName.trim();
-  const normalizedQuestion = question.trim();
-  const normalizedAnswer = answer.trim();
-
-  const result = await pool.query(
-    `
-    WITH category_row AS (
-      INSERT INTO faq_categories (name, sort_order)
-      VALUES (
-        $1,
-        COALESCE((SELECT MAX(sort_order) + 10 FROM faq_categories), 10)
-      )
-      ON CONFLICT (name) DO UPDATE
-      SET updated_at = NOW()
-      RETURNING id, name
-    ),
-    entry_row AS (
-      INSERT INTO faq_entries (
-        category_id,
-        question,
-        answer,
-        sort_order,
-        is_published
-      )
-      SELECT
-        category_row.id,
-        $2,
-        $3,
-        COALESCE(
-          (
-            SELECT MAX(sort_order) + 10
-            FROM faq_entries
-            WHERE category_id = category_row.id
-          ),
-          10
-        ),
-        true
-      FROM category_row
-      ON CONFLICT (category_id, question) DO UPDATE
-      SET
-        answer = EXCLUDED.answer,
-        is_published = true,
-        updated_at = NOW()
-      RETURNING id, question, answer, category_id
-    )
-    SELECT
-      entry_row.id,
-      entry_row.question,
-      entry_row.answer,
-      category_row.name AS category_name
-    FROM entry_row
-    JOIN category_row ON category_row.id = entry_row.category_id
-    `,
-    [normalizedCategoryName, normalizedQuestion, normalizedAnswer],
-  );
-
-  return result.rows[0];
-}
-
-
 module.exports = {
-  buildFaqAddModal,
   buildFaqEmbeds,
   listFaqEntries,
-  upsertFaqEntry,
 };
