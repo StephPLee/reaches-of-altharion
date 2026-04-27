@@ -9,7 +9,7 @@ const sidebars: SidebarsConfig = {
       label: "Player Information",
       collapsible: true,
       collapsed: false,
-      items: ["getting-set-up", "sourcebooks", "transformations"],
+      items: ["getting-set-up", "faq", "sourcebooks", "transformations"],
     },
     "dm-rules",
     "rp-rules",
