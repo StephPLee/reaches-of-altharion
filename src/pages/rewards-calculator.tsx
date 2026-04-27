@@ -45,6 +45,16 @@ type WestMarchesCurrency = {
   order: number;
 };
 
+type WestMarchesAdventure = {
+  id: string;
+  title: string;
+  startTime: string | null;
+  endTime: string | null;
+  gm: WestMarchesUserRef | null;
+  approvedCharacterIds: string[];
+  participantCount: number;
+};
+
 type WestMarchesStatus = {
   configured: boolean;
   currencyMappings: {
@@ -316,11 +326,11 @@ export default function RewardsCalculatorPage(): ReactNode {
     useState<WestMarchesStatus | null>(null);
   const [characters, setCharacters] = useState<WestMarchesCharacter[]>([]);
   const [currencies, setCurrencies] = useState<WestMarchesCurrency[]>([]);
+  const [adventures, setAdventures] = useState<WestMarchesAdventure[]>([]);
 
-  const [playerCharacterIds, setPlayerCharacterIds] = useState<string[]>([]);
+  const [playerAdventureId, setPlayerAdventureId] = useState("");
   const [dmCharacterId, setDmCharacterId] = useState("");
   const [rpCharacterId, setRpCharacterId] = useState("");
-  const [playerCharacterQuery, setPlayerCharacterQuery] = useState("");
   const [dmCharacterQuery, setDmCharacterQuery] = useState("");
   const [rpCharacterQuery, setRpCharacterQuery] = useState("");
   const [playerReason, setPlayerReason] = useState("");
@@ -424,6 +434,7 @@ export default function RewardsCalculatorPage(): ReactNode {
     if (!user?.canSubmitRewards) {
       setIsWestMarchesLoading(false);
       setCharacters([]);
+      setAdventures([]);
       setCurrencies([]);
       return;
     }
@@ -435,11 +446,18 @@ export default function RewardsCalculatorPage(): ReactNode {
         setIsWestMarchesLoading(true);
         setWestMarchesError("");
 
-        const [charactersResponse, currenciesResponse] = await Promise.all([
+        const [
+          charactersResponse,
+          currenciesResponse,
+          adventuresResponse,
+        ] = await Promise.all([
           fetch(`${authApiBaseUrl}/api/rewards/westmarches/characters`, {
             credentials: "include",
           }),
           fetch(`${authApiBaseUrl}/api/rewards/westmarches/currencies`, {
+            credentials: "include",
+          }),
+          fetch(`${authApiBaseUrl}/api/rewards/westmarches/adventures`, {
             credentials: "include",
           }),
         ]);
@@ -448,6 +466,9 @@ export default function RewardsCalculatorPage(): ReactNode {
           .json()
           .catch(() => ({}));
         const currenciesPayload = await currenciesResponse
+          .json()
+          .catch(() => ({}));
+        const adventuresPayload = await adventuresResponse
           .json()
           .catch(() => ({}));
 
@@ -462,6 +483,13 @@ export default function RewardsCalculatorPage(): ReactNode {
           throw new Error(
             currenciesPayload.error ||
               "Failed to load West Marches currencies.",
+          );
+        }
+
+        if (!adventuresResponse.ok) {
+          throw new Error(
+            adventuresPayload.error ||
+              "Failed to load West Marches adventures.",
           );
         }
 
@@ -482,6 +510,11 @@ export default function RewardsCalculatorPage(): ReactNode {
           setCurrencies(
             Array.isArray(currenciesPayload.currencies)
               ? currenciesPayload.currencies
+              : [],
+          );
+          setAdventures(
+            Array.isArray(adventuresPayload.adventures)
+              ? adventuresPayload.adventures
               : [],
           );
         }
@@ -563,13 +596,30 @@ export default function RewardsCalculatorPage(): ReactNode {
     );
   }
 
-  const filteredPlayerCharacters = useMemo(
-    () => filterCharacters(playerCharacterQuery),
-    [characters, playerCharacterQuery],
-  );
+  const selectedPlayerAdventure =
+    adventures.find((adventure) => adventure.id === playerAdventureId) || null;
+  const selectedPlayerCharacterIds =
+    selectedPlayerAdventure?.approvedCharacterIds || [];
+
   const filteredDmCharacters = useMemo(
-    () => filterCharacters(dmCharacterQuery),
-    [characters, dmCharacterQuery],
+    () => {
+      const gmDiscordId = selectedPlayerAdventure?.gm?.discordId;
+      const dmOwnedCharacters = gmDiscordId
+        ? characters.filter(
+            (character) => character.user?.discordId === gmDiscordId,
+          )
+        : characters;
+      const normalizedQuery = dmCharacterQuery.trim().toLowerCase();
+
+      if (!normalizedQuery) {
+        return dmOwnedCharacters;
+      }
+
+      return dmOwnedCharacters.filter((character) =>
+        formatCharacterOption(character).toLowerCase().includes(normalizedQuery),
+      );
+    },
+    [characters, dmCharacterQuery, selectedPlayerAdventure],
   );
   const filteredRpCharacters = useMemo(
     () => filterCharacters(rpCharacterQuery),
@@ -580,11 +630,12 @@ export default function RewardsCalculatorPage(): ReactNode {
     const targetConfig =
       target === "player"
         ? {
-            characterIds: playerCharacterIds,
+            characterIds: selectedPlayerCharacterIds,
             experience: Math.round(playerXp),
             gold: Math.round(playerGold),
             sc: playerSc,
             eventRelated: isEventRelated,
+            adventureId: selectedPlayerAdventure?.id || "",
             reason: playerReason.trim() || playerDefaultReason,
           }
         : target === "dm"
@@ -594,6 +645,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               gold: Math.round(dmGold),
               sc: dmSc,
               eventRelated: isEventRelated,
+              adventureId: selectedPlayerAdventure?.id || "",
               reason: dmReason.trim() || dmDefaultReason,
             }
           : {
@@ -609,7 +661,11 @@ export default function RewardsCalculatorPage(): ReactNode {
       (target !== "player" && !targetConfig.characterId)
     ) {
       setSubmissionMessage("");
-      setSubmissionError("Choose a character before submitting rewards.");
+      setSubmissionError(
+        target === "player"
+          ? "Choose an adventure with approved player characters before submitting rewards."
+          : "Choose a character before submitting rewards.",
+      );
       return;
     }
 
@@ -621,6 +677,7 @@ export default function RewardsCalculatorPage(): ReactNode {
             gold: targetConfig.gold,
             sc: targetConfig.sc,
             eventRelated: targetConfig.eventRelated,
+            adventureId: targetConfig.adventureId,
             reason: targetConfig.reason,
           }))
         : [
@@ -632,6 +689,9 @@ export default function RewardsCalculatorPage(): ReactNode {
               reason: targetConfig.reason,
               ...(target === "dm"
                 ? { eventRelated: targetConfig.eventRelated }
+                : {}),
+              ...(target === "dm"
+                ? { adventureId: targetConfig.adventureId }
                 : {}),
             },
           ];
@@ -649,7 +709,13 @@ export default function RewardsCalculatorPage(): ReactNode {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ rewards }),
+          body: JSON.stringify({
+            rewards,
+            ...((target === "player" || target === "dm") &&
+            selectedPlayerAdventure?.id
+              ? { adventureId: selectedPlayerAdventure.id }
+              : {}),
+          }),
         },
       );
       const payload = await response.json().catch(() => ({}));
@@ -674,12 +740,21 @@ export default function RewardsCalculatorPage(): ReactNode {
     }
   }
 
-  function togglePlayerCharacter(characterId: string) {
-    setPlayerCharacterIds((current) =>
-      current.includes(characterId)
-        ? current.filter((id) => id !== characterId)
-        : [...current, characterId],
-    );
+  function formatAdventureOption(adventure: WestMarchesAdventure) {
+    const endDate = adventure.endTime
+      ? new Intl.DateTimeFormat("en-GB", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(adventure.endTime))
+      : "Date unknown";
+    return `${endDate} - ${adventure.title}`;
+  }
+
+  function getCharacterLabel(characterId: string) {
+    const character = characters.find((item) => item.id === characterId);
+    return character ? formatCharacterOption(character) : characterId;
   }
 
   function renderRewardSubmissionControls(
@@ -689,100 +764,107 @@ export default function RewardsCalculatorPage(): ReactNode {
     setReason: (value: string) => void,
     defaultReason: string,
   ) {
-    const isMultiSelect = target === "player";
     const singleCharacterId = target === "dm" ? dmCharacterId : rpCharacterId;
     const setSingleCharacterId =
       target === "dm" ? setDmCharacterId : setRpCharacterId;
-    const characterQuery =
-      target === "player"
-        ? playerCharacterQuery
-        : target === "dm"
-          ? dmCharacterQuery
-          : rpCharacterQuery;
+    const characterQuery = target === "dm" ? dmCharacterQuery : rpCharacterQuery;
     const setCharacterQuery =
-      target === "player"
-        ? setPlayerCharacterQuery
-        : target === "dm"
-          ? setDmCharacterQuery
-          : setRpCharacterQuery;
+      target === "dm" ? setDmCharacterQuery : setRpCharacterQuery;
     const filteredCharacters =
-      target === "player"
-        ? filteredPlayerCharacters
-        : target === "dm"
-          ? filteredDmCharacters
-          : filteredRpCharacters;
+      target === "dm" ? filteredDmCharacters : filteredRpCharacters;
+
+    function handleAdventureChange(adventureId: string) {
+      setPlayerAdventureId(adventureId);
+      const adventure = adventures.find((item) => item.id === adventureId);
+      if (adventure) {
+        setPlayers(String(Math.max(1, adventure.participantCount)));
+        const gmDiscordId = adventure.gm?.discordId;
+        if (
+          gmDiscordId &&
+          dmCharacterId &&
+          !characters.some(
+            (character) =>
+              character.id === dmCharacterId &&
+              character.user?.discordId === gmDiscordId,
+          )
+        ) {
+          setDmCharacterId("");
+        }
+      }
+    }
 
     return (
       <div className={styles.submissionPanel}>
         <p className={styles.muted}>{description}</p>
         <div className={styles.submissionGrid}>
-          <div className={styles.field}>
-            <label htmlFor={`${target}-character-search`}>
-              {isMultiSelect ? "Characters" : "Character"}
-            </label>
-            <input
-              id={`${target}-character-search`}
-              className={styles.input}
-              value={characterQuery}
-              onChange={(event) => setCharacterQuery(event.target.value)}
-              placeholder={
-                isMultiSelect
-                  ? "Search characters to add"
-                  : "Search for a character"
-              }
-            />
-            {isMultiSelect && playerCharacterIds.length > 0 ? (
-              <div className={styles.selectionChips}>
-                {playerCharacterIds.map((characterId) => {
-                  const character = characters.find(
-                    (item) => item.id === characterId,
-                  );
-                  if (!character) {
-                    return null;
-                  }
+          {target === "player" ? (
+            <div className={styles.field}>
+              <label htmlFor="player-adventure">Adventure</label>
+              <select
+                id="player-adventure"
+                className={styles.select}
+                value={playerAdventureId}
+                onChange={(event) => handleAdventureChange(event.target.value)}
+              >
+                <option value="">Choose a recent adventure...</option>
+                {adventures.map((adventure) => (
+                  <option key={adventure.id} value={adventure.id}>
+                    {formatAdventureOption(adventure)}
+                  </option>
+                ))}
+              </select>
+              {selectedPlayerAdventure ? (
+                <div className={styles.selectionChips}>
+                  {selectedPlayerCharacterIds.map((characterId) => (
+                    <span key={characterId} className={styles.selectionChip}>
+                      {getCharacterLabel(characterId)}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className={styles.field}>
+              <label htmlFor={`${target}-character-search`}>Character</label>
+              {target === "dm" && selectedPlayerAdventure?.gm?.discordId ? (
+                <p className={styles.muted}>
+                  Showing characters owned by the selected adventure&apos;s DM.
+                </p>
+              ) : target === "dm" ? (
+                <p className={styles.muted}>
+                  Choose a player reward adventure first to filter this list to
+                  that adventure&apos;s DM.
+                </p>
+              ) : null}
+              <input
+                id={`${target}-character-search`}
+                className={styles.input}
+                value={characterQuery}
+                onChange={(event) => setCharacterQuery(event.target.value)}
+                placeholder="Search for a character"
+              />
+              <div className={styles.searchResults}>
+                {filteredCharacters.map((character) => {
+                  const isSelected = singleCharacterId === character.id;
 
                   return (
                     <button
-                      key={characterId}
+                      key={character.id}
                       type="button"
-                      className={styles.selectionChip}
-                      onClick={() => togglePlayerCharacter(characterId)}
+                      className={`${styles.searchResultButton} ${
+                        isSelected ? styles.searchResultButtonSelected : ""
+                      }`.trim()}
+                      onClick={() => setSingleCharacterId(character.id)}
                     >
-                      {formatCharacterOption(character)} x
+                      {formatCharacterOption(character)}
                     </button>
                   );
                 })}
               </div>
-            ) : null}
-            <div className={styles.searchResults}>
-              {filteredCharacters.map((character) => {
-                const isSelected = isMultiSelect
-                  ? playerCharacterIds.includes(character.id)
-                  : singleCharacterId === character.id;
-
-                return (
-                  <button
-                    key={character.id}
-                    type="button"
-                    className={`${styles.searchResultButton} ${
-                      isSelected ? styles.searchResultButtonSelected : ""
-                    }`.trim()}
-                    onClick={() => {
-                      if (isMultiSelect) {
-                        togglePlayerCharacter(character.id);
-                      } else {
-                        setSingleCharacterId(character.id);
-                      }
-                    }}
-                  >
-                    {formatCharacterOption(character)}
-                  </button>
-                );
-              })}
             </div>
-          </div>
+          )}
           <div className={styles.field}>
-            <label htmlFor={`${target}-reason`}>Reason</label>
+            <label htmlFor={`${target}-reason`}>Notes</label>
             <textarea
               id={`${target}-reason`}
               className={styles.textarea}
@@ -953,7 +1035,7 @@ export default function RewardsCalculatorPage(): ReactNode {
                 {user?.canSubmitRewards
                   ? renderRewardSubmissionControls(
                       "player",
-                      "Search and select one or more player characters to receive the calculated reward package.",
+                      "Choose the adventure that received these player rewards. Approved player characters on that adventure will receive the calculated reward package.",
                       playerReason,
                       setPlayerReason,
                       playerDefaultReason,

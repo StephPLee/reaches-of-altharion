@@ -107,6 +107,7 @@ const {
   listAllCharacters,
   listCharacterAttributeStats,
   listCurrencies,
+  listRecentAdventures,
 } = require("./westmarches");
 
 const app = express();
@@ -953,8 +954,16 @@ function parseOptionalWholeNumber(value) {
 }
 
 async function normalizeWestMarchesRewardEntry(body) {
-  const { characterId, experience, gold, sc, reason, discordId, eventRelated } =
-    body ?? {};
+  const {
+    characterId,
+    experience,
+    gold,
+    sc,
+    reason,
+    discordId,
+    eventRelated,
+    adventureId,
+  } = body ?? {};
 
   if (typeof characterId !== "string" || !characterId.trim()) {
     return { error: "characterId is required." };
@@ -1025,11 +1034,14 @@ async function normalizeWestMarchesRewardEntry(body) {
     ...(typeof discordId === "string" && discordId.trim()
       ? { discordId: discordId.trim() }
       : {}),
+    ...(typeof adventureId === "string" && adventureId.trim()
+      ? { adventureId: adventureId.trim() }
+      : {}),
   };
 }
 
 async function normalizeWestMarchesRewardBatchPayload(body) {
-  const { characterIds, experience, gold, sc, reason, eventRelated } =
+  const { characterIds, experience, gold, sc, reason, eventRelated, adventureId } =
     body ?? {};
 
   if (
@@ -1052,6 +1064,7 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
     sc,
     reason,
     eventRelated,
+    adventureId,
   });
 
   if (normalizedRewardEntry.error) {
@@ -1059,6 +1072,7 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
   }
 
   return {
+    adventureId: normalizedRewardEntry.adventureId || "",
     characterIds: [
       ...new Set(characterIds.map((characterId) => characterId.trim())),
     ],
@@ -1078,12 +1092,18 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
 }
 
 async function normalizeWestMarchesBulkRewardsPayload(body) {
+  const topLevelAdventureId =
+    typeof body?.adventureId === "string" && body.adventureId.trim()
+      ? body.adventureId.trim()
+      : "";
+
   if (Array.isArray(body?.rewards)) {
     if (body.rewards.length === 0) {
       return { error: "rewards must contain at least one reward entry." };
     }
 
     const rewards = [];
+    let adventureId = topLevelAdventureId;
 
     for (const rewardBody of body.rewards) {
       const normalizedReward = await normalizeWestMarchesRewardEntry(rewardBody);
@@ -1093,9 +1113,12 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
       }
 
       rewards.push(normalizedReward);
+      if (!adventureId && normalizedReward.adventureId) {
+        adventureId = normalizedReward.adventureId;
+      }
     }
 
-    return { rewards };
+    return { rewards, adventureId };
   }
 
   const normalizedBatchPayload =
@@ -1103,6 +1126,7 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
 
   if (!normalizedBatchPayload.error) {
     return {
+      adventureId: normalizedBatchPayload.adventureId || topLevelAdventureId,
       rewards: normalizedBatchPayload.characterIds.map((characterId) => ({
         characterId,
         ...normalizedBatchPayload.reward,
@@ -1116,7 +1140,10 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
     return normalizedBatchPayload;
   }
 
-  return { rewards: [normalizedReward] };
+  return {
+    adventureId: normalizedReward.adventureId || topLevelAdventureId,
+    rewards: [normalizedReward],
+  };
 }
 
 function truncateEmbedDescription(value) {
@@ -1499,6 +1526,76 @@ app.get(
 );
 
 app.get(
+  "/api/rewards/westmarches/adventures",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const limit =
+      typeof req.query.limit === "string"
+        ? Number.parseInt(req.query.limit, 10)
+        : 25;
+
+    try {
+      const adventures = await listRecentAdventures({
+        pageSize: Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 25,
+      });
+
+      res.json({
+        adventures: adventures
+          .filter((adventure) => !adventure?.isCancelled)
+          .map((adventure) => {
+            const participants = Array.isArray(adventure?.participants)
+              ? adventure.participants
+              : [];
+            const approvedCharacterIds = [
+              ...new Set(
+                participants
+                  .filter(
+                    (participant) =>
+                      typeof participant?.characterId === "string" &&
+                      participant.characterId.trim() &&
+                      String(participant.status || "").toUpperCase() ===
+                        "APPROVED",
+                  )
+                  .map((participant) => participant.characterId.trim()),
+              ),
+            ];
+
+            return {
+              id: adventure.id,
+              title:
+                typeof adventure.title === "string"
+                  ? adventure.title.trim()
+                  : "",
+              startTime: adventure.startTime || null,
+              endTime: adventure.endTime || null,
+              gm: adventure.gm || null,
+              approvedCharacterIds,
+              participantCount: approvedCharacterIds.length,
+            };
+          }),
+      });
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to load West Marches adventures:",
+        westMarchesError,
+      );
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to load West Marches adventures.",
+      });
+    }
+  },
+);
+
+app.get(
   "/api/admin/westmarches/debug",
   requireStaffSession,
   async (_req, res) => {
@@ -1558,7 +1655,7 @@ app.post(
     }
 
     try {
-      const rewards = await distributeRewards(normalizedPayload.rewards);
+      const rewards = await distributeRewards(normalizedPayload);
 
       await recordAuditEvent({
         action: "westmarches_reward_distribute_batch",
@@ -1628,7 +1725,7 @@ app.post(
     }
 
     try {
-      const rewards = await distributeRewards(normalizedPayload.rewards);
+      const rewards = await distributeRewards(normalizedPayload);
       const [reward] = rewards;
 
       await recordAuditEvent({
