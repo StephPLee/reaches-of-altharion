@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
+import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import styles from "./SourcebooksTables.module.css";
@@ -13,6 +14,7 @@ type SourcebookRow = {
   edition: string;
   sortOrder?: number;
   isPublished?: boolean;
+  bannedContentCount?: number;
 };
 
 type SessionUser = {
@@ -30,51 +32,6 @@ type SourcebookFormState = {
   edition: string;
   sortOrder: string;
 };
-
-const NOT_ALLOWED_BOOKS: SourcebookRow[] = [
-  {
-    title: "Book of Ebon Tides",
-    publisher: "Kobold Press",
-    type: "Partnered sourcebook",
-    edition: "5e",
-  },
-  {
-    title: "Grim Hollow: Races and Dark Bargains",
-    publisher: "Ghostfire Gaming",
-    type: "Partnered player options",
-    edition: "5e",
-  },
-  {
-    title: "Iron Hero Feat",
-    publisher: "Third-party",
-    type: "Partnered / homebrew feat",
-    edition: "5e",
-  },
-  {
-    title: "Obojima: Tales from the Tall Grass consumables",
-    publisher: "1985 Games",
-    type: "Partnered item content",
-    edition: "5e",
-  },
-  {
-    title: "Dungeons & Dragons vs. Rick and Morty",
-    publisher: "Wizards of the Coast",
-    type: "Boxed adventure product",
-    edition: "5e",
-  },
-  {
-    title: "The Lord of the Rings Roleplaying",
-    publisher: "Free League",
-    type: "Partnered sourcebook",
-    edition: "5e",
-  },
-  {
-    title: "The Pugilist Class",
-    publisher: "Third-party",
-    type: "Partnered class",
-    edition: "5e / 5.5e",
-  },
-];
 
 const ALLOWED_BOOKS: SourcebookRow[] = [
   {
@@ -407,12 +364,14 @@ function SourcebookTable({
   onEdit,
   onDelete,
   deletingId,
+  showBannedContentLinks = false,
 }: {
   books: SourcebookRow[];
   isStaff: boolean;
   onEdit: (book: SourcebookRow) => void;
   onDelete: (book: SourcebookRow) => void;
   deletingId: number | null;
+  showBannedContentLinks?: boolean;
 }) {
   return (
     <table>
@@ -422,6 +381,7 @@ function SourcebookTable({
           <th>Publisher</th>
           <th>Type</th>
           <th>Edition</th>
+          {showBannedContentLinks ? <th>Banned Content</th> : null}
           {isStaff ? <th>Actions</th> : null}
         </tr>
       </thead>
@@ -432,6 +392,17 @@ function SourcebookTable({
             <td>{book.publisher}</td>
             <td>{book.type}</td>
             <td>{book.edition}</td>
+            {showBannedContentLinks ? (
+              <td>
+                {book.id && (book.bannedContentCount ?? 0) > 0 ? (
+                  <Link to={`/docs/banned-content#book-${book.id}`}>
+                    View {book.bannedContentCount}
+                  </Link>
+                ) : (
+                  "None"
+                )}
+              </td>
+            ) : null}
             {isStaff ? (
               <td>
                 <div className={styles.rowActions}>
@@ -466,8 +437,6 @@ export default function SourcebooksTables() {
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
   const [search, setSearch] = useState("");
   const [allowedBooks, setAllowedBooks] = useState<SourcebookRow[]>(ALLOWED_BOOKS);
-  const [notAllowedBooks, setNotAllowedBooks] =
-    useState<SourcebookRow[]>(NOT_ALLOWED_BOOKS);
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [formOpenFor, setFormOpenFor] = useState<"allowed" | "not_allowed" | null>(null);
@@ -492,9 +461,6 @@ export default function SourcebooksTables() {
 
     const payload = await response.json();
     setAllowedBooks(Array.isArray(payload.allowed) ? payload.allowed : []);
-    setNotAllowedBooks(
-      Array.isArray(payload.notAllowed) ? payload.notAllowed : [],
-    );
   }
 
   useEffect(() => {
@@ -513,14 +479,10 @@ export default function SourcebooksTables() {
 
         if (!cancelled) {
           setAllowedBooks(Array.isArray(payload.allowed) ? payload.allowed : []);
-          setNotAllowedBooks(
-            Array.isArray(payload.notAllowed) ? payload.notAllowed : [],
-          );
         }
       } catch {
         if (!cancelled) {
           setAllowedBooks(ALLOWED_BOOKS);
-          setNotAllowedBooks(NOT_ALLOWED_BOOKS);
         }
       } finally {
         if (!cancelled) {
@@ -582,12 +544,6 @@ export default function SourcebooksTables() {
     refreshSourcebooks(true).catch(() => undefined);
   }, [authApiBaseUrl, isStaff]);
 
-  const filteredNotAllowed = useMemo(
-    () =>
-      notAllowedBooks.filter((book) => matchesSearch(book, normalizedSearch)),
-    [normalizedSearch, notAllowedBooks],
-  );
-
   const filteredAllowed = useMemo(
     () => allowedBooks.filter((book) => matchesSearch(book, normalizedSearch)),
     [normalizedSearch, allowedBooks],
@@ -613,7 +569,7 @@ export default function SourcebooksTables() {
       return;
     }
 
-    setFormOpenFor(book.listType);
+    setFormOpenFor("allowed");
     setEditingId(book.id);
     setForm({
       listType: book.listType,
@@ -740,7 +696,6 @@ export default function SourcebooksTables() {
               }
             >
               <option value="allowed">Allowed Reference List</option>
-              <option value="not_allowed">Not Allowed</option>
             </select>
           </label>
           <label className={styles.field}>
@@ -836,54 +791,17 @@ export default function SourcebooksTables() {
           placeholder="Search by title, publisher, type, or edition"
         />
         <p className={styles.searchHint}>
-          The search filters both the not allowed list and the allowed reference
-          list.
+          The search filters the allowed reference list.
         </p>
         {loading ? <p className={styles.searchHint}>Loading sourcebooks...</p> : null}
-      </div>
-
-      <div className={styles.section}>
-        <h2>Not Allowed</h2>
-        <p>
-          These books, options, or exceptions are not allowed even though
-          partnered content is generally permitted.
-        </p>
-        <p className={styles.count}>
-          Showing {filteredNotAllowed.length} of {notAllowedBooks.length} not
-          allowed entries.
-        </p>
-        {isStaff ? (
-          <div className={styles.editorActions}>
-            <button
-              type="button"
-              className={styles.primaryButton}
-              onClick={() => openCreateForm("not_allowed")}
-            >
-              Add Not Allowed Entry
-            </button>
-          </div>
-        ) : null}
-        {renderStaffForm("not_allowed")}
-        {filteredNotAllowed.length > 0 ? (
-          <SourcebookTable
-            books={filteredNotAllowed}
-            isStaff={isStaff}
-            onEdit={beginEditing}
-            onDelete={handleDelete}
-            deletingId={deletingId}
-          />
-        ) : (
-          <p className={styles.emptyState}>
-            No not allowed entries match that search.
-          </p>
-        )}
       </div>
 
       <div className={styles.section}>
         <h2>Allowed Reference List</h2>
         <p>
           This list is here as a reference for books players are generally
-          allowed to use.
+          allowed to use. If a book has specific banned options, the table links
+          to those entries on the Banned Content page.
         </p>
         <p className={styles.count}>
           Showing {filteredAllowed.length} of {allowedBooks.length} allowed
@@ -908,6 +826,7 @@ export default function SourcebooksTables() {
             onEdit={beginEditing}
             onDelete={handleDelete}
             deletingId={deletingId}
+            showBannedContentLinks
           />
         ) : (
           <p className={styles.emptyState}>

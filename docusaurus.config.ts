@@ -110,6 +110,10 @@ const config: Config = {
               label: "Sourcebooks",
             },
             {
+              to: "/docs/banned-content",
+              label: "Banned Content",
+            },
+            {
               to: "/docs/transformations",
               label: "Transformations",
             },
