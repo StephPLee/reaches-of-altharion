@@ -10,6 +10,7 @@ function mapSourcebookRow(row) {
     edition: row.edition,
     sortOrder: row.sort_order,
     isPublished: row.is_published,
+    bannedContentCount: Number(row.banned_content_count ?? 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -27,9 +28,17 @@ async function listSourcebooks({ includeUnpublished = false } = {}) {
       edition,
       sort_order,
       is_published,
+      COALESCE(banned_content_counts.entry_count, 0) AS banned_content_count,
       created_at,
       updated_at
     FROM sourcebook_entries
+    LEFT JOIN (
+      SELECT sourcebook_entry_id, COUNT(*) AS entry_count
+      FROM banned_content_entries
+      WHERE $1::boolean = true OR is_published = true
+      GROUP BY sourcebook_entry_id
+    ) AS banned_content_counts
+      ON banned_content_counts.sourcebook_entry_id = sourcebook_entries.id
     WHERE $1::boolean = true
       OR is_published = true
     ORDER BY
@@ -80,6 +89,7 @@ async function createSourcebook({
       edition,
       sort_order,
       is_published,
+      0 AS banned_content_count,
       created_at,
       updated_at
     `,
@@ -132,6 +142,7 @@ async function updateSourcebook({
       edition,
       sort_order,
       is_published,
+      0 AS banned_content_count,
       created_at,
       updated_at
     `,

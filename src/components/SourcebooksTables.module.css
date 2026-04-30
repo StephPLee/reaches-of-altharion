@@ -108,7 +108,25 @@
     font-weight: 400;
 }
 
+.textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(112, 134, 186, 0.38);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    color: inherit;
+    font: inherit;
+    font-weight: 400;
+    resize: vertical;
+}
+
 [data-theme="dark"] .input {
+    border-color: rgba(154, 180, 235, 0.24);
+    background: rgba(8, 12, 22, 0.9);
+}
+
+[data-theme="dark"] .textarea {
     border-color: rgba(154, 180, 235, 0.24);
     background: rgba(8, 12, 22, 0.9);
 }

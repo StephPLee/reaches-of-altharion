@@ -592,7 +592,10 @@ export default function SpeciesDirectory({
     setFormError("");
     setFormMessage("");
     setEditingItemId(item.id);
-    setOpenComposerParentItemId(item.parentItemId ?? null);
+    setOpenComposerParentItemId(item.parentItemId ?? -1);
+    setOpenAutomationItemId(null);
+    resetAutomationForm();
+    setIsSectionCollapsed(false);
     setItemForm({
       label: item.label,
       href: item.href,
@@ -628,8 +631,12 @@ export default function SpeciesDirectory({
     });
   }
 
+  function isComposerOpenForParent(parentItemId: number | null) {
+    return openComposerParentItemId === (parentItemId ?? -1);
+  }
+
   function renderComposer(parentItemId: number | null) {
-    if (!entry || !isStaff || openComposerParentItemId !== parentItemId) {
+    if (!entry || !isStaff || !isComposerOpenForParent(parentItemId)) {
       return null;
     }
 

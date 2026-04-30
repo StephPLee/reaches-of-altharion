@@ -24,6 +24,7 @@ const NAV_GROUPS = [
     links: [
       { label: "Character Creation", to: "/docs/getting-set-up" },
       { label: "Sourcebooks", to: "/docs/sourcebooks" },
+      { label: "Banned Content", to: "/docs/banned-content" },
       { label: "Transformations", to: "/docs/transformations" },
     ],
   },

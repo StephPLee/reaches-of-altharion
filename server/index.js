@@ -76,6 +76,12 @@ const {
   updateSourcebook,
 } = require("./sourcebooks");
 const {
+  createBannedContentEntry,
+  deleteBannedContentEntry,
+  listBannedContentEntries,
+  updateBannedContentEntry,
+} = require("./bannedContent");
+const {
   createBoon,
   createBoonAutomation,
   deleteBoon,
@@ -884,6 +890,64 @@ function groupSourcebooks(entries) {
   };
 }
 
+function groupBannedContent(entries) {
+  const groups = new Map();
+
+  for (const entry of entries) {
+    const groupKey = entry.sourcebookId;
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        sourcebookId: entry.sourcebookId,
+        sourcebookTitle: entry.sourcebookTitle,
+        sourcebookPublisher: entry.sourcebookPublisher,
+        sourcebookEdition: entry.sourcebookEdition,
+        entries: [],
+      });
+    }
+
+    groups.get(groupKey).entries.push(entry);
+  }
+
+  return Array.from(groups.values());
+}
+
+function normalizeBannedContentPayload(body) {
+  const {
+    sourcebookId,
+    contentType,
+    title,
+    notes,
+    sortOrder,
+    isPublished,
+  } = body ?? {};
+
+  if (
+    !Number.isInteger(sourcebookId) ||
+    sourcebookId <= 0 ||
+    typeof title !== "string" ||
+    !title.trim()
+  ) {
+    return {
+      error: "sourcebookId and title are required.",
+    };
+  }
+
+  const parsedSortOrder =
+    typeof sortOrder === "number" && Number.isFinite(sortOrder)
+      ? Math.trunc(sortOrder)
+      : 0;
+
+  return {
+    sourcebookId,
+    contentType: typeof contentType === "string" ? contentType.trim() : "",
+    title: title.trim(),
+    notes: typeof notes === "string" ? notes.trim() : "",
+    sortOrder: parsedSortOrder,
+    isPublished: isPublished !== false,
+  };
+}
+
 function normalizeGuildUpgradeAutomationPayload(body) {
   const {
     guildUpgradeId,
@@ -1462,6 +1526,25 @@ app.get("/api/sourcebooks", async (_req, res) => {
   } catch (sourcebookError) {
     console.error("Failed to load sourcebooks:", sourcebookError);
     res.status(500).json({ error: "Failed to load sourcebooks." });
+  }
+});
+
+app.get("/api/banned-content", async (_req, res) => {
+  try {
+    const [sourcebooks, entries] = await Promise.all([
+      listSourcebooks(),
+      listBannedContentEntries(),
+    ]);
+
+    res.json({
+      bannedBooks: sourcebooks.filter(
+        (sourcebook) => sourcebook.listType === "not_allowed",
+      ),
+      groups: groupBannedContent(entries),
+    });
+  } catch (bannedContentError) {
+    console.error("Failed to load banned content:", bannedContentError);
+    res.status(500).json({ error: "Failed to load banned content." });
   }
 });
 
@@ -3525,6 +3608,163 @@ app.delete(
     } catch (sourcebookError) {
       console.error("Failed to delete sourcebook:", sourcebookError);
       res.status(500).json({ error: "Failed to delete sourcebook." });
+    }
+  },
+);
+
+app.get(
+  "/api/admin/banned-content",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (_req, res) => {
+    try {
+      const [sourcebooks, entries] = await Promise.all([
+        listSourcebooks({ includeUnpublished: true }),
+        listBannedContentEntries({ includeUnpublished: true }),
+      ]);
+
+      res.json({
+        sourcebooks,
+        bannedBooks: sourcebooks.filter(
+          (sourcebook) => sourcebook.listType === "not_allowed",
+        ),
+        groups: groupBannedContent(entries),
+        entries,
+      });
+    } catch (bannedContentError) {
+      console.error("Failed to load admin banned content:", bannedContentError);
+      res.status(500).json({ error: "Failed to load banned content." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/banned-content/items",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const normalizedPayload = normalizeBannedContentPayload(req.body);
+
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const entry = await createBannedContentEntry({
+        ...normalizedPayload,
+        createdByUserId: req.staffUser.id,
+      });
+
+      await recordAuditEvent({
+        action: "banned_content_create",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          bannedContentId: entry.id,
+          sourcebookId: entry.sourcebookId,
+          title: entry.title,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ entry });
+    } catch (bannedContentError) {
+      console.error("Failed to create banned content:", bannedContentError);
+      res.status(500).json({ error: "Failed to create banned content." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/banned-content/items/:bannedContentId",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const bannedContentId = Number(req.params.bannedContentId);
+    const normalizedPayload = normalizeBannedContentPayload(req.body);
+
+    if (!Number.isInteger(bannedContentId) || bannedContentId <= 0) {
+      res.status(400).json({ error: "Invalid banned content id." });
+      return;
+    }
+
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const entry = await updateBannedContentEntry({
+        bannedContentId,
+        ...normalizedPayload,
+        updatedByUserId: req.staffUser.id,
+      });
+
+      if (!entry) {
+        res.status(404).json({ error: "Banned content not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "banned_content_update",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          bannedContentId: entry.id,
+          sourcebookId: entry.sourcebookId,
+          title: entry.title,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ entry });
+    } catch (bannedContentError) {
+      console.error("Failed to update banned content:", bannedContentError);
+      res.status(500).json({ error: "Failed to update banned content." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/banned-content/items/:bannedContentId",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const bannedContentId = Number(req.params.bannedContentId);
+
+    if (!Number.isInteger(bannedContentId) || bannedContentId <= 0) {
+      res.status(400).json({ error: "Invalid banned content id." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteBannedContentEntry(bannedContentId);
+
+      if (!deleted) {
+        res.status(404).json({ error: "Banned content not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "banned_content_delete",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { bannedContentId },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(204).end();
+    } catch (bannedContentError) {
+      console.error("Failed to delete banned content:", bannedContentError);
+      res.status(500).json({ error: "Failed to delete banned content." });
     }
   },
 );
