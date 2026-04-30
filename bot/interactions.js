@@ -14,10 +14,8 @@ const {
   startBossFight,
 } = require("./services/bosses");
 const {
-  buildFaqAddModal,
   buildFaqEmbeds,
   listFaqEntries,
-  upsertFaqEntry,
 } = require("./services/faq");
 const {
   buildCharacterListEmbed,
@@ -558,54 +556,6 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.isModalSubmit()) {
-    if (interaction.customId.startsWith("faq-add-modal:")) {
-      const ownerId = interaction.customId.slice("faq-add-modal:".length);
-      if (ownerId !== interaction.user.id) {
-        await interaction.reply({
-          content: "Use your own `/faq-add` command so the form belongs to you.",
-          ephemeral: true,
-        });
-        return;
-      }
-
-      if (!hasRequiredRole(interaction)) {
-        await interaction.reply({
-          content: "You do not have the required role to add FAQ entries.",
-          ephemeral: true,
-        });
-        return;
-      }
-
-      try {
-        await interaction.deferReply({ ephemeral: true });
-
-        const faqEntry = await upsertFaqEntry({
-          categoryName: interaction.fields.getTextInputValue("faq-category"),
-          question: interaction.fields.getTextInputValue("faq-question"),
-          answer: interaction.fields.getTextInputValue("faq-answer"),
-        });
-
-        await interaction.editReply(
-          `Saved FAQ entry **${faqEntry.question}** under **${faqEntry.category_name}**.`,
-        );
-      } catch (error) {
-        console.error("Failed to process /faq-add modal:", error);
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply(
-            "Something went wrong while saving that FAQ entry. Please try again.",
-          );
-        } else {
-          await interaction.reply({
-            content:
-              "Something went wrong while saving that FAQ entry. Please try again.",
-            ephemeral: true,
-          });
-        }
-      }
-
-      return;
-    }
-
     if (!interaction.customId.startsWith("approve-modal:")) {
       return;
     }
@@ -784,19 +734,6 @@ async function handleInteraction(interaction) {
       }
     }
 
-    return;
-  }
-
-  if (interaction.commandName === "faq-add") {
-    if (!hasRequiredRole(interaction)) {
-      await interaction.reply({
-        content: "You do not have the required role to add FAQ entries.",
-        ephemeral: true,
-      });
-      return;
-    }
-
-    await interaction.showModal(buildFaqAddModal(interaction.user.id));
     return;
   }
 

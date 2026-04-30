@@ -53,6 +53,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
     title: "Player Information",
     links: [
       { label: "Character Creation", to: "/docs/getting-set-up" },
+      { label: "FAQ", to: "/docs/faq" },
       { label: "Sourcebooks", to: "/docs/sourcebooks" },
       { label: "Banned Content", to: "/docs/banned-content" },
       { label: "Transformations", to: "/docs/transformations" },

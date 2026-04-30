@@ -143,6 +143,17 @@ async function listCurrencies() {
   return Array.isArray(payload.data) ? payload.data : [];
 }
 
+async function listRecentAdventures({ pageSize = 25 } = {}) {
+  const safePageSize =
+    Number.isInteger(pageSize) && pageSize > 0 && pageSize <= 100
+      ? pageSize
+      : 25;
+  const payload = await westMarchesFetch(
+    `/adventures?page=1&pageSize=${safePageSize}`,
+  );
+  return Array.isArray(payload.data) ? payload.data : [];
+}
+
 async function getEventCurrencyMapping() {
   const currencyName =
     typeof westMarchesEventCurrencyName === "string"
@@ -349,10 +360,13 @@ async function listCharacterAttributeStats() {
   return result;
 }
 
-async function distributeRewards(rewards) {
+async function distributeRewards({ rewards, adventureId = "" }) {
   const payload = await westMarchesFetch("/rewards", {
     method: "POST",
-    body: JSON.stringify({ rewards }),
+    body: JSON.stringify({
+      rewards,
+      ...(adventureId ? { adventureId } : {}),
+    }),
   });
 
   return Array.isArray(payload.data) ? payload.data : [];
@@ -365,5 +379,6 @@ module.exports = {
   listAllCharacters,
   listCharacterAttributeStats,
   listCurrencies,
+  listRecentAdventures,
   getEventCurrencyMapping,
 };

@@ -2,6 +2,9 @@ const express = require("express");
 const { serialize, parse } = require("cookie");
 const crypto = require("node:crypto");
 const {
+  parseFaqMarkdown,
+} = require("../shared/faqContent");
+const {
   appOrigin,
   appOriginUrl,
   adminRateLimitMaxRequests,
@@ -113,6 +116,7 @@ const {
   listAllCharacters,
   listCharacterAttributeStats,
   listCurrencies,
+  listRecentAdventures,
 } = require("./westmarches");
 
 const app = express();
@@ -587,6 +591,169 @@ app.use(
   requireStaffSession,
 );
 
+async function listFaqRows() {
+  const result = await pool.query(
+    `
+    SELECT
+      c.id AS category_id,
+      c.name AS category_name,
+      c.description AS category_description,
+      e.id AS entry_id,
+      e.question,
+      e.answer
+    FROM faq_categories c
+    LEFT JOIN faq_entries e
+      ON e.category_id = c.id
+      AND e.is_published = true
+    ORDER BY
+      c.sort_order ASC,
+      LOWER(c.name) ASC,
+      e.sort_order ASC NULLS LAST,
+      e.id ASC NULLS LAST
+    `,
+  );
+
+  const categories = new Map();
+  for (const row of result.rows) {
+    const categoryId = Number(row.category_id);
+    if (!categories.has(categoryId)) {
+      categories.set(categoryId, {
+        id: String(categoryId),
+        name: row.category_name,
+        description: row.category_description || "",
+        entries: [],
+      });
+    }
+
+    if (row.entry_id) {
+      categories.get(categoryId).entries.push({
+        id: String(row.entry_id),
+        question: row.question,
+        answer: row.answer,
+      });
+    }
+  }
+
+  return [...categories.values()];
+}
+
+function faqCategoriesToMarkdown(categories) {
+  const lines = [
+    "---",
+    "title: FAQ",
+    "---",
+    "",
+    "# Frequently Asked Questions",
+    "",
+    'This should be your first port of call to check for answers to questions you have. It will be updated as more questions become "frequent".',
+  ];
+
+  for (const category of categories) {
+    lines.push("", `## ${category.name}`, "");
+    if (category.description) {
+      lines.push(category.description.trim(), "");
+    }
+
+    for (const entry of category.entries) {
+      lines.push(`### ${entry.question}`, "", entry.answer.trim(), "");
+    }
+  }
+
+  return `${lines.join("\n").trim()}\n`;
+}
+
+async function replaceFaqFromMarkdown(markdown) {
+  const categories = parseFaqMarkdown(markdown);
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM faq_entries");
+    await client.query("DELETE FROM faq_categories");
+
+    for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex += 1) {
+      const category = categories[categoryIndex];
+      const categoryResult = await client.query(
+        `
+        INSERT INTO faq_categories (name, description, sort_order)
+        VALUES ($1, $2, $3)
+        RETURNING id
+        `,
+        [category.name, category.description || "", (categoryIndex + 1) * 10],
+      );
+      const categoryId = categoryResult.rows[0].id;
+
+      for (let entryIndex = 0; entryIndex < category.entries.length; entryIndex += 1) {
+        const entry = category.entries[entryIndex];
+        await client.query(
+          `
+          INSERT INTO faq_entries (
+            category_id,
+            question,
+            answer,
+            sort_order,
+            is_published
+          )
+          VALUES ($1, $2, $3, $4, true)
+          `,
+          [categoryId, entry.question, entry.answer, (entryIndex + 1) * 10],
+        );
+      }
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  return listFaqRows();
+}
+
+app.get("/api/faq", async (_req, res) => {
+  try {
+    const categories = await listFaqRows();
+    res.json({
+      markdown: faqCategoriesToMarkdown(categories),
+      categories,
+    });
+  } catch (faqError) {
+    console.error("Failed to load FAQ content:", faqError);
+    res.status(500).json({ error: "Failed to load FAQ content." });
+  }
+});
+
+app.patch("/api/admin/faq", async (req, res) => {
+  const { markdown } = req.body ?? {};
+
+  if (typeof markdown !== "string" || !markdown.trim()) {
+    res.status(400).json({ error: "FAQ markdown is required." });
+    return;
+  }
+
+  try {
+    const categories = await replaceFaqFromMarkdown(markdown);
+    await recordAuditEvent({
+      action: "faq_update",
+      status: "success",
+      userId: req.staffUser.id,
+      discordUserId: req.staffUser.discordUserId,
+      metadata: {},
+      ...getRequestMetadata(req),
+    });
+
+    res.json({
+      markdown: faqCategoriesToMarkdown(categories),
+      categories,
+    });
+  } catch (faqError) {
+    console.error("Failed to update FAQ content:", faqError);
+    res.status(500).json({ error: "Failed to update FAQ content." });
+  }
+});
+
 function slugifyCalendarTitle(value) {
   return value
     .trim()
@@ -1017,8 +1184,16 @@ function parseOptionalWholeNumber(value) {
 }
 
 async function normalizeWestMarchesRewardEntry(body) {
-  const { characterId, experience, gold, sc, reason, discordId, eventRelated } =
-    body ?? {};
+  const {
+    characterId,
+    experience,
+    gold,
+    sc,
+    reason,
+    discordId,
+    eventRelated,
+    adventureId,
+  } = body ?? {};
 
   if (typeof characterId !== "string" || !characterId.trim()) {
     return { error: "characterId is required." };
@@ -1089,11 +1264,14 @@ async function normalizeWestMarchesRewardEntry(body) {
     ...(typeof discordId === "string" && discordId.trim()
       ? { discordId: discordId.trim() }
       : {}),
+    ...(typeof adventureId === "string" && adventureId.trim()
+      ? { adventureId: adventureId.trim() }
+      : {}),
   };
 }
 
 async function normalizeWestMarchesRewardBatchPayload(body) {
-  const { characterIds, experience, gold, sc, reason, eventRelated } =
+  const { characterIds, experience, gold, sc, reason, eventRelated, adventureId } =
     body ?? {};
 
   if (
@@ -1116,6 +1294,7 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
     sc,
     reason,
     eventRelated,
+    adventureId,
   });
 
   if (normalizedRewardEntry.error) {
@@ -1123,6 +1302,7 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
   }
 
   return {
+    adventureId: normalizedRewardEntry.adventureId || "",
     characterIds: [
       ...new Set(characterIds.map((characterId) => characterId.trim())),
     ],
@@ -1142,12 +1322,18 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
 }
 
 async function normalizeWestMarchesBulkRewardsPayload(body) {
+  const topLevelAdventureId =
+    typeof body?.adventureId === "string" && body.adventureId.trim()
+      ? body.adventureId.trim()
+      : "";
+
   if (Array.isArray(body?.rewards)) {
     if (body.rewards.length === 0) {
       return { error: "rewards must contain at least one reward entry." };
     }
 
     const rewards = [];
+    let adventureId = topLevelAdventureId;
 
     for (const rewardBody of body.rewards) {
       const normalizedReward = await normalizeWestMarchesRewardEntry(rewardBody);
@@ -1157,9 +1343,12 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
       }
 
       rewards.push(normalizedReward);
+      if (!adventureId && normalizedReward.adventureId) {
+        adventureId = normalizedReward.adventureId;
+      }
     }
 
-    return { rewards };
+    return { rewards, adventureId };
   }
 
   const normalizedBatchPayload =
@@ -1167,6 +1356,7 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
 
   if (!normalizedBatchPayload.error) {
     return {
+      adventureId: normalizedBatchPayload.adventureId || topLevelAdventureId,
       rewards: normalizedBatchPayload.characterIds.map((characterId) => ({
         characterId,
         ...normalizedBatchPayload.reward,
@@ -1180,7 +1370,10 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
     return normalizedBatchPayload;
   }
 
-  return { rewards: [normalizedReward] };
+  return {
+    adventureId: normalizedReward.adventureId || topLevelAdventureId,
+    rewards: [normalizedReward],
+  };
 }
 
 function truncateEmbedDescription(value) {
@@ -1582,6 +1775,76 @@ app.get(
 );
 
 app.get(
+  "/api/rewards/westmarches/adventures",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const limit =
+      typeof req.query.limit === "string"
+        ? Number.parseInt(req.query.limit, 10)
+        : 25;
+
+    try {
+      const adventures = await listRecentAdventures({
+        pageSize: Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 25,
+      });
+
+      res.json({
+        adventures: adventures
+          .filter((adventure) => !adventure?.isCancelled)
+          .map((adventure) => {
+            const participants = Array.isArray(adventure?.participants)
+              ? adventure.participants
+              : [];
+            const approvedCharacterIds = [
+              ...new Set(
+                participants
+                  .filter(
+                    (participant) =>
+                      typeof participant?.characterId === "string" &&
+                      participant.characterId.trim() &&
+                      String(participant.status || "").toUpperCase() ===
+                        "APPROVED",
+                  )
+                  .map((participant) => participant.characterId.trim()),
+              ),
+            ];
+
+            return {
+              id: adventure.id,
+              title:
+                typeof adventure.title === "string"
+                  ? adventure.title.trim()
+                  : "",
+              startTime: adventure.startTime || null,
+              endTime: adventure.endTime || null,
+              gm: adventure.gm || null,
+              approvedCharacterIds,
+              participantCount: approvedCharacterIds.length,
+            };
+          }),
+      });
+    } catch (westMarchesError) {
+      console.error(
+        "Failed to load West Marches adventures:",
+        westMarchesError,
+      );
+      res.status(westMarchesError.status || 500).json({
+        error:
+          westMarchesError instanceof Error
+            ? westMarchesError.message
+            : "Failed to load West Marches adventures.",
+      });
+    }
+  },
+);
+
+app.get(
   "/api/admin/westmarches/debug",
   requireStaffSession,
   async (_req, res) => {
@@ -1641,7 +1904,7 @@ app.post(
     }
 
     try {
-      const rewards = await distributeRewards(normalizedPayload.rewards);
+      const rewards = await distributeRewards(normalizedPayload);
 
       await recordAuditEvent({
         action: "westmarches_reward_distribute_batch",
@@ -1711,7 +1974,7 @@ app.post(
     }
 
     try {
-      const rewards = await distributeRewards(normalizedPayload.rewards);
+      const rewards = await distributeRewards(normalizedPayload);
       const [reward] = rewards;
 
       await recordAuditEvent({

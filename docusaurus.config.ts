@@ -106,6 +106,10 @@ const config: Config = {
               label: "Character Creation",
             },
             {
+              to: "/docs/faq",
+              label: "FAQ",
+            },
+            {
               to: "/docs/sourcebooks",
               label: "Sourcebooks",
             },
