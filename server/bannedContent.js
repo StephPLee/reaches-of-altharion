@@ -39,6 +39,10 @@ async function listBannedContentEntries({ includeUnpublished = false } = {}) {
     WHERE $1::boolean = true
       OR banned_content_entries.is_published = true
     ORDER BY
+      CASE
+        WHEN LOWER(sourcebook_entries.title) LIKE 'player''s handbook%' THEN 0
+        ELSE 1
+      END ASC,
       LOWER(sourcebook_entries.title) ASC,
       banned_content_entries.sort_order ASC,
       LOWER(banned_content_entries.content_type) ASC,
