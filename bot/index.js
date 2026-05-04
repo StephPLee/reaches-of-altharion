@@ -1,5 +1,6 @@
 ﻿const { Client, GatewayIntentBits } = require("discord.js");
 const config = require("./config");
+const { ActivityType } = require("discord.js");
 const { registerGuildCommands } = require("./commands");
 const { handleInteraction } = require("./interactions");
 
@@ -9,6 +10,16 @@ const bot = new Client({
 
 bot.once("clientReady", async () => {
   console.log(`Logged in as ${bot.user.tag}`);
+  bot.user.setPresence({
+    activities: [
+      {
+        name: "/help | /faq",
+        type: ActivityType.Playing,
+      },
+    ],
+    status: "online",
+  });
+
   try {
     await registerGuildCommands();
   } catch (error) {
