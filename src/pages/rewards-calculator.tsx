@@ -555,17 +555,25 @@ export default function RewardsCalculatorPage(): ReactNode {
     clampNumber(safeQuestLevel + dmBonusLevel, 1, 22),
   );
   const rpRewardRow = getRewardRow(safeRpLevel);
-
-  const playerXp = questDuration * playerRewardRow.xpPerHour;
-  const playerGold = questDuration * playerRewardRow.goldPerHour;
-  const playerSc = Math.trunc(safeHours);
-
-  const dmXp = questDuration * dmRewardRow.xpPerHour;
-  const dmGold = questDuration * dmRewardRow.goldPerHour;
-  const dmSc = Math.trunc(safeHours) * 2;
   const eventCurrencyName =
     westMarchesStatus?.currencyMappings.event?.name?.trim() || "";
   const hasEventCurrency = Boolean(eventCurrencyName);
+  const appliesEventRewardBonus = isEventRelated && !hasEventCurrency;
+  const eventRewardMultiplier = appliesEventRewardBonus ? 1.5 : 1;
+
+  const basePlayerXp = questDuration * playerRewardRow.xpPerHour;
+  const basePlayerGold = questDuration * playerRewardRow.goldPerHour;
+  const basePlayerSc = Math.trunc(safeHours);
+  const playerXp = basePlayerXp * eventRewardMultiplier;
+  const playerGold = basePlayerGold * eventRewardMultiplier;
+  const playerSc = Math.round(basePlayerSc * eventRewardMultiplier);
+
+  const baseDmXp = questDuration * dmRewardRow.xpPerHour;
+  const baseDmGold = questDuration * dmRewardRow.goldPerHour;
+  const baseDmSc = Math.trunc(safeHours) * 2;
+  const dmXp = baseDmXp * eventRewardMultiplier;
+  const dmGold = baseDmGold * eventRewardMultiplier;
+  const dmSc = Math.round(baseDmSc * eventRewardMultiplier);
   const playerRf = hasEventCurrency
     ? isEventRelated
       ? playerSc
@@ -581,8 +589,9 @@ export default function RewardsCalculatorPage(): ReactNode {
   const rpXp = Math.round((rpDuration * rpRewardRow.xpPerHour) / 3);
   const rpGold = Math.round((rpDuration * rpRewardRow.goldPerHour) / 3);
 
-  const playerDefaultReason = `Quest rewards: ${safeHours}h ${safeMinutes}m, level ${safeQuestLevel}, ${safePlayers} player${safePlayers === 1 ? "" : "s"}`;
-  const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}`;
+  const eventReasonText = appliesEventRewardBonus ? ", event quest +50%" : "";
+  const playerDefaultReason = `Quest rewards: ${safeHours}h ${safeMinutes}m, level ${safeQuestLevel}, ${safePlayers} player${safePlayers === 1 ? "" : "s"}${eventReasonText}`;
+  const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}${eventReasonText}`;
   const rpDefaultReason = `RP rewards: ${safeRpHours}h ${safeRpMinutes}m, level ${safeRpLevel}`;
 
   function filterCharacters(query: string) {
@@ -953,24 +962,26 @@ export default function RewardsCalculatorPage(): ReactNode {
                     />
                   </div>
                 </div>
-                {hasEventCurrency ? (
-                  <label className={styles.toggleRow} htmlFor="event-related">
-                    <input
-                      id="event-related"
-                      type="checkbox"
-                      checked={isEventRelated}
-                      onChange={(event) =>
-                        setIsEventRelated(event.target.checked)
-                      }
-                    />
-                    <span>
-                      Event related quest
-                      <small>
-                        {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"} of SC.
-                      </small>
-                    </span>
-                  </label>
-                ) : null}
+                <label className={styles.toggleRow} htmlFor="event-related">
+                  <input
+                    id="event-related"
+                    type="checkbox"
+                    checked={isEventRelated}
+                    onChange={(event) =>
+                      setIsEventRelated(event.target.checked)
+                    }
+                  />
+                  <span>
+                    Event quest
+                    <small>
+                      {hasEventCurrency
+                        ? `${eventCurrencyName} pays ${isEventRelated ? "100%" : "50%"} of SC.`
+                        : isEventRelated
+                          ? "Adds 50% to player and DM XP, gold, and SC."
+                          : "Enable for a 50% player and DM reward bonus."}
+                    </small>
+                  </span>
+                </label>
               </section>
 
               {!isAuthLoading &&
@@ -1032,6 +1043,11 @@ export default function RewardsCalculatorPage(): ReactNode {
                     {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"} of SC for player rewards.
                   </p>
                 ) : null}
+                {appliesEventRewardBonus ? (
+                  <p className={styles.muted}>
+                    Event quest bonus adds 50% to player XP, gold, and SC.
+                  </p>
+                ) : null}
                 {user?.canSubmitRewards
                   ? renderRewardSubmissionControls(
                       "player",
@@ -1078,6 +1094,11 @@ export default function RewardsCalculatorPage(): ReactNode {
                 {hasEventCurrency ? (
                   <p className={styles.muted}>
                     {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"} of SC for DM rewards.
+                  </p>
+                ) : null}
+                {appliesEventRewardBonus ? (
+                  <p className={styles.muted}>
+                    Event quest bonus adds 50% to DM XP, gold, and SC.
                   </p>
                 ) : null}
                 <p className={styles.muted}>
