@@ -14,7 +14,7 @@ This bot provides `/help`, `/faq`, `/characters`, `/cc-link`, `/magicitem`, `/ap
 - `/rp` tracks active roleplay time in the current channel or thread.
 - `/boss-start` lets staff start a manual server boss fight.
 - `/boss-post` lets staff post or refresh the public boss status message.
-- `/boss-damage` lets staff record manual damage against the active boss.
+- `/boss-damage` lets staff record manual damage against the active boss, scaled by quest level.
 - `/boss-heal` lets staff restore boss HP for corrections.
 - `/boss-status` shows the active boss HP privately.
 - `/boss-log` shows recent boss HP changes privately.
@@ -114,5 +114,5 @@ When the bot starts, it auto-registers `/help`, `/faq`, `/characters`, `/cc-link
 - Characters can only join, leave, or change guild once every 7 days after their first bot-driven roster change. Cooldowns persist after leaving, so a character cannot leave and immediately join a different guild. Imported roster rows are not backfilled with a cooldown timestamp, so existing memberships are not blocked immediately.
 - `/rp start`, `/rp pause`, `/rp resume`, `/rp end`, and `/rp status` track one open RP timer per channel or thread. The starter or staff can pause, resume, or end it, and each command posts a public update where it was used.
 - `/boss-start` deactivates any previous active boss, creates a new boss at full HP, and posts its public status embed.
-- `/boss-damage` and `/boss-heal` write entries to `event_boss_damage_log`, update `event_bosses.current_hp`, and refresh the stored public boss status message.
+- `/boss-damage` and `/boss-heal` write entries to `event_boss_damage_log`, update `event_bosses.current_hp`, and refresh the stored public boss status message. `/boss-damage` multiplies the entered damage by quest level: 18-20 = 1x, 14-17 = 3x, 9-13 = 5x, and 4-8 = 10x.
 - Boss status embeds use the configured image URL, or the default site asset `/img/events/direbunny.jpg`.
