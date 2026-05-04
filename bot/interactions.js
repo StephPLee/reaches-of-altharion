@@ -1184,6 +1184,9 @@ async function handleInteraction(interaction) {
         amount,
         entryType: isHeal ? "heal" : "damage",
         reason,
+        baseAmount: isHeal ? null : baseAmount,
+        questLevel,
+        questMultiplier: isHeal ? null : questMultiplier,
       });
 
       if (!boss) {

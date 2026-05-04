@@ -74,8 +74,15 @@ function buildBossStatusEmbed(boss) {
 function buildBossLogEmbed(boss, entries) {
   const lines = entries.map((entry) => {
     const sign = entry.entryType === "heal" ? "+" : "-";
+    const multiplierText =
+      entry.entryType === "damage" &&
+      entry.baseAmount &&
+      entry.questLevel &&
+      entry.questMultiplier
+        ? ` (${formatBossHp(entry.baseAmount)} x ${entry.questMultiplier.toString()} for quest level ${entry.questLevel})`
+        : "";
     const reason = entry.reason ? ` - ${truncateValue(entry.reason, 160)}` : "";
-    return `<t:${Math.floor(new Date(entry.createdAt).getTime() / 1000)}:R> ${sign}${formatBossHp(entry.amount)} by <@${entry.discordUserId}>${reason}`;
+    return `<t:${Math.floor(new Date(entry.createdAt).getTime() / 1000)}:R> ${sign}${formatBossHp(entry.amount)}${multiplierText} by <@${entry.discordUserId}>${reason}`;
   });
 
   return new EmbedBuilder()
@@ -153,7 +160,15 @@ async function startBossFight({ name, maxHp, imageUrl }) {
 }
 
 
-async function recordBossHpEntry({ discordUserId, amount, entryType, reason }) {
+async function recordBossHpEntry({
+  discordUserId,
+  amount,
+  entryType,
+  reason,
+  baseAmount,
+  questLevel,
+  questMultiplier,
+}) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -198,15 +213,21 @@ async function recordBossHpEntry({ discordUserId, amount, entryType, reason }) {
         boss_id,
         discord_user_id,
         amount,
+        base_amount,
+        quest_level,
+        quest_multiplier,
         entry_type,
         reason
       )
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `,
       [
         boss.id,
         discordUserId,
         amount.toString(),
+        baseAmount ? baseAmount.toString() : null,
+        questLevel || null,
+        questMultiplier ? questMultiplier.toString() : null,
         entryType,
         reason?.trim() || null,
       ],
@@ -226,7 +247,15 @@ async function recordBossHpEntry({ discordUserId, amount, entryType, reason }) {
 async function listBossLogEntries(bossId, limit = 10) {
   const result = await pool.query(
     `
-    SELECT discord_user_id, amount, entry_type, reason, created_at
+    SELECT
+      discord_user_id,
+      amount,
+      base_amount,
+      quest_level,
+      quest_multiplier,
+      entry_type,
+      reason,
+      created_at
     FROM event_boss_damage_log
     WHERE boss_id = $1
     ORDER BY created_at DESC, id DESC
@@ -238,6 +267,10 @@ async function listBossLogEntries(bossId, limit = 10) {
   return result.rows.map((row) => ({
     discordUserId: row.discord_user_id,
     amount: BigInt(row.amount),
+    baseAmount: row.base_amount === null ? null : BigInt(row.base_amount),
+    questLevel: row.quest_level === null ? null : Number(row.quest_level),
+    questMultiplier:
+      row.quest_multiplier === null ? null : BigInt(row.quest_multiplier),
     entryType: row.entry_type,
     reason: row.reason,
     createdAt: row.created_at,

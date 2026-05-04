@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS event_boss_damage_log (
   boss_id INTEGER NOT NULL REFERENCES event_bosses(id) ON DELETE CASCADE,
   discord_user_id TEXT NOT NULL,
   amount BIGINT NOT NULL,
+  base_amount BIGINT,
+  quest_level INTEGER CHECK (quest_level IS NULL OR quest_level BETWEEN 4 AND 20),
+  quest_multiplier INTEGER CHECK (quest_multiplier IS NULL OR quest_multiplier > 0),
   entry_type TEXT NOT NULL DEFAULT 'damage' CHECK (entry_type IN ('damage', 'heal')),
   reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
