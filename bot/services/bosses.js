@@ -71,6 +71,25 @@ function buildBossStatusEmbed(boss) {
 }
 
 
+function buildBossHealthEmbed(boss) {
+  const damageDealt = boss.maxHp - boss.currentHp;
+  const progressPercent = Number((damageDealt * 10000n) / boss.maxHp) / 100;
+
+  return new EmbedBuilder()
+    .setTitle(`${boss.name} Health`)
+    .setDescription(
+      [
+        buildBossHpBar(boss.currentHp, boss.maxHp),
+        "",
+        `Damage dealt: ${formatBossHp(damageDealt)} (${progressPercent.toFixed(2)}%)`,
+        boss.currentHp === 0n ? "The boss has been defeated." : "The fight continues.",
+      ].join("\n"),
+    )
+    .setColor(boss.currentHp === 0n ? 0x4caf50 : 0xb73a3a)
+    .setTimestamp(new Date(boss.updatedAt || Date.now()));
+}
+
+
 function buildBossLogEmbed(boss, entries) {
   const lines = entries.map((entry) => {
     const sign = entry.entryType === "heal" ? "+" : "-";
@@ -278,7 +297,7 @@ async function listBossLogEntries(bossId, limit = 10) {
 }
 
 
-async function postOrRefreshBossStatus(interaction, boss) {
+async function postOrRefreshBossStatus(interaction, boss, { forceNew = false } = {}) {
   const embed = buildBossStatusEmbed(boss);
   const targetChannelId =
     boss.statusChannelId || config.bossStatusChannelId || interaction.channelId;
@@ -288,7 +307,7 @@ async function postOrRefreshBossStatus(interaction, boss) {
     throw new Error("Boss status channel is not a text channel.");
   }
 
-  if (boss.statusMessageId) {
+  if (boss.statusMessageId && !forceNew) {
     try {
       const message = await targetChannel.messages.fetch(boss.statusMessageId);
       await message.edit({ embeds: [embed] });
@@ -313,6 +332,7 @@ async function postOrRefreshBossStatus(interaction, boss) {
 
 
 module.exports = {
+  buildBossHealthEmbed,
   buildBossLogEmbed,
   buildBossStatusEmbed,
   formatBossHp,

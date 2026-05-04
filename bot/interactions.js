@@ -4,6 +4,7 @@ const { hasRequiredRole } = require("./permissions");
 const { getDisplayName } = require("./utils");
 const { getOrAssignCampaign } = require("./services/campaigns");
 const {
+  buildBossHealthEmbed,
   buildBossLogEmbed,
   buildBossStatusEmbed,
   formatBossHp,
@@ -1123,9 +1124,11 @@ async function handleInteraction(interaction) {
         return;
       }
 
-      const status = await postOrRefreshBossStatus(interaction, boss);
+      await postOrRefreshBossStatus(interaction, boss, {
+        forceNew: true,
+      });
       await interaction.editReply(
-        `${status.created ? "Posted" : "Refreshed"} the boss status message for **${boss.name}**.`,
+        `Posted a fresh boss status message for **${boss.name}**.`,
       );
     } catch (error) {
       console.error("Failed to process /boss-post:", error);
@@ -1219,15 +1222,21 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.commandName === "boss-status") {
+    const visibility =
+      interaction.options.getString("visibility") === "public"
+        ? "public"
+        : "private";
+    const isPublic = visibility === "public";
+
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ ephemeral: !isPublic });
       const boss = await getActiveBoss();
       if (!boss) {
         await interaction.editReply("No active boss fight is configured.");
         return;
       }
 
-      await interaction.editReply({ embeds: [buildBossStatusEmbed(boss)] });
+      await interaction.editReply({ embeds: [buildBossHealthEmbed(boss)] });
     } catch (error) {
       console.error("Failed to process /boss-status:", error);
       if (interaction.deferred || interaction.replied) {

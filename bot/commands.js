@@ -119,8 +119,8 @@ const COMMAND_DEFINITIONS = [
   },
   {
     name: "boss-post",
-    description: "Post or refresh the active boss status message.",
-    help: "Staff-only. Post or refresh the public active boss status message.",
+    description: "Post the active boss status message.",
+    help: "Staff-only. Post a fresh public active boss status message.",
     requiresRole: true,
   },
   {
@@ -178,7 +178,17 @@ const COMMAND_DEFINITIONS = [
   {
     name: "boss-status",
     description: "Show the active boss status.",
-    help: "Show the active boss status.",
+    help: "Show active boss health. Use the visibility option to share it publicly.",
+    buildCommand: (command) =>
+      command.addStringOption((option) =>
+        option
+          .setName("visibility")
+          .setDescription("Who should see the boss health?")
+          .addChoices(
+            { name: "Private", value: "private" },
+            { name: "Public", value: "public" },
+          ),
+      ),
   },
   {
     name: "boss-log",
