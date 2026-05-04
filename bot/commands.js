@@ -138,6 +138,14 @@ const COMMAND_DEFINITIONS = [
             .setMinValue(1)
             .setMaxValue(Number.MAX_SAFE_INTEGER),
         )
+        .addIntegerOption((option) =>
+          option
+            .setName("quest-level")
+            .setDescription("Quest level used to scale boss damage.")
+            .setRequired(true)
+            .setMinValue(4)
+            .setMaxValue(20),
+        )
         .addStringOption((option) =>
           option
             .setName("reason")

@@ -65,6 +65,26 @@ const {
   startRpSession,
 } = require("./services/rpSessions");
 
+function getBossDamageQuestMultiplier(questLevel) {
+  if (questLevel >= 18 && questLevel <= 20) {
+    return 1n;
+  }
+
+  if (questLevel >= 14 && questLevel <= 17) {
+    return 3n;
+  }
+
+  if (questLevel >= 9 && questLevel <= 13) {
+    return 5n;
+  }
+
+  if (questLevel >= 4 && questLevel <= 8) {
+    return 10n;
+  }
+
+  return null;
+}
+
 function getRpContext(interaction) {
   return {
     guildId: interaction.guildId,
@@ -1138,8 +1158,24 @@ async function handleInteraction(interaction) {
       return;
     }
 
-    const amount = BigInt(interaction.options.getInteger("amount", true));
+    const baseAmount = BigInt(interaction.options.getInteger("amount", true));
+    const questLevel = isHeal
+      ? null
+      : interaction.options.getInteger("quest-level", true);
+    const questMultiplier = isHeal
+      ? 1n
+      : getBossDamageQuestMultiplier(questLevel);
     const reason = interaction.options.getString("reason")?.trim() || null;
+
+    if (!questMultiplier) {
+      await interaction.reply({
+        content: "Quest level must be between 4 and 20.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const amount = baseAmount * questMultiplier;
 
     try {
       await interaction.deferReply({ ephemeral: isHeal });
@@ -1158,7 +1194,7 @@ async function handleInteraction(interaction) {
       await postOrRefreshBossStatus(interaction, boss);
       const updateMessage = isHeal
         ? `Restored ${formatBossHp(amount)} HP to **${boss.name}**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`
-        : `The Voice of Altharion calls the strike true: **${boss.name}** suffers **${formatBossHp(amount)} damage**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`;
+        : `The Voice of Altharion calls the strike true: **${boss.name}** suffers **${formatBossHp(amount)} damage** (${formatBossHp(baseAmount)} x ${questMultiplier.toString()} for quest level ${questLevel}). Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`;
 
       await interaction.editReply(updateMessage);
     } catch (error) {
