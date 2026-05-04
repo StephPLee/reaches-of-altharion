@@ -121,6 +121,8 @@ const {
 
 const app = express();
 const rateLimitBuckets = new Map();
+const DISCORD_MESSAGE_LIMIT = 2000;
+const ANNOUNCEMENT_CONTENT_LIMIT = 10000;
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -1461,23 +1463,79 @@ function normalizeAnnouncementRoleIds(roleIds) {
   )];
 }
 
-function buildTextAnnouncementPayload(content, roleIds = []) {
-  const normalizedRoleIds = normalizeAnnouncementRoleIds(roleIds);
-  const messageContent = normalizedRoleIds.length
-    ? content + "\n" + normalizedRoleIds.map((roleId) => `<@&${roleId}>`).join("\n")
-    : content;
+function findAnnouncementSplitIndex(content, maxLength) {
+  if (content.length <= maxLength) {
+    return content.length;
+  }
 
-  return {
-    content: messageContent,
-    allowed_mentions: normalizedRoleIds.length
-      ? {
-          parse: [],
-          roles: normalizedRoleIds,
-        }
-      : {
-          parse: [],
-        },
-  };
+  const preferredBreaks = ["\n\n", "\n", " "];
+  for (const breakText of preferredBreaks) {
+    const breakIndex = content.lastIndexOf(breakText, maxLength);
+    if (breakIndex > 0) {
+      const splitAfterBreak = breakIndex + breakText.length;
+      return splitAfterBreak <= maxLength ? splitAfterBreak : breakIndex;
+    }
+  }
+
+  return maxLength;
+}
+
+function splitAnnouncementContent(content, finalReservedLength = 0) {
+  const chunks = [];
+  let remainingContent = content.trim();
+
+  while (remainingContent.length > 0) {
+    const isFinalChunk =
+      remainingContent.length + finalReservedLength <= DISCORD_MESSAGE_LIMIT;
+    const maxLength = isFinalChunk
+      ? DISCORD_MESSAGE_LIMIT - finalReservedLength
+      : DISCORD_MESSAGE_LIMIT;
+    const splitIndex = findAnnouncementSplitIndex(remainingContent, maxLength);
+    const chunk = remainingContent.slice(0, splitIndex).trim();
+
+    if (chunk) {
+      chunks.push(chunk);
+    }
+
+    remainingContent = remainingContent.slice(splitIndex).trim();
+  }
+
+  return chunks;
+}
+
+function buildTextAnnouncementPayloads(content, roleIds = []) {
+  const normalizedRoleIds = normalizeAnnouncementRoleIds(roleIds);
+  const roleMentions = normalizedRoleIds
+    .map((roleId) => `<@&${roleId}>`)
+    .join("\n");
+  const finalReservedLength = roleMentions ? roleMentions.length + 1 : 0;
+
+  if (roleMentions && finalReservedLength >= DISCORD_MESSAGE_LIMIT) {
+    throw new Error(
+      "Selected role pings are too long to fit in one Discord message.",
+    );
+  }
+
+  const chunks = splitAnnouncementContent(content, finalReservedLength);
+
+  return chunks.map((chunk, index) => {
+    const isFinalChunk = index === chunks.length - 1;
+    const messageContent = isFinalChunk && roleMentions
+      ? `${chunk}\n${roleMentions}`
+      : chunk;
+
+    return {
+      content: messageContent,
+      allowed_mentions: isFinalChunk && normalizedRoleIds.length
+        ? {
+            parse: [],
+            roles: normalizedRoleIds,
+          }
+        : {
+            parse: [],
+          },
+    };
+  });
 }
 
 async function notifyTextAnnouncement(content, roleIds = []) {
@@ -1485,10 +1543,10 @@ async function notifyTextAnnouncement(content, roleIds = []) {
     return;
   }
 
-  await postChannelMessage(
-    calendarAnnouncementChannelId,
-    buildTextAnnouncementPayload(content, roleIds),
-  );
+  const payloads = buildTextAnnouncementPayloads(content, roleIds);
+  for (const payload of payloads) {
+    await postChannelMessage(calendarAnnouncementChannelId, payload);
+  }
 }
 
 app.get("/api/calendar", async (_req, res) => {
@@ -3790,9 +3848,9 @@ app.post(
           ? [roleId]
           : [],
     );
-    if (normalizedContent.length > 2000) {
+    if (normalizedContent.length > ANNOUNCEMENT_CONTENT_LIMIT) {
       res.status(400).json({
-        error: "content must be 2000 characters or fewer.",
+        error: `content must be ${ANNOUNCEMENT_CONTENT_LIMIT} characters or fewer.`,
       });
       return;
     }

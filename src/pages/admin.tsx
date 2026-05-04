@@ -8,6 +8,8 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import styles from "./admin.module.css";
 
+const ANNOUNCEMENT_CHARACTER_LIMIT = 10000;
+
 type SessionUser = {
   id?: number;
   username: string;
@@ -316,7 +318,7 @@ export default function AdminPage(): ReactNode {
                         setAnnouncementText(event.target.value)
                       }
                       rows={6}
-                      maxLength={2000}
+                      maxLength={ANNOUNCEMENT_CHARACTER_LIMIT}
                       placeholder="Write the announcement exactly as it should appear in Discord."
                     />
                   </div>
