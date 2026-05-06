@@ -26,6 +26,7 @@ type IslandHotspot = {
   id: string;
   label: string;
   hoverSummary: string;
+  worldHoverSummary: string;
   islandName: string;
   regionType: string;
   description: string;
@@ -50,6 +51,8 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     label: "Player Information",
     hoverSummary:
       "Character creation, sourcebooks, and transformation guidance for players.",
+    worldHoverSummary:
+      "A harsh, unstable desert frontier split by ravines, mesas, and seismic scars. Its people endure the heat, storms, and rugged terrain through old tribal traditions and hard-won resilience.",
     islandName: "Solcrata",
     regionType: "Shattered Frontier",
     description:
@@ -80,6 +83,8 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     label: "The World of Altharion",
     hoverSummary:
       "Island lore, locations, and setting details across the archipelago.",
+    worldHoverSummary:
+      "The lush heartland of Altharion and its most populated island. New arrivals often emerge near Everholt, a bright eastern city and major center of settlement.",
     islandName: "Verdalis",
     regionType: "Heartland",
     description:
@@ -109,6 +114,8 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     label: "DM Rules",
     hoverSummary:
       "Dungeon Master expectations, processes, and server-specific rulings.",
+    worldHoverSummary:
+      "A small forested island at the center of the archipelago, crowned by the Beacon of Altharion. Its light is tied to the magic that drew the floating islands together.",
     islandName: "Thaloryn",
     regionType: "Beacon Isle",
     description:
@@ -139,6 +146,8 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     label: "RP Rules",
     hoverSummary:
       "Roleplay standards, etiquette, and core community guidelines.",
+    worldHoverSummary:
+      "A barren, mountainous island with little visible life and few permanent residents. Those who come to Tenebryn usually do so for a specific purpose.",
     islandName: "Tenebryn",
     regionType: "Barren Peaks",
     description:
@@ -160,6 +169,8 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     label: "Homebrew",
     hoverSummary:
       "Custom server mechanics including graces, boons, and guild systems.",
+    worldHoverSummary:
+      "A frozen reach of snow, ice, mountains, and tundra. Iskralith is unforgiving, but those adapted to the cold can find shelter and safety there.",
     islandName: "Iskralith",
     regionType: "Frozen Reaches",
     description:
@@ -570,7 +581,9 @@ function HomepageHeader() {
                       </AnimatePresence>
                       {!isSelected ? (
                         <span className={styles.islandHoverCard}>
-                          {island.hoverSummary}
+                          {showIslandNames
+                            ? island.worldHoverSummary
+                            : island.hoverSummary}
                         </span>
                       ) : null}
                     </m.div>
