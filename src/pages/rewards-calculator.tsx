@@ -570,7 +570,8 @@ export default function RewardsCalculatorPage(): ReactNode {
 
   const baseDmXp = questDuration * dmRewardRow.xpPerHour;
   const baseDmGold = questDuration * dmRewardRow.goldPerHour;
-  const baseDmSc = Math.trunc(safeHours) * 2;
+  const dmScMultiplier = safeQuestLevel < 10 ? 2 : 1;
+  const baseDmSc = Math.trunc(safeHours) * 2 * dmScMultiplier;
   const dmXp = baseDmXp * eventRewardMultiplier;
   const dmGold = baseDmGold * eventRewardMultiplier;
   const dmSc = Math.round(baseDmSc * eventRewardMultiplier);
@@ -590,8 +591,9 @@ export default function RewardsCalculatorPage(): ReactNode {
   const rpGold = Math.round((rpDuration * rpRewardRow.goldPerHour) / 3);
 
   const eventReasonText = appliesEventRewardBonus ? ", event quest +50%" : "";
+  const dmScReasonText = dmScMultiplier > 1 ? ", below level 10 DM SC x2" : "";
   const playerDefaultReason = `Quest rewards: ${safeHours}h ${safeMinutes}m, level ${safeQuestLevel}, ${safePlayers} player${safePlayers === 1 ? "" : "s"}${eventReasonText}`;
-  const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}${eventReasonText}`;
+  const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}${dmScReasonText}${eventReasonText}`;
   const rpDefaultReason = `RP rewards: ${safeRpHours}h ${safeRpMinutes}m, level ${safeRpLevel}`;
 
   function filterCharacters(query: string) {
@@ -1099,6 +1101,11 @@ export default function RewardsCalculatorPage(): ReactNode {
                 {appliesEventRewardBonus ? (
                   <p className={styles.muted}>
                     Event quest bonus adds 50% to DM XP, gold, and SC.
+                  </p>
+                ) : null}
+                {dmScMultiplier > 1 ? (
+                  <p className={styles.muted}>
+                    Quests below level 10 grant DMs twice the usual SC.
                   </p>
                 ) : null}
                 <p className={styles.muted}>
