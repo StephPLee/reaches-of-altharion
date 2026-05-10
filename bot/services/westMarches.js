@@ -1,5 +1,10 @@
 ﻿const { EmbedBuilder } = require("discord.js");
 const config = require("../config");
+const {
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+} = require("discord.js");
+const pool = require("../db");
 const { truncateValue } = require("../utils");
 
 function isWestMarchesConfigured() {
@@ -106,6 +111,11 @@ async function listOwnedActiveWestMarchesCharacters(discordUserId) {
 async function listHighestLevelActiveCharactersForDiscordUsers(discordUserIds) {
   const targetUserIds = new Set(discordUserIds);
   const highestByDiscordUserId = new Map();
+  const preferences = await listScRewardCharacterPreferences(discordUserIds);
+  const preferenceByDiscordUserId = new Map(
+    preferences.map((preference) => [preference.discordUserId, preference]),
+  );
+  const preferredByDiscordUserId = new Map();
   const characters = await listAllWestMarchesCharacters();
 
   for (const character of characters) {
@@ -118,6 +128,12 @@ async function listHighestLevelActiveCharactersForDiscordUsers(discordUserIds) {
       typeof character?.id !== "string" ||
       !characterName
     ) {
+      continue;
+    }
+
+    const preference = preferenceByDiscordUserId.get(discordUserId);
+    if (preference?.characterId === character.id) {
+      preferredByDiscordUserId.set(discordUserId, character);
       continue;
     }
 
@@ -139,13 +155,16 @@ async function listHighestLevelActiveCharactersForDiscordUsers(discordUserIds) {
 
   const matched = discordUserIds
     .map((discordUserId) => {
-      const character = highestByDiscordUserId.get(discordUserId);
+      const character =
+        preferredByDiscordUserId.get(discordUserId) ||
+        highestByDiscordUserId.get(discordUserId);
       return character
         ? {
             discordUserId,
             characterId: character.id,
             characterName: formatCharacterName(character),
             level: normalizeCharacterLevel(character),
+            usedPreference: preferredByDiscordUserId.has(discordUserId),
           }
         : null;
     })
@@ -154,9 +173,78 @@ async function listHighestLevelActiveCharactersForDiscordUsers(discordUserIds) {
   return {
     matched,
     missingUserIds: discordUserIds.filter(
-      (discordUserId) => !highestByDiscordUserId.has(discordUserId),
+      (discordUserId) =>
+        !preferredByDiscordUserId.has(discordUserId) &&
+        !highestByDiscordUserId.has(discordUserId),
     ),
   };
+}
+
+function mapScRewardCharacterPreference(row) {
+  return row
+    ? {
+        discordUserId: row.discord_user_id,
+        characterId: row.westmarches_character_id,
+        characterName: row.character_name,
+        updatedAt: row.updated_at,
+      }
+    : null;
+}
+
+async function getScRewardCharacterPreference(discordUserId) {
+  const result = await pool.query(
+    `
+    SELECT discord_user_id, westmarches_character_id, character_name, updated_at
+    FROM sc_reward_character_preferences
+    WHERE discord_user_id = $1
+    `,
+    [discordUserId],
+  );
+
+  return mapScRewardCharacterPreference(result.rows[0]);
+}
+
+async function listScRewardCharacterPreferences(discordUserIds) {
+  if (!Array.isArray(discordUserIds) || discordUserIds.length === 0) {
+    return [];
+  }
+
+  const result = await pool.query(
+    `
+    SELECT discord_user_id, westmarches_character_id, character_name, updated_at
+    FROM sc_reward_character_preferences
+    WHERE discord_user_id = ANY($1::text[])
+    `,
+    [discordUserIds],
+  );
+
+  return result.rows.map(mapScRewardCharacterPreference).filter(Boolean);
+}
+
+async function upsertScRewardCharacterPreference({
+  discordUserId,
+  characterId,
+  characterName,
+}) {
+  const result = await pool.query(
+    `
+    INSERT INTO sc_reward_character_preferences (
+      discord_user_id,
+      westmarches_character_id,
+      character_name
+    )
+    VALUES ($1, $2, $3)
+    ON CONFLICT (discord_user_id) DO UPDATE
+    SET
+      westmarches_character_id = EXCLUDED.westmarches_character_id,
+      character_name = EXCLUDED.character_name,
+      updated_at = NOW()
+    RETURNING discord_user_id, westmarches_character_id, character_name, updated_at
+    `,
+    [discordUserId, characterId, characterName],
+  );
+
+  return mapScRewardCharacterPreference(result.rows[0]);
 }
 
 async function getOwnedActiveWestMarchesCharacter(discordUserId, characterId) {
@@ -247,6 +335,27 @@ function buildCharacterListEmbed({ displayName, characters }) {
     .setDescription(truncateValue(description, 4096));
 }
 
+function buildScRewardCharacterRow(discordUserId, characters, currentCharacterId) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`sc-character:${discordUserId}`)
+    .setPlaceholder("Choose your default SC character...")
+    .addOptions(
+      characters.slice(0, 25).map((character) => {
+        const characterName = formatCharacterName(character);
+        const level = normalizeCharacterLevel(character);
+
+        return {
+          label: characterName.slice(0, 100),
+          description: `Level ${level || "unknown"}`.slice(0, 100),
+          value: character.id,
+          default: character.id === currentCharacterId,
+        };
+      }),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
 async function awardScToCharacters({ awards, amount, reason }) {
   if (!config.westMarchesScCurrencyId) {
     throw new Error("missing_sc_currency_id");
@@ -276,13 +385,16 @@ async function awardScToCharacters({ awards, amount, reason }) {
 module.exports = {
   awardScToCharacters,
   buildCharacterListEmbed,
+  buildScRewardCharacterRow,
   formatCharacterClass,
   formatCharacterName,
   getOwnedActiveWestMarchesCharacter,
+  getScRewardCharacterPreference,
   getWestMarchesCharacter,
   isWestMarchesConfigured,
   listAllWestMarchesCharacters,
   listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
+  upsertScRewardCharacterPreference,
 };
