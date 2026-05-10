@@ -42,8 +42,8 @@ const COMMAND_DEFINITIONS = [
   },
   {
     name: "homebrew-discussion",
-    description: "Ping users who discussed or voted on a homebrew submission.",
-    help: "Ping deduped users who posted in your workshop thread or reacted to a submission message.",
+    description: "Award SC to users who discussed or voted on homebrew.",
+    help: "Award SC to deduped users who posted in your workshop thread or reacted to a submission message.",
     buildCommand: (command) =>
       command
         .addStringOption((option) =>

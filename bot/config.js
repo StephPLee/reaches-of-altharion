@@ -35,6 +35,7 @@ const config = {
     "https://www.westmarches.games/api/v1"
   ).replace(/\/$/, ""),
   westMarchesApiKey: process.env.WEST_MARCHES_API_KEY || "",
+  westMarchesScCurrencyId: process.env.WEST_MARCHES_SC_CURRENCY_ID || "",
 };
 
 
