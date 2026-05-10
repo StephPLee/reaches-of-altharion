@@ -6,21 +6,132 @@ hide_title: true
 
 import EditableWikiPage from "@site/src/components/EditableWikiPage";
 
-export const fallbackMarkdown = `# Homebrew Guidelines
+export const fallbackMarkdown = `# Homebrew Guidelines & Review Process
 
-Use this page for guidance on reviewing, balancing, and submitting homebrew for the server.
+### Purpose of the Homebrew Workshop
 
-## Workshop Discussions
+The Homebrew Workshop exists to:
+- Develop ideas collaboratively
+- Identify mechanical, balance, and clarity issues early
+- Reduce arguments during formal submission
 
-Homebrew should be discussed in the workshop before it is submitted for approval.
+### Expectation:
+Almost all homebrew should go through the Workshop before being submitted for approval.
 
-## Balance Review
+You should only go to submissions directly if you are confident in the flavour, mechanics, thematics and balance of your homebrew from the start.
 
-When reviewing homebrew, consider how it compares to existing server options, whether it creates unclear rules interactions, and whether it gives one character option too much power or flexibility.
+If you have doubts about any of those, go through the workshop first. The Submission channel is for final review, not first drafts.
 
-## Submission Votes
+## What Belongs in the Workshop vs Submissions
 
-When the homebrew is ready, use the submission post for final votes and link back to the workshop discussion.
+### Homebrew Workshop
+
+Post here if your homebrew:
+- Is a first or early draft
+- Needs rewriting or clarification
+- Needs balance discussion
+- Introduces new mechanics, subsystems, or niches
+
+Workshop posts must include:
+Concept / Niche: What role, fantasy, or build does this fill?
+Design Goal: What should this be good at, and what should it not be good at?
+Current State:
+- Rough draft (needs rewriting)
+- Nearly complete (needs balance check)
+- Complete draft (polish & edge cases)
+- Link to the Homebrew
+
+This helps reviewers give useful feedback instead of guessing intent.
+
+### Homebrew Submission (Final Review Only)
+You may submit once:
+- The workshop discussion has addressed major concerns
+- The HB is readable, coherent, and mechanically complete
+
+Submission must include:
+- Stellar Coin (SC) payment link in market channel
+- Link to the final Homebrew
+- Link to the Workshop Thread where applicable
+
+## Feedback Standards
+
+### For Reviewers
+
+Feedback must be actionable.
+
+Not acceptable:
+- "This is broken."
+- "This is weak."
+- "No."
+- "I don't like it."
+
+Required instead:
+- What part is problematic?
+- Why it's an issue (numbers, action economy, scaling, interactions)
+- A suggested change or a clear explanation of the concern
+
+Example:
+
+"At level 5 this outpaces X feature because it stacks with Y. I'd suggest limiting it to once per turn or scaling later."
+Blunt is fine. Vague is not.
+
+### For Authors
+
+Submitting homebrew means agreeing that:
+- Critique is about mechanics, not you
+- Changes are normal and expected
+- Rejection or revision is not a judgement of creativity
+
+If feedback feels unclear, ask for clarification - don't assume bad faith.
+
+## Balance Philosophy
+
+We balance homebrew for typical table play, not exclusively for power-gaming or non-power-gaming
+
+That said:
+- Power-gamer edge cases must be considered
+- If something becomes game-warping when optimised, it will be addressed
+- We will not cripple interesting design solely to prevent every possible exploit
+
+Rule of thumb:
+- If an optimisation is clever but reasonable - fine.
+- If it trivialises encounters or invalidates other players - it needs fixing.
+- This is a discussion, not a winner-takes-all argument.
+
+## Workshop Before Submission Is Not a Punishment
+
+The workshop:
+- Improves acceptance chances
+- Reduces last-minute rejection
+- Spreads design load
+- Prevents repeated arguments
+
+Skipping it often leads to more changes, more frustration, and more conflict later.
+
+## Voting vs Discussion
+- Votes are a signal, not the whole process.
+- Workshop discussion carries more weight than raw votes
+- Votes without engagement do not override unresolved mechanical concerns
+
+Submissions should reflect workshop feedback where applicable
+
+## SC Rewards - Clarified
+When a homebrew is accepted:
+- 2 SC is awarded to contributors who meaningfully participated in the workshop discussion
+- 5 SC is awarded as above if the homebrew is a subclass
+
+Participation is based on:
+- Feedback given
+- Suggestions made
+- Balance analysis contributed
+
+### SC Reward Command
+
+There's a command to get the list of participants to ping them for discussion rewards.
+
+It uses the link to the homebrew workshop thread, the post for the actual submission and an optional boolean to say if it is or is not a subclass to determine reward values
+
+\`/homebrew-discussion [link to workshop thread] [link to submission post] [subclass: optional]\`
 `;
 
 <EditableWikiPage
