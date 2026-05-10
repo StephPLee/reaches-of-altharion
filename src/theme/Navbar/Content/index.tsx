@@ -43,7 +43,6 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
     title: null,
     links: [
       { label: "Home", to: "/?view=map" },
-      { label: "DM Rules", to: "/docs/dm-rules" },
       { label: "RP Rules", to: "/docs/rp-rules" },
       { label: "Calendar", to: "/calendar" },
       { label: "The World of Altharion", to: "/?view=world" },
@@ -58,6 +57,13 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Banned Content", to: "/docs/banned-content" },
       { label: "Transformations", to: "/docs/transformations" },
       { label: "Character Attributes", to: "/character-attributes" },
+    ],
+  },
+  {
+    title: "DM Information",
+    links: [
+      { label: "DM Rules", to: "/docs/dm-rules" },
+      { label: "Homebrew Guidelines", to: "/docs/homebrew-guidelines" },
     ],
   },
   {

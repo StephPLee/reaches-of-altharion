@@ -111,9 +111,9 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
   },
   {
     id: "thaloryn",
-    label: "DM Rules",
+    label: "DM Information",
     hoverSummary:
-      "Dungeon Master expectations, processes, and server-specific rulings.",
+      "Dungeon Master rules, homebrew guidance, and server-specific rulings.",
     worldHoverSummary:
       "A small forested island at the center of the archipelago, crowned by the Beacon of Altharion. Its light is tied to the magic that drew the floating islands together.",
     islandName: "Thaloryn",

@@ -11,7 +11,13 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: ["getting-set-up", "faq", "sourcebooks", "banned-content", "transformations"],
     },
-    "dm-rules",
+    {
+      type: "category",
+      label: "DM Information",
+      collapsible: true,
+      collapsed: false,
+      items: ["dm-rules", "homebrew-guidelines"],
+    },
     "rp-rules",
     {
       type: "category",

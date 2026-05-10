@@ -128,9 +128,18 @@ const config: Config = {
           ],
         },
         {
-          to: "/docs/dm-rules",
-          label: "DM Rules",
+          label: "DM Information",
           position: "left",
+          items: [
+            {
+              to: "/docs/dm-rules",
+              label: "DM Rules",
+            },
+            {
+              to: "/docs/homebrew-guidelines",
+              label: "Homebrew Guidelines",
+            },
+          ],
         },
         {
           to: "/docs/rp-rules",
