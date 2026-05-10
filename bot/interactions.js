@@ -966,40 +966,36 @@ async function handleInteraction(interaction) {
         `Homebrew discussion participants for **${result.thread.name}**:`,
         `${result.participantIds.length} user${result.participantIds.length === 1 ? "" : "s"} found.`,
         `Discussion posters: ${result.threadAuthorIds.length}. Submission voters: ${result.reactionUserIds.length}.`,
-        `Reward: **${scReward} SC** each to each user's highest-level active character.`,
+        `Reward: **${scReward} SC** each.`,
         `Awarded automatically: ${matchedCharacters.length}. No active character found: ${missingUserIds.length}.`,
         result.threadOwnerId
           ? `Excluded thread creator: <@${result.threadOwnerId}>.`
           : "Thread creator could not be identified.",
-        "",
-        "Ping list:",
       ].join("\n");
-      const messages = chunkMentionLines(result.participantIds, {
-        header,
-        emptyText:
-          `No non-bot participants were found for **${result.thread.name}**.`,
-      });
 
       await interaction.editReply(
         `Found ${result.participantIds.length} participant${result.participantIds.length === 1 ? "" : "s"} and awarded ${scReward} SC to ${matchedCharacters.length} character${matchedCharacters.length === 1 ? "" : "s"}. Posting the public receipt now.`,
       );
 
-      for (const message of messages) {
+      await interaction.channel.send({
+        content: header,
+        allowedMentions: {
+          parse: [],
+          users: result.threadOwnerId ? [result.threadOwnerId] : [],
+        },
+      });
+
+      if (result.participantIds.length === 0) {
         await interaction.channel.send({
-          content: message.content,
-          allowedMentions: {
-            parse: [],
-            users: message.userIds,
-          },
+          content: `No non-bot participants were found for **${result.thread.name}**.`,
+          allowedMentions: { parse: [] },
         });
       }
 
       if (matchedCharacters.length > 0) {
         const awardedLines = matchedCharacters.map((award) => ({
           userId: award.discordUserId,
-          text:
-            `<@${award.discordUserId}> -> **${award.characterName}** ` +
-            `(level ${award.level}, ${award.usedPreference ? "SC default" : "highest level"})`,
+          text: `<@${award.discordUserId}> -> **${award.characterName}**`,
         }));
         const awardedMessages = [];
         let current = `Awarded **${scReward} SC** to:\n`;
