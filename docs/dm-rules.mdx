@@ -1,14 +1,18 @@
 ---
 sidebar_position: 4
+title: DM Rules
+hide_title: true
 ---
 
-# DM Rules
+import EditableWikiPage from "@site/src/components/EditableWikiPage";
+
+export const fallbackMarkdown = `# DM Rules
 
 ## Becoming a DM
 
-Any player can volunteer to become a DM by posting an application using the server's `join-dm-team` template and pinging `@Staff`.
+Any player can volunteer to become a DM by posting an application using the server's \`join-dm-team\` template and pinging \`@Staff\`.
 
-After staff review the application, the player is given the `@Junior DM` role.
+After staff review the application, the player is given the \`@Junior DM\` role.
 
 ## DM Roles
 
@@ -20,13 +24,13 @@ Junior DMs can run most quests, with three exceptions:
 - Grim Hollow Transformation quests
 - Legendary item quests
 
-After running 5 games, the Junior DM is promoted to `@Dungeon Master`.
+After running 5 games, the Junior DM is promoted to \`@Dungeon Master\`.
 
 For the final fifth game, it is strongly encouraged to have other DMs and/or staff members present.
 
 ### Dungeon Master
 
-`@Dungeon Master` can run any quest unless the quest itself has special restrictions.
+\`@Dungeon Master\` can run any quest unless the quest itself has special restrictions.
 
 Examples:
 
@@ -35,7 +39,7 @@ Examples:
 
 ## Bonus Rewards
 
-A `@Dungeon Master` may award extra items at the end of a quest if the players performed exceptionally well.
+A \`@Dungeon Master\` may award extra items at the end of a quest if the players performed exceptionally well.
 
 This should be rare and reserved for cases where the party clearly impressed the DM by outplaying, outwitting, or otherwise exceeding expectations.
 
@@ -46,22 +50,22 @@ These bonus items:
 
 ## Staff Help
 
-If you are unsure about a ruling or process, contact `@Staff` in `dm-general`.
+If you are unsure about a ruling or process, contact \`@Staff\` in \`dm-general\`.
 
 ## Stellar Coin Rules For DMs
 
-`@Junior DM` and `@Dungeon Master` have additional ways to gain and spend Stellar Coins.
+\`@Junior DM\` and \`@Dungeon Master\` have additional ways to gain and spend Stellar Coins.
 
 ### Ways to gain SC
 
-- Participate in discussion for an approved homebrew species, item, spell, or feat: `2 SC`
-- Participate in discussion for an approved homebrew subclass: `5 SC`
-- Approve a character sheet: `2 SC`
-- DM a quest: `1 SC` per hour, in addition to normal gameplay SC rewards
+- Participate in discussion for an approved homebrew species, item, spell, or feat: \`2 SC\`
+- Participate in discussion for an approved homebrew subclass: \`5 SC\`
+- Approve a character sheet: \`2 SC\`
+- DM a quest: \`1 SC\` per hour, in addition to normal gameplay SC rewards
 
 ### Ways to spend SC
 
-`@Dungeon Master` may submit one homebrew subclass, item, spell, or feat in `homebrew-submissions` for `10 SC`.
+\`@Dungeon Master\` may submit one homebrew subclass, item, spell, or feat in \`homebrew-submissions\` for \`10 SC\`.
 
 The cost must come from a single PC.
 
@@ -69,7 +73,7 @@ The cost must come from a single PC.
 
 ### Grim Hollow Transformation Quests
 
-Only `@Dungeon Master` can run Grim Hollow Transformation quests.
+Only \`@Dungeon Master\` can run Grim Hollow Transformation quests.
 
 These quests can only do one of the following:
 
@@ -81,7 +85,7 @@ Rules:
 
 - the quest must be at least 2 hours long
 - the session may be split across two days if needed
-- the quest must be posted in `quest-approval` and approved by staff before it is run
+- the quest must be posted in \`quest-approval\` and approved by staff before it is run
 
 After running a transformation quest, the DM may choose one of their own PCs to:
 
@@ -93,7 +97,7 @@ That PC must still meet the relevant requirements.
 
 ### Legendary Item Quests
 
-Only `@Dungeon Master` can run legendary item quests.
+Only \`@Dungeon Master\` can run legendary item quests.
 
 Legendary item quests are Prize Hunt quests where at least one player has used a Relic Prize Hunt and selected a legendary rarity item, even if other players selected lower rarities.
 
@@ -103,7 +107,7 @@ Rules:
 
 - the quest must be at least 4 hours long
 - the session may be split across two days if needed
-- the quest must be posted in `quest-approval` and approved by staff before it is run
+- the quest must be posted in \`quest-approval\` and approved by staff before it is run
 
 After completing a Legendary Prize Hunt, the DM may choose one of their own characters and:
 
@@ -112,7 +116,7 @@ After completing a Legendary Prize Hunt, the DM may choose one of their own char
 
 ### World Boss Quests
 
-Only `@Dungeon Master` can run World Boss quests.
+Only \`@Dungeon Master\` can run World Boss quests.
 
 World Boss quests are special quests where the party faces one of the server's approved world bosses.
 
@@ -149,7 +153,7 @@ At the end of a World Boss quest, the DM may choose one of their own level 20 ch
 
 When posting a quest on WestMarches.games, include the following information in the quest notice:
 
-```text
+\`\`\`text
 Quest Level: <#>
 Format: PBP or VC
 Expected Duration: <#>
@@ -160,10 +164,16 @@ DM Table Rules:
 Any rules that you, as a DM, apply to your table
 
 Possible Signup Form Requirement
-```
+\`\`\`
 
 ## Reward Handling
 
 When giving out rewards at the end of a quest, DMs may sign up as one of their own PCs so rewards can be applied more easily.
 
-When calculating rewards, use the [Rewards of Altharion calculator](/rewards-calculator).
+When calculating rewards, use the [Rewards of Altharion calculator](/rewards-calculator).`;
+
+<EditableWikiPage
+  slug="dm-rules"
+  title="DM Rules"
+  fallbackMarkdown={fallbackMarkdown}
+/>

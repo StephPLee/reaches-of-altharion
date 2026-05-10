@@ -1,0 +1,192 @@
+.shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.statusRow,
+.editorHeader,
+.editorActions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.statusRow {
+  margin-bottom: 0.5rem;
+}
+
+.message {
+  margin: 0;
+  color: var(--ifm-color-primary-lightest);
+}
+
+.error {
+  margin: 0;
+  color: #ffc9d6;
+}
+
+.button {
+  border: 1px solid rgba(154, 180, 235, 0.26);
+  border-radius: 0.55rem;
+  background: rgba(17, 26, 56, 0.52);
+  color: var(--ifm-font-color-base);
+  cursor: pointer;
+  font: inherit;
+}
+
+.button {
+  min-height: 2.4rem;
+  padding: 0.55rem 0.9rem;
+  font-weight: 700;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(154, 180, 235, 0.22);
+  border-radius: 0.8rem;
+  background:
+    linear-gradient(180deg, rgba(22, 29, 57, 0.96), rgba(12, 17, 36, 0.96)),
+    rgba(14, 20, 36, 0.92);
+  color: #ece2ff;
+  box-shadow:
+    0 1px 0 rgba(224, 232, 255, 0.08) inset,
+    0 10px 22px rgba(2, 4, 12, 0.18);
+  overflow-x: auto;
+}
+
+.blockSelect {
+  min-width: 12rem;
+  height: 2.4rem;
+  padding: 0 2rem 0 0.75rem;
+  border: 1px solid rgba(196, 215, 255, 0.18);
+  border-radius: 0.55rem;
+  background: rgba(8, 12, 28, 0.86);
+  color: #d9def0;
+  font: inherit;
+  box-shadow: 0 1px 0 rgba(224, 232, 255, 0.07) inset;
+}
+
+.toolbarButton {
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: #ece2ff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.toolbarButton:hover,
+.toolbarButton:focus-visible {
+  background: rgba(196, 215, 255, 0.1);
+  outline: none;
+}
+
+.toolbarIcon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.toolbarSeparator {
+  width: 1px;
+  height: 1.8rem;
+  margin: 0 0.35rem;
+  background: rgba(196, 215, 255, 0.18);
+}
+
+.button:disabled,
+.toolbarButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.editorPanel {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid rgba(154, 180, 235, 0.2);
+  border-radius: 0.8rem;
+  background: rgba(14, 20, 36, 0.72);
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.fieldLabel {
+  font-weight: 700;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border: 1px solid rgba(196, 215, 255, 0.2);
+  border-radius: 0.7rem;
+  background: rgba(10, 15, 33, 0.8);
+  color: #ece2ff;
+  font: inherit;
+}
+
+.input {
+  min-height: 2.75rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.textarea {
+  min-height: min(60vh, 42rem);
+  padding: 0.9rem;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  line-height: 1.55;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: rgba(224, 232, 255, 0.38);
+  box-shadow: 0 0 0 1px rgba(224, 232, 255, 0.18);
+}
+
+.previewPanel {
+  padding: 1rem;
+  border: 1px solid rgba(154, 180, 235, 0.16);
+  border-radius: 0.8rem;
+}
+
+.previewTitle {
+  margin-top: 0;
+}
+
+.content table,
+.previewPanel table {
+  width: 100%;
+  display: table;
+  border-collapse: collapse;
+}
+
+.content th,
+.content td,
+.previewPanel th,
+.previewPanel td {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--ifm-table-border-color);
+}
+
+.content pre,
+.previewPanel pre {
+  padding: 1rem;
+  overflow-x: auto;
+}

@@ -76,6 +76,11 @@ const {
   updateSourcebook,
 } = require("./sourcebooks");
 const {
+  getWikiPage,
+  isAllowedWikiPageSlug,
+  upsertWikiPage,
+} = require("./wikiPages");
+const {
   createBannedContentEntry,
   deleteBannedContentEntry,
   listBannedContentEntries,
@@ -1574,6 +1579,23 @@ app.get("/api/homebrew/:section", async (req, res) => {
   } catch (homebrewError) {
     console.error("Failed to load homebrew entries:", homebrewError);
     res.status(500).json({ error: "Failed to load homebrew entries." });
+  }
+});
+
+app.get("/api/wiki-pages/:slug", async (req, res) => {
+  const slug = typeof req.params.slug === "string" ? req.params.slug.trim() : "";
+
+  if (!isAllowedWikiPageSlug(slug)) {
+    res.status(404).json({ error: "Wiki page not found." });
+    return;
+  }
+
+  try {
+    const page = await getWikiPage(slug);
+    res.json({ page });
+  } catch (wikiPageError) {
+    console.error("Failed to load wiki page:", wikiPageError);
+    res.status(500).json({ error: "Failed to load wiki page." });
   }
 });
 
@@ -4013,6 +4035,64 @@ app.delete(
     } catch (calendarError) {
       console.error("Failed to delete calendar event:", calendarError);
       res.status(500).json({ error: "Failed to delete calendar event." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/wiki-pages/:slug",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const slug =
+      typeof req.params.slug === "string" ? req.params.slug.trim() : "";
+    const { title, markdown } = req.body ?? {};
+
+    if (!isAllowedWikiPageSlug(slug)) {
+      res.status(404).json({ error: "Wiki page not found." });
+      return;
+    }
+
+    if (typeof title !== "string" || !title.trim()) {
+      res.status(400).json({ error: "title is required." });
+      return;
+    }
+
+    if (typeof markdown !== "string" || !markdown.trim()) {
+      res.status(400).json({ error: "markdown is required." });
+      return;
+    }
+
+    if (markdown.length > 100000) {
+      res.status(400).json({ error: "markdown must be 100000 characters or fewer." });
+      return;
+    }
+
+    try {
+      const page = await upsertWikiPage({
+        slug,
+        title: title.trim().slice(0, 200),
+        markdown: markdown.trim(),
+        updatedByUserId: req.staffUser.id,
+      });
+
+      await recordAuditEvent({
+        action: "wiki_page_update",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          slug,
+          markdownLength: page.markdown.length,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ page });
+    } catch (wikiPageError) {
+      console.error("Failed to update wiki page:", wikiPageError);
+      res.status(500).json({ error: "Failed to update wiki page." });
     }
   },
 );
