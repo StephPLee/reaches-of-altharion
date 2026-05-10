@@ -41,6 +41,27 @@ const COMMAND_DEFINITIONS = [
     requiresRole: true,
   },
   {
+    name: "homebrew-discussion",
+    description: "Ping users who discussed or voted on a homebrew submission.",
+    help: "Ping deduped users who posted in your workshop thread or reacted to a submission message.",
+    buildCommand: (command) =>
+      command
+        .addStringOption((option) =>
+          option
+            .setName("thread")
+            .setDescription("Discord link to the workshop thread.")
+            .setRequired(true)
+            .setMaxLength(500),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("message")
+            .setDescription("Discord link to the submission post.")
+            .setRequired(true)
+            .setMaxLength(500),
+        ),
+  },
+  {
     name: "join-guild",
     description: "Join or move one of your characters to a guild.",
     help: "Choose one of your WestMarches.games characters and add or move them to a guild roster.",

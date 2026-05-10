@@ -52,6 +52,10 @@ const {
   getCategory,
 } = require("./services/approval");
 const {
+  chunkMentionLines,
+  collectHomebrewDiscussionParticipants,
+} = require("./services/homebrewDiscussion");
+const {
   MAGIC_ITEM_RARITIES,
   buildMagicItemRarityRow,
   buildMagicItemResultEmbed,
@@ -752,6 +756,75 @@ async function handleInteraction(interaction) {
           content: "Something went wrong while loading the FAQ. Please try again.",
           ephemeral: true,
         });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "homebrew-discussion") {
+    const threadInput = interaction.options.getString("thread", true);
+    const messageInput = interaction.options.getString("message", true);
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const result = await collectHomebrewDiscussionParticipants({
+        client: interaction.client,
+        threadInput,
+        messageInput,
+        fallbackChannel: interaction.channel,
+      });
+
+      const header = [
+        `Homebrew discussion participants for **${result.thread.name}**:`,
+        `${result.participantIds.length} user${result.participantIds.length === 1 ? "" : "s"} found.`,
+        `Discussion posters: ${result.threadAuthorIds.length}. Submission voters: ${result.reactionUserIds.length}.`,
+        result.threadOwnerId
+          ? `Excluded thread creator: <@${result.threadOwnerId}>.`
+          : "Thread creator could not be identified.",
+        "",
+        "Ping list:",
+      ].join("\n");
+      const messages = chunkMentionLines(result.participantIds, {
+        header,
+        emptyText:
+          `No non-bot participants were found for **${result.thread.name}**.`,
+      });
+
+      await interaction.editReply(
+        `Found ${result.participantIds.length} participant${result.participantIds.length === 1 ? "" : "s"}. Posting the ping list now.`,
+      );
+
+      for (const message of messages) {
+        await interaction.channel.send({
+          content: message.content,
+          allowedMentions: {
+            parse: [],
+            users: message.userIds,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to process /homebrew-discussion:", error);
+
+      const message =
+        error.message === "invalid_thread"
+          ? "I could not find a thread ID in the thread option."
+          : error.message === "not_thread"
+            ? "That thread option did not resolve to a Discord thread."
+          : error.message === "invalid_message"
+            ? "I could not find a message ID in the message option."
+          : error.message === "missing_message_channel"
+            ? "Use a Discord message link, or run the command in the same channel as the submission message."
+          : error.message === "message_channel_unavailable"
+            ? "I could not access the submission message channel."
+          : "Something went wrong while gathering homebrew discussion participants. Check that I can view the thread, the submission channel, message history, and reactions.";
+
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(message);
+      } else {
+        await interaction.reply({ content: message, ephemeral: true });
       }
     }
 
