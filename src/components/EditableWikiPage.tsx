@@ -78,6 +78,13 @@ function renderInlineMarkdown(value: string): ReactNode[] {
   return nodes;
 }
 
+function renderInlineMarkdownWithBreaks(lines: string[]): ReactNode[] {
+  return lines.flatMap((line, index) => [
+    ...(index > 0 ? [<br key={`br-${index}`} />] : []),
+    ...renderInlineMarkdown(line),
+  ]);
+}
+
 function isTableDivider(line: string) {
   return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
 }
@@ -224,7 +231,7 @@ function renderMarkdown(markdown: string) {
     }
 
     blocks.push(
-      <p key={`p-${index}`}>{renderInlineMarkdown(paragraphLines.join(" "))}</p>,
+      <p key={`p-${index}`}>{renderInlineMarkdownWithBreaks(paragraphLines)}</p>,
     );
   }
 
