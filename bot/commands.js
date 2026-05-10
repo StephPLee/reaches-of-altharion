@@ -59,6 +59,11 @@ const COMMAND_DEFINITIONS = [
             .setDescription("Discord link to the submission post.")
             .setRequired(true)
             .setMaxLength(500),
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName("subclass")
+            .setDescription("Set true for subclass submissions worth 5 SC."),
         ),
   },
   {

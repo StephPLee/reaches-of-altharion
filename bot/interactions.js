@@ -765,6 +765,8 @@ async function handleInteraction(interaction) {
   if (interaction.commandName === "homebrew-discussion") {
     const threadInput = interaction.options.getString("thread", true);
     const messageInput = interaction.options.getString("message", true);
+    const isSubclass = interaction.options.getBoolean("subclass") === true;
+    const scReward = isSubclass ? 5 : 2;
 
     try {
       await interaction.deferReply({ ephemeral: true });
@@ -780,6 +782,7 @@ async function handleInteraction(interaction) {
         `Homebrew discussion participants for **${result.thread.name}**:`,
         `${result.participantIds.length} user${result.participantIds.length === 1 ? "" : "s"} found.`,
         `Discussion posters: ${result.threadAuthorIds.length}. Submission voters: ${result.reactionUserIds.length}.`,
+        `Reward: **${scReward} SC** each.`,
         result.threadOwnerId
           ? `Excluded thread creator: <@${result.threadOwnerId}>.`
           : "Thread creator could not be identified.",
