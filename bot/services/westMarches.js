@@ -78,6 +78,14 @@ function formatCharacterName(character) {
   return typeof character?.name === "string" ? character.name.trim() : "";
 }
 
+function normalizeCharacterLevel(character) {
+  const rawLevel = character?.level;
+  const level =
+    typeof rawLevel === "number" ? rawLevel : Number.parseInt(rawLevel, 10);
+
+  return Number.isInteger(level) && level > 0 ? level : 0;
+}
+
 async function listOwnedActiveWestMarchesCharacters(discordUserId) {
   const characters = await listAllWestMarchesCharacters();
   return characters
@@ -93,6 +101,62 @@ async function listOwnedActiveWestMarchesCharacters(discordUserId) {
         sensitivity: "base",
       }),
     );
+}
+
+async function listHighestLevelActiveCharactersForDiscordUsers(discordUserIds) {
+  const targetUserIds = new Set(discordUserIds);
+  const highestByDiscordUserId = new Map();
+  const characters = await listAllWestMarchesCharacters();
+
+  for (const character of characters) {
+    const discordUserId = character?.user?.discordId;
+    const characterName = formatCharacterName(character);
+
+    if (
+      !targetUserIds.has(discordUserId) ||
+      !isActiveWestMarchesCharacter(character) ||
+      typeof character?.id !== "string" ||
+      !characterName
+    ) {
+      continue;
+    }
+
+    const current = highestByDiscordUserId.get(discordUserId);
+    const candidateLevel = normalizeCharacterLevel(character);
+    const currentLevel = current ? normalizeCharacterLevel(current) : -1;
+
+    if (
+      !current ||
+      candidateLevel > currentLevel ||
+      (candidateLevel === currentLevel &&
+        characterName.localeCompare(formatCharacterName(current), undefined, {
+          sensitivity: "base",
+        }) < 0)
+    ) {
+      highestByDiscordUserId.set(discordUserId, character);
+    }
+  }
+
+  const matched = discordUserIds
+    .map((discordUserId) => {
+      const character = highestByDiscordUserId.get(discordUserId);
+      return character
+        ? {
+            discordUserId,
+            characterId: character.id,
+            characterName: formatCharacterName(character),
+            level: normalizeCharacterLevel(character),
+          }
+        : null;
+    })
+    .filter(Boolean);
+
+  return {
+    matched,
+    missingUserIds: discordUserIds.filter(
+      (discordUserId) => !highestByDiscordUserId.has(discordUserId),
+    ),
+  };
 }
 
 async function getOwnedActiveWestMarchesCharacter(discordUserId, characterId) {
@@ -183,8 +247,34 @@ function buildCharacterListEmbed({ displayName, characters }) {
     .setDescription(truncateValue(description, 4096));
 }
 
+async function awardScToCharacters({ awards, amount, reason }) {
+  if (!config.westMarchesScCurrencyId) {
+    throw new Error("missing_sc_currency_id");
+  }
+
+  if (!Array.isArray(awards) || awards.length === 0) {
+    return [];
+  }
+
+  const payload = await westMarchesFetch("/rewards", {
+    method: "POST",
+    body: JSON.stringify({
+      rewards: awards.map((award) => ({
+        characterId: award.characterId,
+        currencies: {
+          [config.westMarchesScCurrencyId]: amount,
+        },
+        reason,
+        discordId: award.discordUserId,
+      })),
+    }),
+  });
+
+  return Array.isArray(payload.data) ? payload.data : [];
+}
 
 module.exports = {
+  awardScToCharacters,
   buildCharacterListEmbed,
   formatCharacterClass,
   formatCharacterName,
@@ -192,6 +282,7 @@ module.exports = {
   getWestMarchesCharacter,
   isWestMarchesConfigured,
   listAllWestMarchesCharacters,
+  listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
 };

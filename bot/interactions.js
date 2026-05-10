@@ -19,10 +19,12 @@ const {
   listFaqEntries,
 } = require("./services/faq");
 const {
+  awardScToCharacters,
   buildCharacterListEmbed,
   formatCharacterName,
   getOwnedActiveWestMarchesCharacter,
   isWestMarchesConfigured,
+  listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
 } = require("./services/westMarches");
@@ -778,11 +780,56 @@ async function handleInteraction(interaction) {
         fallbackChannel: interaction.channel,
       });
 
+      if (!result.threadOwnerId) {
+        await interaction.editReply(
+          "I could not identify the workshop thread creator, so I cannot award SC automatically.",
+        );
+        return;
+      }
+
+      if (result.threadOwnerId !== interaction.user.id) {
+        await interaction.editReply(
+          `Only the workshop thread creator <@${result.threadOwnerId}> can run this SC reward command.`,
+        );
+        return;
+      }
+
+      let matchedCharacters = [];
+      let missingUserIds = result.participantIds;
+
+      if (!isWestMarchesConfigured()) {
+        await interaction.editReply(
+          "West Marches API access is not configured, so I cannot award SC automatically.",
+        );
+        return;
+      }
+
+      if (result.participantIds.length > 0) {
+        const characterResult =
+          await listHighestLevelActiveCharactersForDiscordUsers(
+            result.participantIds,
+          );
+        matchedCharacters = characterResult.matched;
+        missingUserIds = characterResult.missingUserIds;
+
+        if (matchedCharacters.length > 0) {
+          await awardScToCharacters({
+            awards: matchedCharacters,
+            amount: scReward,
+            reason: `Homebrew discussion reward: ${result.thread.name}`.slice(
+              0,
+              500,
+            ),
+          });
+        }
+      }
+
       const header = [
         `Homebrew discussion participants for **${result.thread.name}**:`,
         `${result.participantIds.length} user${result.participantIds.length === 1 ? "" : "s"} found.`,
         `Discussion posters: ${result.threadAuthorIds.length}. Submission voters: ${result.reactionUserIds.length}.`,
-        `Reward: **${scReward} SC** each.`,
+        `Reward: **${scReward} SC** each to each user's highest-level active character.`,
+        `Awarded automatically: ${matchedCharacters.length}. No active character found: ${missingUserIds.length}.`,
         result.threadOwnerId
           ? `Excluded thread creator: <@${result.threadOwnerId}>.`
           : "Thread creator could not be identified.",
@@ -796,7 +843,7 @@ async function handleInteraction(interaction) {
       });
 
       await interaction.editReply(
-        `Found ${result.participantIds.length} participant${result.participantIds.length === 1 ? "" : "s"}. Posting the ping list now.`,
+        `Found ${result.participantIds.length} participant${result.participantIds.length === 1 ? "" : "s"} and awarded ${scReward} SC to ${matchedCharacters.length} character${matchedCharacters.length === 1 ? "" : "s"}. Posting the public receipt now.`,
       );
 
       for (const message of messages) {
@@ -807,6 +854,63 @@ async function handleInteraction(interaction) {
             users: message.userIds,
           },
         });
+      }
+
+      if (matchedCharacters.length > 0) {
+        const awardedLines = matchedCharacters.map((award) => ({
+          userId: award.discordUserId,
+          text: `<@${award.discordUserId}> -> **${award.characterName}** (level ${award.level})`,
+        }));
+        const awardedMessages = [];
+        let current = `Awarded **${scReward} SC** to:\n`;
+        let currentUserIds = [];
+
+        for (const line of awardedLines) {
+          const next = `${current}${current.endsWith("\n") ? "" : "\n"}${line.text}`;
+          if (next.length > 1900 || currentUserIds.length >= 100) {
+            awardedMessages.push({
+              content: current,
+              userIds: currentUserIds,
+            });
+            current = `Awarded **${scReward} SC** to:\n${line.text}`;
+            currentUserIds = [line.userId];
+          } else {
+            current = next;
+            currentUserIds.push(line.userId);
+          }
+        }
+
+        awardedMessages.push({
+          content: current,
+          userIds: currentUserIds,
+        });
+
+        for (const message of awardedMessages) {
+          await interaction.channel.send({
+            content: message.content,
+            allowedMentions: {
+              parse: [],
+              users: message.userIds,
+            },
+          });
+        }
+      }
+
+      if (missingUserIds.length > 0) {
+        const missingMessages = chunkMentionLines(missingUserIds, {
+          header: "I could not find an active WestMarches.games character for:",
+          emptyText: "",
+        });
+
+        for (const message of missingMessages) {
+          await interaction.channel.send({
+            content: message.content,
+            allowedMentions: {
+              parse: [],
+              users: message.userIds,
+            },
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to process /homebrew-discussion:", error);
@@ -822,6 +926,8 @@ async function handleInteraction(interaction) {
             ? "Use a Discord message link, or run the command in the same channel as the submission message."
           : error.message === "message_channel_unavailable"
             ? "I could not access the submission message channel."
+          : error.message === "missing_sc_currency_id"
+            ? "WEST_MARCHES_SC_CURRENCY_ID is not configured, so I cannot award SC automatically."
           : "Something went wrong while gathering homebrew discussion participants. Check that I can view the thread, the submission channel, message history, and reactions.";
 
       if (interaction.deferred || interaction.replied) {
