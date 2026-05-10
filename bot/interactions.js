@@ -21,12 +21,15 @@ const {
 const {
   awardScToCharacters,
   buildCharacterListEmbed,
+  buildScRewardCharacterRow,
   formatCharacterName,
   getOwnedActiveWestMarchesCharacter,
+  getScRewardCharacterPreference,
   isWestMarchesConfigured,
   listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
+  upsertScRewardCharacterPreference,
 } = require("./services/westMarches");
 const {
   buildJoinGuildCharacterRow,
@@ -201,6 +204,75 @@ async function handleInteraction(interaction) {
       await interaction.showModal(
         buildApproveModal(interaction.user.id, category, detailValue),
       );
+      return;
+    }
+
+    if (interaction.customId.startsWith("sc-character:")) {
+      const ownerId = interaction.customId.slice("sc-character:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/sc-character` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (!isWestMarchesConfigured()) {
+        await interaction.reply({
+          content:
+            "West Marches API access is not configured, so I cannot set your SC character yet.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const character = await getOwnedActiveWestMarchesCharacter(
+          interaction.user.id,
+          characterId,
+        );
+
+        if (!character) {
+          await interaction.editReply({
+            content:
+              "I could not find that active character under your Discord account.",
+            components: [],
+          });
+          return;
+        }
+
+        const characterName = formatCharacterName(character);
+        await upsertScRewardCharacterPreference({
+          discordUserId: interaction.user.id,
+          characterId: character.id,
+          characterName,
+        });
+
+        await interaction.editReply({
+          content:
+            `Set **${characterName}** as your default character for automatic SC-only rewards.`,
+          components: [],
+        });
+      } catch (error) {
+        console.error("Failed to process /sc-character select:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content:
+              "Something went wrong while setting your SC character. Please try again.",
+            components: [],
+          });
+        } else {
+          await interaction.reply({
+            content:
+              "Something went wrong while setting your SC character. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
       return;
     }
 
@@ -695,6 +767,72 @@ async function handleInteraction(interaction) {
     return;
   }
 
+  if (interaction.commandName === "sc-character") {
+    if (!isWestMarchesConfigured()) {
+      await interaction.reply({
+        content:
+          "West Marches API access is not configured, so I cannot load your characters yet.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const [characters, preference] = await Promise.all([
+        listOwnedActiveWestMarchesCharacters(interaction.user.id),
+        getScRewardCharacterPreference(interaction.user.id),
+      ]);
+
+      if (characters.length === 0) {
+        await interaction.editReply(
+          "I could not find any active WestMarches.games characters linked to your Discord account.",
+        );
+        return;
+      }
+
+      const visibleCharacters = characters.slice(0, 25);
+      const currentCharacter = preference
+        ? characters.find((character) => character.id === preference.characterId)
+        : null;
+      const overflowText =
+        characters.length > visibleCharacters.length
+          ? `\n\nI found ${characters.length} active characters. Discord menus can only show 25 options, so only the first 25 by name are listed.`
+          : "";
+      const currentText = currentCharacter
+        ? ` Your current default is **${formatCharacterName(currentCharacter)}**.`
+        : "";
+
+      await interaction.editReply({
+        content:
+          `Choose the character that should receive automatic SC-only rewards.${currentText}${overflowText}`,
+        components: [
+          buildScRewardCharacterRow(
+            interaction.user.id,
+            visibleCharacters,
+            preference?.characterId || null,
+          ),
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to process /sc-character:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while loading your characters. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while loading your characters. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
   if (interaction.commandName === "characters") {
     if (!isWestMarchesConfigured()) {
       await interaction.reply({
@@ -859,7 +997,9 @@ async function handleInteraction(interaction) {
       if (matchedCharacters.length > 0) {
         const awardedLines = matchedCharacters.map((award) => ({
           userId: award.discordUserId,
-          text: `<@${award.discordUserId}> -> **${award.characterName}** (level ${award.level})`,
+          text:
+            `<@${award.discordUserId}> -> **${award.characterName}** ` +
+            `(level ${award.level}, ${award.usedPreference ? "SC default" : "highest level"})`,
         }));
         const awardedMessages = [];
         let current = `Awarded **${scReward} SC** to:\n`;

@@ -35,6 +35,11 @@ const COMMAND_DEFINITIONS = [
       ),
   },
   {
+    name: "sc-character",
+    description: "Set your default character for SC-only rewards.",
+    help: "Choose which of your active WestMarches.games characters receives automatic SC-only rewards.",
+  },
+  {
     name: "approve",
     description: "Approve a homebrew link for the site.",
     help: "Staff-only. Approve a homebrew link into the site-backed homebrew lists.",
