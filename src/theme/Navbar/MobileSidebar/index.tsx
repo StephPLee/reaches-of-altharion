@@ -14,7 +14,6 @@ const NAV_GROUPS = [
     title: null,
     links: [
       { label: "Home", to: "/?view=map" },
-      { label: "DM Rules", to: "/docs/dm-rules" },
       { label: "RP Rules", to: "/docs/rp-rules" },
       { label: "The World of Altharion", to: "/?view=world" },
     ],
@@ -26,6 +25,13 @@ const NAV_GROUPS = [
       { label: "Sourcebooks", to: "/docs/sourcebooks" },
       { label: "Banned Content", to: "/docs/banned-content" },
       { label: "Transformations", to: "/docs/transformations" },
+    ],
+  },
+  {
+    title: "DM Information",
+    links: [
+      { label: "DM Rules", to: "/docs/dm-rules" },
+      { label: "Homebrew Guidelines", to: "/docs/homebrew-guidelines" },
     ],
   },
   {

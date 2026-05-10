@@ -3,6 +3,7 @@ const { pool } = require("./db");
 const WIKI_PAGE_SLUGS = new Set([
   "getting-set-up",
   "dm-rules",
+  "homebrew-guidelines",
   "rp-rules",
 ]);
 
