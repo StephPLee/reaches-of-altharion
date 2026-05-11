@@ -25,8 +25,10 @@ const config = {
   guildId: process.env.DISCORD_GUILD_ID,
   databaseUrl: process.env.DATABASE_URL,
   requiredRoleId: process.env.REQUIRED_ROLE_ID || "",
+  dmRoleId: process.env.DM_ROLE_ID || "",
   guildRosterChannelId: process.env.GUILD_ROSTER_CHANNEL_ID || "",
   bossStatusChannelId: process.env.BOSS_STATUS_CHANNEL_ID || "",
+  beginnerRoleChannelId: process.env.BEGINNER_ROLE_CHANNEL_ID || "",
   publicSiteUrl: (
     process.env.PUBLIC_SITE_URL || "https://reachesofaltharion.com"
   ).replace(/\/$/, ""),

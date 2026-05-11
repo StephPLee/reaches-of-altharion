@@ -96,6 +96,11 @@ function getAuthApiBaseUrl(siteConfig): string {
     : "";
 }
 
+function getDiscordInviteUrl(siteConfig): string {
+  const configuredInviteUrl = siteConfig.customFields?.discordInviteUrl;
+  return typeof configuredInviteUrl === "string" ? configuredInviteUrl.trim() : "";
+}
+
 function getAuthErrorMessage(code: string | null) {
   switch (code) {
     case "staff_only":
@@ -375,6 +380,34 @@ function CalendarPreviewLink({ isActive }: { isActive: boolean }): ReactNode {
   );
 }
 
+function DiscordInviteLink({
+  inviteUrl,
+  isMobile = false,
+  onNavigate,
+}: {
+  inviteUrl: string;
+  isMobile?: boolean;
+  onNavigate?: () => void;
+}): ReactNode {
+  if (!inviteUrl) {
+    return null;
+  }
+
+  return (
+    <a
+      href={inviteUrl}
+      className={clsx(
+        isMobile ? "custom-mobile-discord-link" : "custom-navbar-discord-link",
+      )}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={onNavigate}
+    >
+      Join Discord
+    </a>
+  );
+}
+
 function NavbarAuthControls({
   apiBaseUrl,
   isMobile = false,
@@ -625,6 +658,7 @@ export default function NavbarContent(): ReactNode {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const isCalendarActive = location.pathname === "/calendar";
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
+  const discordInviteUrl = getDiscordInviteUrl(siteConfig);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -664,6 +698,7 @@ export default function NavbarContent(): ReactNode {
               items={rightItems}
               isCalendarActive={isCalendarActive}
             />
+            <DiscordInviteLink inviteUrl={discordInviteUrl} />
             <NavbarAuthControls apiBaseUrl={authApiBaseUrl} />
           </div>
         </div>
@@ -726,6 +761,16 @@ export default function NavbarContent(): ReactNode {
                       </div>
                     </div>
                   ))}
+                  <div className="custom-mobile-menu-group">
+                    <p className="custom-mobile-menu-group__title">Community</p>
+                    <div className="custom-mobile-menu-group__links">
+                      <DiscordInviteLink
+                        inviteUrl={discordInviteUrl}
+                        isMobile
+                        onNavigate={() => setIsMobileMenuOpen(false)}
+                      />
+                    </div>
+                  </div>
                   <div className="custom-mobile-menu-group">
                     <p className="custom-mobile-menu-group__title">Staff</p>
                     <NavbarAuthControls

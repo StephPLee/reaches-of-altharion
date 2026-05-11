@@ -91,6 +91,10 @@ function normalizeCharacterLevel(character) {
   return Number.isInteger(level) && level > 0 ? level : 0;
 }
 
+function isApprovedWestMarchesCharacter(character) {
+  return character?.isApproved === true;
+}
+
 async function listOwnedActiveWestMarchesCharacters(discordUserId) {
   const characters = await listAllWestMarchesCharacters();
   return characters
@@ -257,6 +261,67 @@ async function getWestMarchesCharacter(characterId) {
   return payload.data ?? null;
 }
 
+async function approveWestMarchesCharacter(characterId) {
+  const payload = await westMarchesFetch(`/characters/${characterId}/approve`, {
+    method: "POST",
+  });
+
+  return payload.data ?? null;
+}
+
+function normalizeCharacterNameSearch(value) {
+  return typeof value === "string"
+    ? value.trim().toLowerCase().replace(/\s+/g, " ")
+    : "";
+}
+
+async function findUnapprovedCharacterForDiscordUser(discordUserId, characterName) {
+  const characters = await listOwnedActiveWestMarchesCharacters(discordUserId);
+  const unapprovedCharacters = characters.filter(
+    (character) => !isApprovedWestMarchesCharacter(character),
+  );
+  const normalizedSearch = normalizeCharacterNameSearch(characterName);
+
+  if (!normalizedSearch) {
+    return {
+      status:
+        unapprovedCharacters.length === 0
+          ? "none"
+          : unapprovedCharacters.length === 1
+            ? "matched"
+            : "ambiguous",
+      character:
+        unapprovedCharacters.length === 1 ? unapprovedCharacters[0] : null,
+      candidates: unapprovedCharacters,
+    };
+  }
+
+  const exactMatches = unapprovedCharacters.filter(
+    (character) =>
+      normalizeCharacterNameSearch(formatCharacterName(character)) ===
+      normalizedSearch,
+  );
+  const partialMatches =
+    exactMatches.length > 0
+      ? exactMatches
+      : unapprovedCharacters.filter((character) =>
+          normalizeCharacterNameSearch(formatCharacterName(character)).includes(
+            normalizedSearch,
+          ),
+        );
+
+  return {
+    status:
+      partialMatches.length === 0
+        ? "none"
+        : partialMatches.length === 1
+          ? "matched"
+          : "ambiguous",
+    character: partialMatches.length === 1 ? partialMatches[0] : null,
+    candidates: partialMatches.length > 0 ? partialMatches : unapprovedCharacters,
+  };
+}
+
 function formatCharacterClass(character) {
   if (typeof character?.class === "string" && character.class.trim()) {
     return character.class.trim();
@@ -384,6 +449,7 @@ async function awardScToCharacters({ awards, amount, reason }) {
 
 module.exports = {
   awardScToCharacters,
+  approveWestMarchesCharacter,
   buildCharacterListEmbed,
   buildScRewardCharacterRow,
   formatCharacterClass,
@@ -392,6 +458,7 @@ module.exports = {
   getScRewardCharacterPreference,
   getWestMarchesCharacter,
   isWestMarchesConfigured,
+  findUnapprovedCharacterForDiscordUser,
   listAllWestMarchesCharacters,
   listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,

@@ -1,6 +1,6 @@
 ﻿const config = require("./config");
 const { buildHelpMessage } = require("./commands");
-const { hasRequiredRole } = require("./permissions");
+const { hasDmOrRequiredRole, hasRequiredRole } = require("./permissions");
 const { getDisplayName } = require("./utils");
 const { getOrAssignCampaign } = require("./services/campaigns");
 const {
@@ -20,8 +20,10 @@ const {
 } = require("./services/faq");
 const {
   awardScToCharacters,
+  approveWestMarchesCharacter,
   buildCharacterListEmbed,
   buildScRewardCharacterRow,
+  findUnapprovedCharacterForDiscordUser,
   formatCharacterName,
   getOwnedActiveWestMarchesCharacter,
   getScRewardCharacterPreference,
@@ -1596,6 +1598,114 @@ async function handleInteraction(interaction) {
             "Something went wrong while loading the boss log. Please try again.",
           ephemeral: true,
         });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "approve-character") {
+    if (!hasDmOrRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "You do not have the required role to approve characters.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!isWestMarchesConfigured()) {
+      await interaction.reply({
+        content:
+          "West Marches API access is not configured, so I cannot approve characters yet.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const targetUser = interaction.options.getUser("user", true);
+    const characterName = interaction.options.getString("character") || "";
+
+    try {
+      await interaction.deferReply();
+
+      const result = await findUnapprovedCharacterForDiscordUser(
+        targetUser.id,
+        characterName,
+      );
+
+      if (result.status === "none") {
+        await interaction.editReply(
+          characterName
+            ? `I could not find an unapproved active character named **${characterName}** for ${targetUser}.`
+            : `I could not find any unapproved active characters linked to ${targetUser}.`,
+        );
+        return;
+      }
+
+      if (result.status === "ambiguous") {
+        const names = result.candidates
+          .slice(0, 10)
+          .map((character) => `**${formatCharacterName(character)}**`)
+          .join(", ");
+        await interaction.editReply(
+          `I found multiple unapproved active characters for ${targetUser}. Run the command again with the character option. Candidates: ${names}`,
+        );
+        return;
+      }
+
+      const character = result.character;
+      const approved = await approveWestMarchesCharacter(character.id);
+      const approverCharacters =
+        await listHighestLevelActiveCharactersForDiscordUsers([
+          interaction.user.id,
+        ]);
+      const [approverRewardCharacter] = approverCharacters.matched;
+      let approverRewardText = "";
+
+      if (approverRewardCharacter && config.westMarchesScCurrencyId) {
+        await awardScToCharacters({
+          awards: [approverRewardCharacter],
+          amount: 2,
+          reason: `Character approval: ${formatCharacterName(character)}`.slice(
+            0,
+            500,
+          ),
+        });
+        approverRewardText =
+          `\nAwarded **2 SC** to **${approverRewardCharacter.characterName}** for the approval.`;
+      } else {
+        approverRewardText = config.westMarchesScCurrencyId
+          ? "\nI could not find an active character for the approver, so no approval SC was awarded."
+          : "\nApproval SC was not awarded because WEST_MARCHES_SC_CURRENCY_ID is not configured.";
+      }
+
+      const beginnerChannelText = config.beginnerRoleChannelId
+        ? `<#${config.beginnerRoleChannelId}>`
+        : "Channels & Roles";
+      const approvalConfirmed =
+        approved?.isApproved === true ? "has been approved" : "was submitted for approval";
+
+      await interaction.editReply({
+        content:
+          `${targetUser} Your character **${formatCharacterName(character)}** ${approvalConfirmed} by ${interaction.user}!\n` +
+          `Don't forget to grab your Beginner [1-4] role from ${beginnerChannelText} and to add any XP you have from starting at higher than lvl 1.` +
+          approverRewardText,
+        allowedMentions: {
+          parse: [],
+          users: [targetUser.id, interaction.user.id],
+        },
+      });
+    } catch (error) {
+      console.error("Failed to process /approve-character:", error);
+      const message =
+        error.status === 403
+          ? "The WestMarches API key is missing write permission for character approval."
+          : "Something went wrong while approving that character. Please try again.";
+
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(message);
+      } else {
+        await interaction.reply({ content: message, ephemeral: true });
       }
     }
 

@@ -121,7 +121,8 @@
 }
 
 .custom-navbar-auth-button,
-.custom-navbar-auth-link {
+.custom-navbar-auth-link,
+.custom-navbar-discord-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -143,11 +144,20 @@
 .custom-navbar-auth-button:hover,
 .custom-navbar-auth-button:focus-visible,
 .custom-navbar-auth-link:hover,
-.custom-navbar-auth-link:focus-visible {
+.custom-navbar-auth-link:focus-visible,
+.custom-navbar-discord-link:hover,
+.custom-navbar-discord-link:focus-visible {
     color: #ffffff;
     text-decoration: none;
     border-color: rgba(224, 232, 255, 0.34);
     background: rgba(37, 31, 76, 0.92);
+}
+
+.custom-navbar-discord-link {
+    margin-right: 0.55rem;
+    border-color: rgba(120, 151, 255, 0.4);
+    background: rgba(42, 52, 112, 0.78);
+    color: #ffffff;
 }
 
 .custom-calendar-nav-item {
@@ -691,7 +701,8 @@
 }
 
 .custom-mobile-auth-button,
-.custom-mobile-auth-link {
+.custom-mobile-auth-link,
+.custom-mobile-discord-link {
     display: block;
     width: 100%;
     padding: 0.72rem 0.9rem;
@@ -706,11 +717,18 @@
 .custom-mobile-auth-button:hover,
 .custom-mobile-auth-button:focus-visible,
 .custom-mobile-auth-link:hover,
-.custom-mobile-auth-link:focus-visible {
+.custom-mobile-auth-link:focus-visible,
+.custom-mobile-discord-link:hover,
+.custom-mobile-discord-link:focus-visible {
     color: #ffffff;
     text-decoration: none;
     border-color: rgba(224, 232, 255, 0.28);
     background: rgba(18, 22, 43, 0.9);
+}
+
+.custom-mobile-discord-link {
+    border-color: rgba(120, 151, 255, 0.34);
+    background: rgba(36, 45, 95, 0.72);
 }
 
 [data-theme="dark"] .section-contents-grid {

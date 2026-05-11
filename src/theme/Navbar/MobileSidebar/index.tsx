@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import Link from "@docusaurus/Link";
 import { translate } from "@docusaurus/Translate";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import {
   useLockBodyScroll,
   useNavbarMobileSidebar,
@@ -44,6 +45,11 @@ const NAV_GROUPS = [
   },
 ];
 
+function getDiscordInviteUrl(siteConfig): string {
+  const configuredInviteUrl = siteConfig.customFields?.discordInviteUrl;
+  return typeof configuredInviteUrl === "string" ? configuredInviteUrl.trim() : "";
+}
+
 function CloseButton() {
   const mobileSidebar = useNavbarMobileSidebar();
 
@@ -65,6 +71,8 @@ function CloseButton() {
 
 export default function NavbarMobileSidebar(): ReactNode {
   const mobileSidebar = useNavbarMobileSidebar();
+  const { siteConfig } = useDocusaurusContext();
+  const discordInviteUrl = getDiscordInviteUrl(siteConfig);
 
   useLockBodyScroll(mobileSidebar.shown);
 
@@ -103,6 +111,22 @@ export default function NavbarMobileSidebar(): ReactNode {
                 </div>
               </div>
             ))}
+            {discordInviteUrl ? (
+              <div className="mobile-primary-nav__group">
+                <p className="mobile-primary-nav__heading">Community</p>
+                <div className="mobile-primary-nav__links">
+                  <a
+                    href={discordInviteUrl}
+                    className="mobile-primary-nav__link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => mobileSidebar.toggle()}
+                  >
+                    Join Discord
+                  </a>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

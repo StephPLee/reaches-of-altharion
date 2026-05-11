@@ -1,6 +1,7 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
+import "dotenv/config";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -10,6 +11,7 @@ const config: Config = {
   favicon: "img/altharion_logo_white.ico",
   customFields: {
     authApiBaseUrl: process.env.CLIENT_AUTH_API_BASE_URL || "",
+    discordInviteUrl: process.env.CLIENT_DISCORD_INVITE_URL || "",
   },
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future

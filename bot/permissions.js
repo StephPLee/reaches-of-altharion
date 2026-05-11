@@ -5,17 +5,36 @@ function hasRequiredRole(interaction) {
     return true;
   }
 
+  return hasRole(interaction, config.requiredRoleId);
+}
+
+function hasDmOrRequiredRole(interaction) {
+  if (!config.requiredRoleId) {
+    return true;
+  }
+
+  return (
+    hasRole(interaction, config.requiredRoleId) ||
+    (config.dmRoleId ? hasRole(interaction, config.dmRoleId) : false)
+  );
+}
+
+function hasRole(interaction, roleId) {
+  if (!roleId) {
+    return false;
+  }
+
   const roleIds = interaction.member?.roles;
   if (!roleIds) {
     return false;
   }
 
   if (Array.isArray(roleIds)) {
-    return roleIds.includes(config.requiredRoleId);
+    return roleIds.includes(roleId);
   }
 
   if (roleIds.cache) {
-    return roleIds.cache.has(config.requiredRoleId);
+    return roleIds.cache.has(roleId);
   }
 
   return false;
@@ -23,5 +42,6 @@ function hasRequiredRole(interaction) {
 
 
 module.exports = {
+  hasDmOrRequiredRole,
   hasRequiredRole,
 };
