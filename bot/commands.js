@@ -1,6 +1,6 @@
 ﻿const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 const config = require("./config");
-const { hasRequiredRole } = require("./permissions");
+const { hasDmOrRequiredRole, hasRequiredRole } = require("./permissions");
 
 const COMMAND_DEFINITIONS = [
   {
@@ -44,6 +44,26 @@ const COMMAND_DEFINITIONS = [
     description: "Approve a homebrew link for the site.",
     help: "Staff-only. Approve a homebrew link into the site-backed homebrew lists.",
     requiresRole: true,
+  },
+  {
+    name: "approve-character",
+    description: "Approve a WestMarches.games character.",
+    help: "DM/staff. Approve a user's unapproved character and award the approver 2 SC.",
+    requiresDmOrRole: true,
+    buildCommand: (command) =>
+      command
+        .addUserOption((option) =>
+          option
+            .setName("user")
+            .setDescription("The Discord user whose character was reviewed.")
+            .setRequired(true),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("character")
+            .setDescription("Optional character name if the user has multiple pending characters.")
+            .setMaxLength(100),
+        ),
   },
   {
     name: "homebrew-discussion",
@@ -259,8 +279,11 @@ async function registerGuildCommands() {
 
 function buildHelpMessage(interaction) {
   const canUseRoleCommands = hasRequiredRole(interaction);
+  const canUseDmCommands = hasDmOrRequiredRole(interaction);
   return COMMAND_DEFINITIONS.filter(
-    (command) => !command.requiresRole || canUseRoleCommands,
+    (command) =>
+      (!command.requiresRole || canUseRoleCommands) &&
+      (!command.requiresDmOrRole || canUseDmCommands),
   ).map(
     (command) => `/${command.name} - ${command.help}`,
   ).join("\n");
