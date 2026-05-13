@@ -29,6 +29,7 @@ function mapBossRow(row) {
         name: row.name,
         maxHp: BigInt(row.max_hp),
         currentHp: BigInt(row.current_hp),
+        trackingMode: row.tracking_mode || "countdown",
         imageUrl: row.image_url,
         statusChannelId: row.status_channel_id,
         statusMessageId: row.status_message_id,
@@ -37,6 +38,16 @@ function mapBossRow(row) {
         updatedAt: row.updated_at,
       }
     : null;
+}
+
+
+function isBossCountUp(boss) {
+  return boss.trackingMode === "countup" || boss.trackingMode === "countup_unbounded";
+}
+
+
+function isBossUnbounded(boss) {
+  return boss.trackingMode === "countup_unbounded";
 }
 
 
@@ -52,6 +63,35 @@ function buildBossHpBar(currentHp, maxHp, width = 20) {
 
 
 function buildBossStatusEmbed(boss) {
+  if (isBossUnbounded(boss)) {
+    return new EmbedBuilder()
+      .setTitle(boss.name)
+      .setDescription(`Progress: ${formatBossHp(boss.currentHp)} / ∞`)
+      .setImage(normalizeBossImageUrl(boss.imageUrl))
+      .setColor(0x4c78af)
+      .setTimestamp(new Date(boss.updatedAt || Date.now()));
+  }
+
+  if (isBossCountUp(boss)) {
+    const clampedProgress =
+      boss.currentHp > boss.maxHp ? boss.maxHp : boss.currentHp;
+    const progressPercent = Number((clampedProgress * 10000n) / boss.maxHp) / 100;
+
+    return new EmbedBuilder()
+      .setTitle(boss.name)
+      .setDescription(
+        [
+          buildBossHpBar(boss.currentHp, boss.maxHp),
+          "",
+          `Progress: ${formatBossHp(boss.currentHp)} / ${formatBossHp(boss.maxHp)} (${progressPercent.toFixed(2)}%)`,
+          boss.currentHp >= boss.maxHp ? "The target has been reached." : "Progress continues.",
+        ].join("\n"),
+      )
+      .setImage(normalizeBossImageUrl(boss.imageUrl))
+      .setColor(boss.currentHp >= boss.maxHp ? 0x4caf50 : 0x4c78af)
+      .setTimestamp(new Date(boss.updatedAt || Date.now()));
+  }
+
   const damageDealt = boss.maxHp - boss.currentHp;
   const progressPercent = Number((damageDealt * 10000n) / boss.maxHp) / 100;
 
@@ -72,6 +112,33 @@ function buildBossStatusEmbed(boss) {
 
 
 function buildBossHealthEmbed(boss) {
+  if (isBossUnbounded(boss)) {
+    return new EmbedBuilder()
+      .setTitle(`${boss.name} Progress`)
+      .setDescription(`Progress: ${formatBossHp(boss.currentHp)} / ∞`)
+      .setColor(0x4c78af)
+      .setTimestamp(new Date(boss.updatedAt || Date.now()));
+  }
+
+  if (isBossCountUp(boss)) {
+    const clampedProgress =
+      boss.currentHp > boss.maxHp ? boss.maxHp : boss.currentHp;
+    const progressPercent = Number((clampedProgress * 10000n) / boss.maxHp) / 100;
+
+    return new EmbedBuilder()
+      .setTitle(`${boss.name} Progress`)
+      .setDescription(
+        [
+          buildBossHpBar(boss.currentHp, boss.maxHp),
+          "",
+          `Progress: ${formatBossHp(boss.currentHp)} / ${formatBossHp(boss.maxHp)} (${progressPercent.toFixed(2)}%)`,
+          boss.currentHp >= boss.maxHp ? "The target has been reached." : "Progress continues.",
+        ].join("\n"),
+      )
+      .setColor(boss.currentHp >= boss.maxHp ? 0x4caf50 : 0x4c78af)
+      .setTimestamp(new Date(boss.updatedAt || Date.now()));
+  }
+
   const damageDealt = boss.maxHp - boss.currentHp;
   const progressPercent = Number((damageDealt * 10000n) / boss.maxHp) / 100;
 
@@ -92,7 +159,14 @@ function buildBossHealthEmbed(boss) {
 
 function buildBossLogEmbed(boss, entries) {
   const lines = entries.map((entry) => {
-    const sign = entry.entryType === "heal" ? "+" : "-";
+    const sign =
+      isBossCountUp(boss)
+        ? entry.entryType === "heal"
+          ? "-"
+          : "+"
+        : entry.entryType === "heal"
+          ? "+"
+          : "-";
     const multiplierText =
       entry.entryType === "damage" &&
       entry.baseAmount &&
@@ -119,6 +193,7 @@ async function getActiveBoss(client = pool, { lock = false } = {}) {
       name,
       max_hp,
       current_hp,
+      tracking_mode,
       image_url,
       status_channel_id,
       status_message_id,
@@ -137,7 +212,7 @@ async function getActiveBoss(client = pool, { lock = false } = {}) {
 }
 
 
-async function startBossFight({ name, maxHp, imageUrl }) {
+async function startBossFight({ name, maxHp, imageUrl, trackingMode = "countdown" }) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -149,15 +224,19 @@ async function startBossFight({ name, maxHp, imageUrl }) {
       `,
     );
 
+    const storedMaxHp = maxHp || 1n;
+    const currentHp = trackingMode === "countdown" ? storedMaxHp : 0n;
+
     const result = await client.query(
       `
-      INSERT INTO event_bosses (name, max_hp, current_hp, image_url)
-      VALUES ($1, $2, $2, $3)
+      INSERT INTO event_bosses (name, max_hp, current_hp, tracking_mode, image_url)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING
         id,
         name,
         max_hp,
         current_hp,
+        tracking_mode,
         image_url,
         status_channel_id,
         status_message_id,
@@ -165,7 +244,7 @@ async function startBossFight({ name, maxHp, imageUrl }) {
         created_at,
         updated_at
       `,
-      [name, maxHp.toString(), imageUrl || null],
+      [name, storedMaxHp.toString(), currentHp.toString(), trackingMode, imageUrl || null],
     );
 
     await client.query("COMMIT");
@@ -197,14 +276,24 @@ async function recordBossHpEntry({
       return null;
     }
 
-    const nextHp =
-      entryType === "heal"
-        ? boss.currentHp + amount > boss.maxHp
-          ? boss.maxHp
-          : boss.currentHp + amount
-        : boss.currentHp - amount < 0n
-          ? 0n
-          : boss.currentHp - amount;
+    let nextHp;
+    if (isBossCountUp(boss)) {
+      nextHp =
+        entryType === "heal"
+          ? boss.currentHp - amount < 0n
+            ? 0n
+            : boss.currentHp - amount
+          : boss.currentHp + amount;
+    } else {
+      nextHp =
+        entryType === "heal"
+          ? boss.currentHp + amount > boss.maxHp
+            ? boss.maxHp
+            : boss.currentHp + amount
+          : boss.currentHp - amount < 0n
+            ? 0n
+            : boss.currentHp - amount;
+    }
 
     const result = await client.query(
       `
@@ -216,6 +305,7 @@ async function recordBossHpEntry({
         name,
         max_hp,
         current_hp,
+        tracking_mode,
         image_url,
         status_channel_id,
         status_message_id,

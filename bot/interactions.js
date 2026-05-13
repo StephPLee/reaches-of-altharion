@@ -1391,8 +1391,13 @@ async function handleInteraction(interaction) {
     }
 
     const name = interaction.options.getString("name", true).trim();
-    const maxHp = BigInt(interaction.options.getInteger("max-hp", true));
+    const maxHpOption = interaction.options.getInteger("max-hp");
+    const mode = interaction.options.getString("mode") || "countdown";
+    const target = interaction.options.getString("target");
     const imageUrl = interaction.options.getString("image-url")?.trim() || null;
+    const trackingMode =
+      mode === "countup" && target === "none" ? "countup_unbounded" : mode;
+    const maxHp = maxHpOption === null ? null : BigInt(maxHpOption);
 
     if (!name) {
       await interaction.reply({
@@ -1402,12 +1407,34 @@ async function handleInteraction(interaction) {
       return;
     }
 
+    if (target === "none" && mode !== "countup") {
+      await interaction.reply({
+        content: "Target none can only be used with count-up mode.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (trackingMode !== "countup_unbounded" && maxHp === null) {
+      await interaction.reply({
+        content: "Max HP is required unless this is a count-up tracker with target set to none.",
+        ephemeral: true,
+      });
+      return;
+    }
+
     try {
       await interaction.deferReply({ ephemeral: true });
-      const boss = await startBossFight({ name, maxHp, imageUrl });
+      const boss = await startBossFight({ name, maxHp, imageUrl, trackingMode });
       const status = await postOrRefreshBossStatus(interaction, boss);
+      const startedValue =
+        boss.trackingMode === "countup_unbounded"
+          ? "with progress target ∞"
+          : boss.trackingMode === "countup"
+            ? `with progress target ${formatBossHp(boss.maxHp)}`
+            : `with ${formatBossHp(boss.maxHp)} HP`;
       await interaction.editReply(
-        `Started **${boss.name}** with ${formatBossHp(boss.maxHp)} HP and ${status.created ? "posted" : "refreshed"} the boss status message.`,
+        `Started **${boss.name}** ${startedValue} and ${status.created ? "posted" : "refreshed"} the boss status message.`,
       );
     } catch (error) {
       console.error("Failed to process /boss-start:", error);
@@ -1518,9 +1545,17 @@ async function handleInteraction(interaction) {
       }
 
       await postOrRefreshBossStatus(interaction, boss);
-      const updateMessage = isHeal
-        ? `Restored ${formatBossHp(amount)} HP to **${boss.name}**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`
-        : `The Voice of Altharion calls the strike true: **${boss.name}** suffers **${formatBossHp(amount)} damage** (${formatBossHp(baseAmount)} x ${questMultiplier.toString()} for quest level ${questLevel}). Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`;
+      const isCountUpBoss =
+        boss.trackingMode === "countup" || boss.trackingMode === "countup_unbounded";
+      const targetText =
+        boss.trackingMode === "countup_unbounded" ? "∞" : formatBossHp(boss.maxHp);
+      const updateMessage = isCountUpBoss
+        ? isHeal
+          ? `Removed ${formatBossHp(amount)} progress from **${boss.name}**. Progress: ${formatBossHp(boss.currentHp)} / ${targetText}.`
+          : `The Voice of Altharion calls the strike true: **${boss.name}** gains **${formatBossHp(amount)} progress** (${formatBossHp(baseAmount)} x ${questMultiplier.toString()} for quest level ${questLevel}). Progress: ${formatBossHp(boss.currentHp)} / ${targetText}.`
+        : isHeal
+          ? `Restored ${formatBossHp(amount)} HP to **${boss.name}**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`
+          : `The Voice of Altharion calls the strike true: **${boss.name}** suffers **${formatBossHp(amount)} damage** (${formatBossHp(baseAmount)} x ${questMultiplier.toString()} for quest level ${questLevel}). Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`;
 
       await interaction.editReply(updateMessage);
     } catch (error) {

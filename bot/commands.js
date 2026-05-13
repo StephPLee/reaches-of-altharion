@@ -142,7 +142,7 @@ const COMMAND_DEFINITIONS = [
   {
     name: "boss-start",
     description: "Start a manual server boss fight.",
-    help: "Staff-only. Start a manual server boss fight with a name and maximum HP.",
+    help: "Staff-only. Start a manual server boss fight or count-up progress tracker.",
     requiresRole: true,
     buildCommand: (command) =>
       command
@@ -156,10 +156,24 @@ const COMMAND_DEFINITIONS = [
         .addIntegerOption((option) =>
           option
             .setName("max-hp")
-            .setDescription("The boss maximum HP.")
-            .setRequired(true)
+            .setDescription("The boss maximum HP or finite count-up target.")
             .setMinValue(1)
             .setMaxValue(Number.MAX_SAFE_INTEGER),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("mode")
+            .setDescription("Whether the tracker counts down from HP or up from 0.")
+            .addChoices(
+              { name: "Countdown", value: "countdown" },
+              { name: "Count up", value: "countup" },
+            ),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("target")
+            .setDescription("Set to none for count-up progress with no finite target.")
+            .addChoices({ name: "None", value: "none" }),
         )
         .addStringOption((option) =>
           option
