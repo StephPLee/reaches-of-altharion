@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS event_bosses (
   name TEXT NOT NULL,
   max_hp BIGINT NOT NULL CHECK (max_hp > 0),
   current_hp BIGINT NOT NULL CHECK (current_hp >= 0),
+  tracking_mode TEXT NOT NULL DEFAULT 'countdown' CHECK (tracking_mode IN ('countdown', 'countup', 'countup_unbounded')),
   image_url TEXT,
   status_channel_id TEXT,
   status_message_id TEXT,
