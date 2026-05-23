@@ -68,6 +68,8 @@ module.exports = {
   discordGuildId: process.env.DISCORD_GUILD_ID,
   calendarAnnouncementChannelId:
     process.env.CALENDAR_ANNOUNCEMENT_CHANNEL_ID || "",
+  marketplaceChannelId: process.env.MARKETPLACE_CHANNEL_ID || "",
+  marketplaceMessageId: process.env.MARKETPLACE_MESSAGE_ID || "",
   discordOauthRedirectUri:
     process.env.DISCORD_OAUTH_REDIRECT_URI ||
     "http://localhost:3001/auth/discord/callback",
