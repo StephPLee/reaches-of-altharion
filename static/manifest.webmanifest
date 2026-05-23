@@ -1,0 +1,25 @@
+{
+  "name": "Reaches of Altharion",
+  "short_name": "Altharion",
+  "description": "Reaches of Altharion D&D 5.5e West Marches server wiki and tools.",
+  "start_url": "/?view=map",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07091a",
+  "theme_color": "#080a1a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/img/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

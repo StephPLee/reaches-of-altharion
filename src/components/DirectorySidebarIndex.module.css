@@ -89,17 +89,6 @@
 
 @media (max-width: 996px) {
     .sidebar {
-        display: block;
-        position: static;
-    }
-
-    .panel {
-        position: static;
-        width: auto;
-        max-height: none;
-        overflow: visible;
-        right: auto;
-        padding-left: 0;
-        border-left: 0;
+        display: none;
     }
 }

@@ -516,6 +516,10 @@
     display: none;
 }
 
+.mobileServerSummary {
+    display: none;
+}
+
 .isMapMode .sceneBackdrop {
     transform: translateZ(0) scale(1.08);
 }
@@ -584,6 +588,120 @@
     .heroBanner {
         padding: 6rem 1rem 1.5rem;
         align-content: start;
+    }
+
+    .heroBanner:not(.isMapMode),
+    .heroBanner.isMenuView {
+        min-height: calc(100dvh - var(--ifm-navbar-height));
+        max-height: calc(100dvh - var(--ifm-navbar-height));
+        display: block;
+        padding: 0.75rem 0.9rem 1rem;
+        overflow: hidden;
+        background: #07091a;
+    }
+
+    .heroBanner:not(.isMapMode) .cornerLogo,
+    .heroBanner.isMenuView .cornerLogo {
+        display: none;
+    }
+
+    .heroBanner:not(.isMapMode) .sceneBackdrop,
+    .heroBanner.isMenuView .sceneBackdrop {
+        position: fixed;
+        opacity: 0.72;
+    }
+
+    .heroBanner:not(.isMapMode) .heroOverlay,
+    .heroBanner.isMenuView .heroOverlay {
+        opacity: 0.5 !important;
+    }
+
+    .heroBanner:not(.isMapMode) .worldFrame,
+    .heroBanner.isMenuView .worldFrame {
+        position: relative;
+        inset: auto;
+        z-index: 2;
+        width: min(100%, 34rem);
+        margin: 0 auto;
+        padding: 0.7rem 0.7rem 0;
+        border: 1px solid rgba(196, 215, 255, 0.14);
+        border-bottom: 0;
+        border-radius: 1rem 1rem 0 0;
+        background:
+            linear-gradient(
+                180deg,
+                rgba(12, 19, 45, 0.58) 0%,
+                rgba(12, 19, 45, 0.48) 100%
+            );
+    }
+
+    .heroBanner:not(.isMapMode) .worldScene,
+    .heroBanner.isMenuView .worldScene {
+        width: min(100%, 30rem);
+        max-height: none;
+        margin: 0 auto;
+    }
+
+    .heroBanner:not(.isMapMode) .heroContent,
+    .heroBanner.isMenuView .heroContent {
+        display: none;
+    }
+
+    .heroBanner:not(.isMapMode) .mapForeground,
+    .heroBanner.isMenuView .mapForeground {
+        filter:
+            drop-shadow(0 16px 28px rgba(2, 6, 25, 0.62))
+            drop-shadow(0 0 18px rgba(138, 156, 231, 0.14));
+    }
+
+    .mobileServerSummary {
+        position: relative;
+        z-index: 1;
+        display: block;
+        width: min(100%, 34rem);
+        max-height: calc(100dvh - var(--ifm-navbar-height) - min(100vw - 1.8rem, 34rem) / 1.324 - 2.4rem);
+        margin: 0 auto;
+        padding: 1rem 1rem 0.95rem;
+        overflow-y: auto;
+        border: 1px solid rgba(196, 215, 255, 0.15);
+        border-top: 0;
+        border-radius: 0 0 1rem 1rem;
+        background:
+            linear-gradient(
+                180deg,
+                rgba(12, 19, 45, 0.48) 0%,
+                rgba(12, 19, 45, 0.72) 100%
+            );
+        color: #edf1ff;
+        box-shadow: 0 14px 28px rgba(2, 4, 12, 0.26);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(222, 231, 255, 0.62) rgba(7, 11, 38, 0.3);
+    }
+
+    .mobileServerSummary::-webkit-scrollbar {
+        width: 0.65rem;
+    }
+
+    .mobileServerSummary::-webkit-scrollbar-track {
+        background: rgba(7, 11, 38, 0.3);
+        border-radius: 999px;
+    }
+
+    .mobileServerSummary::-webkit-scrollbar-thumb {
+        border: 2px solid transparent;
+        border-radius: 999px;
+        background: rgba(222, 231, 255, 0.56);
+        background-clip: padding-box;
+    }
+
+    .mobileServerSummary p {
+        color: rgba(235, 239, 255, 0.88);
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+
+    .mobileServerSummary p:last-child {
+        margin-bottom: 0;
     }
 
     .worldScene {
@@ -690,31 +808,12 @@
         top: 47% !important;
     }
 
-    .isMenuView .worldFrame {
-        position: relative;
-        inset: auto;
-        width: 100%;
-        padding: clamp(1.5rem, 2vh, 2rem) 0 clamp(1rem, 2vh, 1.5rem);
-    }
-
-    .isMenuView .worldScene {
-        width: min(94vw, 32rem);
-        max-height: min(48vh, 30rem);
-    }
-
     .isMenuView .islandLabel {
         display: none;
     }
 
     .isMenuView .mobileMapNav {
-        position: relative;
-        z-index: 3;
-        display: flex;
-        flex-direction: column;
-        gap: 0.7rem;
-        width: min(88vw, 22rem);
-        margin: 0 auto;
-        padding-bottom: 1rem;
+        display: none;
     }
 
     .mobileMapNavLink {
