@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useHistory } from "@docusaurus/router";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
-import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import styles from "./admin.module.css";
 
 const ANNOUNCEMENT_CHARACTER_LIMIT = 10000;
+const MARKETPLACE_CHARACTER_LIMIT = 2000;
 
 type SessionUser = {
   id?: number;
@@ -26,6 +26,18 @@ type DiscordRole = {
   position: number;
 };
 
+type MarketplaceEntry = {
+  id: number;
+  source: "generated" | "manual";
+  content: string;
+  scheduledFor: string;
+  status: "scheduled" | "published" | "error";
+  publishedAt?: string | null;
+  errorMessage?: string | null;
+};
+
+type AdminSection = "marketplace" | "discord";
+
 function getAuthApiBaseUrl(siteConfig): string {
   const configuredBaseUrl = siteConfig.customFields?.authApiBaseUrl;
   return typeof configuredBaseUrl === "string"
@@ -39,6 +51,8 @@ export default function AdminPage(): ReactNode {
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [activeSection, setActiveSection] =
+    useState<AdminSection>("marketplace");
   const [announcementText, setAnnouncementText] = useState("");
   const [announcementRoleIds, setAnnouncementRoleIds] = useState<string[]>([]);
   const [discordRoles, setDiscordRoles] = useState<DiscordRole[]>([]);
@@ -48,6 +62,19 @@ export default function AdminPage(): ReactNode {
   const [announcementError, setAnnouncementError] = useState("");
   const [isSubmittingAnnouncement, setIsSubmittingAnnouncement] =
     useState(false);
+  const [marketplaceContent, setMarketplaceContent] = useState("");
+  const [marketplaceSource, setMarketplaceSource] =
+    useState<"generated" | "manual">("generated");
+  const [marketplaceScheduledForLocal, setMarketplaceScheduledForLocal] =
+    useState("");
+  const [marketplaceTimeZone, setMarketplaceTimeZone] =
+    useState("Europe/London");
+  const [marketplaces, setMarketplaces] = useState<MarketplaceEntry[]>([]);
+  const [marketplaceMessage, setMarketplaceMessage] = useState("");
+  const [marketplaceError, setMarketplaceError] = useState("");
+  const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(false);
+  const [isGeneratingMarketplace, setIsGeneratingMarketplace] = useState(false);
+  const [isSchedulingMarketplace, setIsSchedulingMarketplace] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,6 +197,46 @@ export default function AdminPage(): ReactNode {
     };
   }, [authApiBaseUrl, user?.isStaff]);
 
+  async function loadMarketplaceData() {
+    if (!user?.isStaff) {
+      return;
+    }
+
+    try {
+      setIsMarketplaceLoading(true);
+      setMarketplaceError("");
+
+      const response = await fetch(`${authApiBaseUrl}/api/admin/marketplace`, {
+        credentials: "include",
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to load marketplace data.");
+      }
+
+      setMarketplaceTimeZone(payload.timeZone || "Europe/London");
+      setMarketplaceScheduledForLocal(
+        payload.defaultScheduledForLocal || "",
+      );
+      setMarketplaces(
+        Array.isArray(payload.marketplaces) ? payload.marketplaces : [],
+      );
+    } catch (loadError) {
+      setMarketplaceError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Failed to load marketplace data.",
+      );
+    } finally {
+      setIsMarketplaceLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMarketplaceData();
+  }, [authApiBaseUrl, user?.isStaff]);
+
   const filteredDiscordRoles = useMemo(() => {
     const normalizedQuery = announcementRoleQuery.trim().toLowerCase();
     if (!normalizedQuery) {
@@ -247,6 +314,92 @@ export default function AdminPage(): ReactNode {
     }
   }
 
+  async function handleMarketplaceGenerate() {
+    try {
+      setIsGeneratingMarketplace(true);
+      setMarketplaceMessage("");
+      setMarketplaceError("");
+
+      const response = await fetch(
+        `${authApiBaseUrl}/api/admin/marketplace/generate`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to generate marketplace.");
+      }
+
+      setMarketplaceSource("generated");
+      setMarketplaceContent(payload.content || "");
+      setMarketplaceMessage("Marketplace generated. Review it before scheduling.");
+    } catch (generateError) {
+      setMarketplaceMessage("");
+      setMarketplaceError(
+        generateError instanceof Error
+          ? generateError.message
+          : "Failed to generate marketplace.",
+      );
+    } finally {
+      setIsGeneratingMarketplace(false);
+    }
+  }
+
+  async function handleMarketplaceSchedule() {
+    if (!marketplaceContent.trim()) {
+      setMarketplaceMessage("");
+      setMarketplaceError("Enter or generate marketplace content first.");
+      return;
+    }
+
+    if (!marketplaceScheduledForLocal) {
+      setMarketplaceMessage("");
+      setMarketplaceError("Choose when the marketplace should post.");
+      return;
+    }
+
+    try {
+      setIsSchedulingMarketplace(true);
+      setMarketplaceMessage("");
+      setMarketplaceError("");
+
+      const response = await fetch(`${authApiBaseUrl}/api/admin/marketplace`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: marketplaceContent.trim(),
+          source: marketplaceSource,
+          scheduledForLocal: marketplaceScheduledForLocal,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to schedule marketplace.");
+      }
+
+      setMarketplaceMessage("Marketplace scheduled.");
+      setMarketplaceContent("");
+      setMarketplaceSource("generated");
+      await loadMarketplaceData();
+    } catch (scheduleError) {
+      setMarketplaceMessage("");
+      setMarketplaceError(
+        scheduleError instanceof Error
+          ? scheduleError.message
+          : "Failed to schedule marketplace.",
+      );
+    } finally {
+      setIsSchedulingMarketplace(false);
+    }
+  }
+
   return (
     <Layout title="Staff Panel" description="Discord-authenticated admin area.">
       <main className={styles.page}>
@@ -254,8 +407,7 @@ export default function AdminPage(): ReactNode {
           <p className={styles.eyebrow}>Administrative Access</p>
           <Heading as="h1">Staff Panel</Heading>
           <p className={styles.intro}>
-            This is the authenticated entry point for calendar and wiki editing.
-            Calendar CRUD is the next feature to land here.
+            Manage Discord-facing tools that need staff access.
           </p>
 
           <section className={styles.panel}>
@@ -282,10 +434,10 @@ export default function AdminPage(): ReactNode {
                 <p className={styles.meta}>
                   Staff role verified: {user.isStaff ? "yes" : "no"}.
                 </p>
-                <div className={styles.actions}>
-                  <Link to="/calendar" className={styles.button}>
-                    Open Calendar Tools
-                  </Link>
+                <div className={styles.accountBar}>
+                  <p className={styles.accountText}>
+                    Signed in as {user.globalName || user.username}.
+                  </p>
                   <button
                     type="button"
                     className={styles.button}
@@ -294,19 +446,36 @@ export default function AdminPage(): ReactNode {
                     Sign Out
                   </button>
                 </div>
-                <div className={styles.formPanel}>
-                  <Heading as="h2">Calendar Tools Moved</Heading>
-                  <p className={styles.meta}>
-                    The calendar creation workflow now lives directly on the
-                    public calendar page and only appears when a signed-in staff
-                    member opens it.
-                  </p>
-                </div>
-                <div className={styles.formPanel}>
+
+                <nav className={styles.sectionNav} aria-label="Admin tools">
+                  <button
+                    type="button"
+                    className={`${styles.sectionTab} ${
+                      activeSection === "marketplace"
+                        ? styles.sectionTabActive
+                        : ""
+                    }`.trim()}
+                    onClick={() => setActiveSection("marketplace")}
+                  >
+                    Marketplace
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.sectionTab} ${
+                      activeSection === "discord" ? styles.sectionTabActive : ""
+                    }`.trim()}
+                    onClick={() => setActiveSection("discord")}
+                  >
+                    Discord
+                  </button>
+                </nav>
+
+                {activeSection === "discord" ? (
+                <section className={styles.toolSection}>
                   <Heading as="h2">Post Announcement</Heading>
                   <p className={styles.meta}>
-                    Send a plain text announcement to the same Discord
-                    announcements channel used for calendar event posts.
+                    Send a plain text announcement to the configured Discord
+                    announcements channel.
                   </p>
                   <div className={styles.field}>
                     <label htmlFor="announcement-text">Announcement Text</label>
@@ -395,7 +564,125 @@ export default function AdminPage(): ReactNode {
                         : "Post Announcement"}
                     </button>
                   </div>
-                </div>
+                </section>
+                ) : null}
+
+                {activeSection === "marketplace" ? (
+                <section className={styles.toolSection}>
+                  <Heading as="h2">Weekly Marketplace</Heading>
+                  <p className={styles.meta}>
+                    Generate 10 common, uncommon, rare, and very rare items from
+                    the database, or paste the player-chosen list manually. The
+                    scheduled time is read as {marketplaceTimeZone}.
+                  </p>
+                  <div className={styles.actions}>
+                    <button
+                      type="button"
+                      className={styles.button}
+                      onClick={handleMarketplaceGenerate}
+                      disabled={isGeneratingMarketplace}
+                    >
+                      {isGeneratingMarketplace ? "Generating..." : "Generate Market"}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.button}
+                      onClick={() => {
+                        setMarketplaceSource("manual");
+                        setMarketplaceMessage("");
+                        setMarketplaceError("");
+                      }}
+                    >
+                      Use Manual List
+                    </button>
+                  </div>
+                  <div className={styles.field}>
+                    <label htmlFor="marketplace-schedule">
+                      Scheduled Post Time
+                    </label>
+                    <input
+                      id="marketplace-schedule"
+                      className={styles.input}
+                      type="datetime-local"
+                      value={marketplaceScheduledForLocal}
+                      onChange={(event) =>
+                        setMarketplaceScheduledForLocal(event.target.value)
+                      }
+                    />
+                    <p className={styles.meta}>
+                      Default is the next Sunday at noon in Europe/London.
+                    </p>
+                  </div>
+                  <div className={styles.field}>
+                    <label htmlFor="marketplace-content">Marketplace Post</label>
+                    <textarea
+                      id="marketplace-content"
+                      className={styles.textarea}
+                      value={marketplaceContent}
+                      onChange={(event) => {
+                        setMarketplaceContent(event.target.value);
+                        setMarketplaceSource("manual");
+                      }}
+                      rows={14}
+                      maxLength={MARKETPLACE_CHARACTER_LIMIT}
+                      placeholder={`Common\nItem Name\nItem Name\n\nUncommon\nItem Name`}
+                    />
+                    <p className={styles.meta}>
+                      {marketplaceContent.length} / {MARKETPLACE_CHARACTER_LIMIT}
+                      {" "}characters.
+                    </p>
+                  </div>
+                  {marketplaceMessage ? (
+                    <p className={styles.successMessage}>{marketplaceMessage}</p>
+                  ) : null}
+                  {marketplaceError ? (
+                    <p className={styles.errorMessage}>{marketplaceError}</p>
+                  ) : null}
+                  <div className={styles.actions}>
+                    <button
+                      type="button"
+                      className={styles.button}
+                      onClick={handleMarketplaceSchedule}
+                      disabled={isSchedulingMarketplace}
+                    >
+                      {isSchedulingMarketplace
+                        ? "Scheduling..."
+                        : "Schedule Marketplace"}
+                    </button>
+                  </div>
+                  <div className={styles.marketplaceHistory}>
+                    <Heading as="h3">Recent Markets</Heading>
+                    {isMarketplaceLoading ? (
+                      <p className={styles.meta}>Loading marketplace history...</p>
+                    ) : null}
+                    {!isMarketplaceLoading && marketplaces.length === 0 ? (
+                      <p className={styles.meta}>No marketplaces scheduled yet.</p>
+                    ) : null}
+                    {marketplaces.map((marketplace) => (
+                      <div key={marketplace.id} className={styles.historyItem}>
+                        <div>
+                          <strong>
+                            {new Date(marketplace.scheduledFor).toLocaleString(
+                              "en-GB",
+                              {
+                                timeZone: marketplaceTimeZone,
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              },
+                            )}
+                          </strong>
+                          <p className={styles.meta}>
+                            {marketplace.status} - {marketplace.source}
+                            {marketplace.errorMessage
+                              ? ` - ${marketplace.errorMessage}`
+                              : ""}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+                ) : null}
               </>
             ) : null}
           </section>

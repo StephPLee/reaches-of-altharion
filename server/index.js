@@ -15,6 +15,8 @@ const {
   calendarAnnouncementChannelId,
   cookieSecure,
   isProduction,
+  marketplaceChannelId,
+  marketplaceMessageId,
   oauthReturnToCookieName,
   oauthStateCookieName,
   oauthStateTtlMinutes,
@@ -97,6 +99,7 @@ const {
 } = require("./boons");
 const {
   buildAuthorizationUrl,
+  editChannelMessage,
   exchangeCodeForToken,
   fetchDiscordUser,
   fetchGuildMember,
@@ -104,6 +107,17 @@ const {
   memberHasRole,
   postChannelMessage,
 } = require("./discord");
+const {
+  MARKETPLACE_TIME_ZONE,
+  createMarketplace,
+  formatZonedLocalInput,
+  generateMarketplaceContent,
+  getDefaultMarketplaceScheduledFor,
+  listRecentMarketplaces,
+  parseMarketplaceScheduledForLocal,
+  publishDueMarketplaces,
+  validateMarketplaceContent,
+} = require("./marketplace");
 const {
   createSession,
   deleteExpiredSessions,
@@ -3928,6 +3942,111 @@ app.post(
   },
 );
 
+app.get(
+  "/api/admin/marketplace",
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    try {
+      const defaultScheduledFor = getDefaultMarketplaceScheduledFor();
+      const marketplaces = await listRecentMarketplaces();
+
+      res.json({
+        timeZone: MARKETPLACE_TIME_ZONE,
+        defaultScheduledFor: defaultScheduledFor.toISOString(),
+        defaultScheduledForLocal: formatZonedLocalInput(defaultScheduledFor),
+        marketplaces,
+      });
+    } catch (marketplaceError) {
+      console.error("Failed to load marketplace admin data:", marketplaceError);
+      res.status(500).json({ error: "Failed to load marketplace data." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/marketplace/generate",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    try {
+      const content = await generateMarketplaceContent();
+      res.json({ content });
+    } catch (marketplaceError) {
+      console.error("Failed to generate marketplace:", marketplaceError);
+      res.status(500).json({ error: "Failed to generate marketplace." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/marketplace",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const { content, source, scheduledForLocal } = req.body ?? {};
+    const scheduledFor = parseMarketplaceScheduledForLocal(scheduledForLocal);
+
+    if (!scheduledFor) {
+      res.status(400).json({
+        error: `scheduledForLocal must be a valid ${MARKETPLACE_TIME_ZONE} datetime.`,
+      });
+      return;
+    }
+
+    try {
+      const normalizedContent = validateMarketplaceContent(content);
+      const marketplace = await createMarketplace({
+        source: source === "manual" ? "manual" : "generated",
+        content: normalizedContent,
+        scheduledFor,
+        createdByDiscordUserId: req.staffUser.discordUserId,
+      });
+
+      await recordAuditEvent({
+        action: "marketplace_schedule",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          marketplaceId: marketplace.id,
+          source: marketplace.source,
+          scheduledFor: scheduledFor.toISOString(),
+          contentLength: normalizedContent.length,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ marketplace });
+    } catch (marketplaceError) {
+      await recordAuditEvent({
+        action: "marketplace_schedule",
+        status: "error",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          source: source === "manual" ? "manual" : "generated",
+          scheduledFor: scheduledFor.toISOString(),
+          error:
+            marketplaceError instanceof Error
+              ? marketplaceError.message
+              : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(400).json({
+        error:
+          marketplaceError instanceof Error
+            ? marketplaceError.message
+            : "Failed to schedule marketplace.",
+      });
+    }
+  },
+);
+
 app.post(
   "/api/admin/calendar",
   requireTrustedOrigin,
@@ -4202,6 +4321,15 @@ deleteExpiredSessions().catch((error) => {
   console.error("Initial expired session cleanup failed:", error);
 });
 
+publishDueMarketplaces({
+  defaultChannelId: marketplaceChannelId,
+  defaultMessageId: marketplaceMessageId,
+  editChannelMessage,
+  postChannelMessage,
+}).catch((error) => {
+  console.error("Initial marketplace publish check failed:", error);
+});
+
 setInterval(
   () => {
     deleteExpiredSessions().catch((error) => {
@@ -4209,4 +4337,18 @@ setInterval(
     });
   },
   60 * 60 * 1000,
+).unref();
+
+setInterval(
+  () => {
+    publishDueMarketplaces({
+      defaultChannelId: marketplaceChannelId,
+      defaultMessageId: marketplaceMessageId,
+      editChannelMessage,
+      postChannelMessage,
+    }).catch((error) => {
+      console.error("Marketplace publish check failed:", error);
+    });
+  },
+  60 * 1000,
 ).unref();

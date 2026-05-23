@@ -111,6 +111,29 @@ async function postChannelMessage(channelId, payload) {
   return response.json();
 }
 
+async function editChannelMessage(channelId, messageId, payload) {
+  const response = await fetch(
+    `${DISCORD_API_BASE_URL}/channels/${channelId}/messages/${messageId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bot ${discordBotToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to edit Discord channel message: ${response.status} ${errorText}`,
+    );
+  }
+
+  return response.json();
+}
+
 async function fetchGuildRoles() {
   const url = `${DISCORD_API_BASE_URL}/guilds/${discordGuildId}/roles`;
   const response = await fetch(url, {
@@ -135,6 +158,7 @@ function memberHasRole(member, requiredRoleId) {
 
 module.exports = {
   buildAuthorizationUrl: buildAuthorizationUrlWithState,
+  editChannelMessage,
   exchangeCodeForToken,
   fetchDiscordUser,
   fetchGuildMember,

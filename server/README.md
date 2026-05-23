@@ -38,6 +38,8 @@
 - `DISCORD_TOKEN`
 - `DISCORD_GUILD_ID`
 - `CALENDAR_ANNOUNCEMENT_CHANNEL_ID` (optional, posts new calendar events to this channel)
+- `MARKETPLACE_CHANNEL_ID` (optional, posts scheduled marketplace updates to this channel)
+- `MARKETPLACE_MESSAGE_ID` (optional, edits an existing marketplace message instead of creating the first one)
 - `REQUIRED_ROLE_ID`
 - `DM_ROLE_ID` (optional, for rewards-calculator submit access without staff edit access)
 - `DISCORD_OAUTH_REDIRECT_URI`
