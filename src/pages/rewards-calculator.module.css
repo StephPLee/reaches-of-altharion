@@ -643,9 +643,53 @@
 
     .layout,
     .twoCol,
-    .inputGrid,
-    .rewardGrid {
+    .inputGrid {
         grid-template-columns: 1fr;
+    }
+
+    .rewardPanel {
+        padding: 1rem;
+    }
+
+    .rewardPanel h2 {
+        margin-bottom: 0.7rem;
+        font-size: 1.7rem;
+    }
+
+    .rewardPanel .rewardGrid {
+        gap: 0.55rem;
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .rewardGridTriple {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .rewardGridQuad {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rewardGridDouble {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rewardCard {
+        min-height: 0;
+        padding: 0.65rem 0.7rem;
+        border-radius: 0.75rem;
+        gap: 0.1rem;
+    }
+
+    .rewardLabel {
+        margin-bottom: 0.15rem;
+        font-size: 0.8rem;
+        line-height: 1.2;
+    }
+
+    .rewardValue {
+        font-size: clamp(1.1rem, 5vw, 1.45rem);
+        line-height: 1.05;
     }
 
     .shell,

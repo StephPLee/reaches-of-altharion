@@ -197,6 +197,28 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
   },
 ];
 
+function MobileServerSummary() {
+  return (
+    <section className={styles.mobileServerSummary}>
+      <p>
+        In the Reaches of Altharion, your soul is touched by a spark of
+        destiny. Some call it a blessing, others a curse. We call it your
+        Starting Grace.
+      </p>
+      <p>
+        Play the hero you envision at the peak of their power, from your first
+        steps to your final world-shaking battle. Starting Graces, custom items,
+        crafting, guilds, automated rewards, and bespoke World Bosses all exist
+        to make that fantasy real.
+      </p>
+      <p>
+        Whether you are a veteran optimizer or a newcomer taking your first
+        steps in TTRPGs, Altharion can be your home. Your legend begins now.
+      </p>
+    </section>
+  );
+}
+
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
   const location = useLocation();
@@ -594,6 +616,8 @@ function HomepageHeader() {
           </m.div>
         </div>
 
+        {!showIslandNames && !selectedIsland ? <MobileServerSummary /> : null}
+
         <AnimatePresence mode="wait">
           {renderIslandDetailCard(true)}
         </AnimatePresence>
@@ -647,20 +671,37 @@ export default function Home(): ReactNode {
   const showMapView = view === "map" || view === "world";
   const layoutStyle = showMapView
     ? `
-        .main-wrapper {
-          padding-top: 0 !important;
+        @media (min-width: 997px) {
+          .main-wrapper {
+            padding-top: 0 !important;
+          }
+        }
+
+        @media (max-width: 996px) {
+          .main-wrapper {
+            padding-top: var(--ifm-navbar-height) !important;
+          }
         }
       `
     : `
-        nav.navbar,
-        .navbar-sidebar,
-        .navbar-sidebar__backdrop {
-          display: none !important;
+        @media (min-width: 997px) {
+          nav.navbar,
+          .navbar-sidebar,
+          .navbar-sidebar__backdrop {
+            display: none !important;
+          }
+
+          .main-wrapper {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+          }
         }
 
-        .main-wrapper {
-          margin-top: 0 !important;
-          padding-top: 0 !important;
+        @media (max-width: 996px) {
+          .main-wrapper {
+            margin-top: 0 !important;
+            padding-top: var(--ifm-navbar-height) !important;
+          }
         }
       `;
 

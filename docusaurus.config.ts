@@ -9,6 +9,57 @@ const config: Config = {
   title: "Reaches of Altharion",
   tagline: "D&D 5.5e Westmarch Server",
   favicon: "img/altharion_logo_white.ico",
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "manifest",
+        href: "/manifest.webmanifest",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "apple-touch-icon",
+        href: "/img/app-icon-192.png",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "theme-color",
+        content: "#080a1a",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "apple-mobile-web-app-capable",
+        content: "yes",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "apple-mobile-web-app-title",
+        content: "Altharion",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "apple-mobile-web-app-status-bar-style",
+        content: "black-translucent",
+      },
+    },
+    {
+      tagName: "script",
+      attributes: {
+        src: "/register-sw.js",
+        defer: "true",
+      },
+    },
+  ],
   customFields: {
     authApiBaseUrl: process.env.CLIENT_AUTH_API_BASE_URL || "",
     discordInviteUrl: process.env.CLIENT_DISCORD_INVITE_URL || "",
