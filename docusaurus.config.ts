@@ -247,9 +247,13 @@ const config: Config = {
           position: "left",
         },
         {
-          label: "Calculators",
+          label: "Tools",
           position: "left",
           items: [
+            {
+              to: "/avrae",
+              label: "Avrae Commands",
+            },
             {
               to: "/rewards-calculator",
               label: "Rewards Calculator",

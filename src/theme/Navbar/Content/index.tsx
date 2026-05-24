@@ -80,8 +80,12 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: "Calculators",
-    links: [{ label: "Rewards Calculator", to: "/rewards-calculator" }],
+    title: "Tools",
+    links: [
+      { label: "Avrae Commands", to: "/avrae" },
+      { label: "Rewards Calculator", to: "/rewards-calculator" },
+      { label: "Stellar Coin Conversion", to: "/stellar-coin-conversion" },
+    ],
   },
 ];
 
@@ -104,7 +108,7 @@ function getDiscordInviteUrl(siteConfig): string {
 function getAuthErrorMessage(code: string | null) {
   switch (code) {
     case "staff_only":
-      return "You do not have permission to sign in to the staff tools.";
+      return "You do not have permission to open that tool.";
     case "not_in_server":
       return "You must be in the Discord server before you can sign in.";
     case "discord_denied":
@@ -543,7 +547,7 @@ function NavbarAuthControls({
               : "custom-navbar-auth-status",
           )}
         >
-          Checking staff access...
+          Checking sign-in...
         </span>
       </>
     );
@@ -581,7 +585,7 @@ function NavbarAuthControls({
           )}
           onClick={handleLogin}
         >
-          Staff / DM Login
+          Discord Login
         </button>
       </>
     );

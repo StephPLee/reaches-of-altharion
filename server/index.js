@@ -32,6 +32,18 @@ const {
   westMarchesScCurrencyId,
 } = require("./config");
 const { recordAuditEvent } = require("./audit");
+const {
+  deleteSavedAvraeCharacter,
+  listSavedAvraeCharacters,
+  upsertSavedAvraeCharacter,
+} = require("./avraeCharacters");
+const {
+  createSavedAvraeModifier,
+  deleteSavedAvraeModifier,
+  listSavedAvraeModifiers,
+  normalizeModifierPayload,
+  updateSavedAvraeModifier,
+} = require("./avraeModifiers");
 const { pool } = require("./db");
 const {
   createCalendarEvent,
@@ -107,6 +119,7 @@ const {
   memberHasRole,
   postChannelMessage,
 } = require("./discord");
+const { fetchDdbCharacter } = require("./ddbCharacters");
 const {
   MARKETPLACE_TIME_ZONE,
   createMarketplace,
@@ -407,10 +420,252 @@ async function revalidateStaffUser(user) {
   };
 }
 
+async function revalidateGuildUser(user) {
+  const lastCheckTimestamp = user.lastGuildCheckAt
+    ? new Date(user.lastGuildCheckAt).getTime()
+    : 0;
+  const revalidationWindowMs = staffRevalidationMinutes * 60 * 1000;
+
+  if (Date.now() - lastCheckTimestamp <= revalidationWindowMs) {
+    return user;
+  }
+
+  const guildMember = await fetchGuildMember(user.discordUserId);
+  if (!guildMember) {
+    await deleteSessionsForUser(user.id);
+    return null;
+  }
+
+  const isStaff = memberHasRole(guildMember, requiredRoleId);
+  const isDm = dmRoleId ? memberHasRole(guildMember, dmRoleId) : false;
+  await updateUserRoleStatus({
+    discordUserId: user.discordUserId,
+    isStaff,
+    isDm,
+  });
+
+  return {
+    ...user,
+    isStaff,
+    isDm,
+    lastGuildCheckAt: new Date(),
+  };
+}
+
+async function requireMemberSession(req, res, next) {
+  try {
+    const sessionToken = getSessionTokenFromRequest(req);
+    const user = await getSessionUser(sessionToken);
+
+    if (!user) {
+      res.status(401).json({ error: "Authentication required." });
+      return;
+    }
+
+    const revalidatedUser = await revalidateGuildUser(user);
+    if (!revalidatedUser) {
+      clearSessionCookie(res);
+      res.status(403).json({ error: "Server membership required." });
+      return;
+    }
+
+    req.memberUser = revalidatedUser;
+    next();
+  } catch (sessionError) {
+    console.error("Member session check failed:", sessionError);
+    res.status(500).json({ error: "Failed to verify session." });
+  }
+}
+
 app.get("/health", async (_req, res) => {
   await pool.query("SELECT 1");
   res.json({ ok: true });
 });
+
+app.post(
+  "/api/avrae/ddb-character",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "D&D Beyond character link is required." });
+      return;
+    }
+
+    try {
+      const character = await fetchDdbCharacter(url);
+      const savedCharacter = await upsertSavedAvraeCharacter({
+        userId: req.memberUser.id,
+        character,
+      });
+      res.json({ character: savedCharacter });
+    } catch (ddbError) {
+      const statusCode = Number(ddbError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to sync D&D Beyond character:", ddbError);
+      }
+      res.status(statusCode).json({
+        error:
+          ddbError instanceof Error
+            ? ddbError.message
+            : "Failed to sync D&D Beyond character.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/avrae/characters",
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    try {
+      const characters = await listSavedAvraeCharacters(req.memberUser.id);
+      res.json({ characters });
+    } catch (avraeError) {
+      console.error("Failed to list Avrae characters:", avraeError);
+      res.status(500).json({ error: "Failed to load saved characters." });
+    }
+  },
+);
+
+app.delete(
+  "/api/avrae/characters/:characterId",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const characterId = req.params.characterId;
+    if (typeof characterId !== "string" || !characterId.trim()) {
+      res.status(400).json({ error: "Invalid character id." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteSavedAvraeCharacter({
+        userId: req.memberUser.id,
+        characterId: characterId.trim(),
+      });
+
+      if (!deleted) {
+        res.status(404).json({ error: "Saved character not found." });
+        return;
+      }
+
+      res.status(204).end();
+    } catch (avraeError) {
+      console.error("Failed to delete Avrae character:", avraeError);
+      res.status(500).json({ error: "Failed to remove saved character." });
+    }
+  },
+);
+
+app.get(
+  "/api/avrae/modifiers",
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    try {
+      const modifiers = await listSavedAvraeModifiers(req.memberUser.id);
+      res.json({ modifiers });
+    } catch (avraeError) {
+      console.error("Failed to list Avrae modifiers:", avraeError);
+      res.status(500).json({ error: "Failed to load saved modifiers." });
+    }
+  },
+);
+
+app.post(
+  "/api/avrae/modifiers",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const normalized = normalizeModifierPayload(req.body);
+    if ("error" in normalized) {
+      res.status(400).json({ error: normalized.error });
+      return;
+    }
+
+    try {
+      const modifier = await createSavedAvraeModifier({
+        userId: req.memberUser.id,
+        modifier: normalized,
+      });
+      res.status(201).json({ modifier });
+    } catch (avraeError) {
+      console.error("Failed to create Avrae modifier:", avraeError);
+      res.status(500).json({ error: "Failed to save modifier." });
+    }
+  },
+);
+
+app.patch(
+  "/api/avrae/modifiers/:modifierId",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const modifierId = Number(req.params.modifierId);
+    if (!Number.isInteger(modifierId) || modifierId <= 0) {
+      res.status(400).json({ error: "Invalid modifier id." });
+      return;
+    }
+
+    const normalized = normalizeModifierPayload(req.body);
+    if ("error" in normalized) {
+      res.status(400).json({ error: normalized.error });
+      return;
+    }
+
+    try {
+      const modifier = await updateSavedAvraeModifier({
+        userId: req.memberUser.id,
+        modifierId,
+        modifier: normalized,
+      });
+      if (!modifier) {
+        res.status(404).json({ error: "Modifier not found." });
+        return;
+      }
+      res.json({ modifier });
+    } catch (avraeError) {
+      console.error("Failed to update Avrae modifier:", avraeError);
+      res.status(500).json({ error: "Failed to update modifier." });
+    }
+  },
+);
+
+app.delete(
+  "/api/avrae/modifiers/:modifierId",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const modifierId = Number(req.params.modifierId);
+    if (!Number.isInteger(modifierId) || modifierId <= 0) {
+      res.status(400).json({ error: "Invalid modifier id." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteSavedAvraeModifier({
+        userId: req.memberUser.id,
+        modifierId,
+      });
+      if (!deleted) {
+        res.status(404).json({ error: "Modifier not found." });
+        return;
+      }
+      res.status(204).end();
+    } catch (avraeError) {
+      console.error("Failed to delete Avrae modifier:", avraeError);
+      res.status(500).json({ error: "Failed to delete modifier." });
+    }
+  },
+);
 
 app.get("/auth/discord/login", authRateLimiter, (req, res) => {
   const state = crypto.randomBytes(32).toString("base64url");
@@ -487,24 +742,6 @@ app.get("/auth/discord/callback", authCallbackRateLimiter, async (req, res) => {
 
     const isStaff = memberHasRole(guildMember, requiredRoleId);
     const isDm = dmRoleId ? memberHasRole(guildMember, dmRoleId) : false;
-    if (!isStaff && !isDm) {
-      const deniedUser = await upsertUser({
-        discordUser,
-        isStaff: false,
-        isDm: false,
-      });
-      await recordAuditEvent({
-        action: "discord_login",
-        status: "denied",
-        userId: deniedUser.id,
-        discordUserId: discordUser.id,
-        metadata: { reason: "missing_staff_role" },
-        ...requestMetadata,
-      });
-      redirectWithAuthError(req, res, "staff_only");
-      return;
-    }
-
     const user = await upsertUser({ discordUser, isStaff, isDm });
     const session = await createSession(user.id);
     const returnTo = normalizeReturnToPath(getOauthReturnToFromRequest(req));
@@ -4300,11 +4537,18 @@ app.get("/api/me", sessionRateLimiter, async (req, res) => {
       return;
     }
 
+    const revalidatedUser = await revalidateGuildUser(user);
+    if (!revalidatedUser) {
+      clearSessionCookie(res);
+      res.status(401).json({ authenticated: false });
+      return;
+    }
+
     res.json({
       authenticated: true,
       user: {
-        ...user,
-        canSubmitRewards: Boolean(user.isStaff || user.isDm),
+        ...revalidatedUser,
+        canSubmitRewards: Boolean(revalidatedUser.isStaff || revalidatedUser.isDm),
       },
     });
   } catch (sessionError) {
