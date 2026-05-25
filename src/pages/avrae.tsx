@@ -41,24 +41,24 @@ const SKILLS = [
 ];
 
 const SKILL_DEFS = [
-  { id: "acrobatics", label: "Acrobatics", ability: "dex" },
-  { id: "animal-handling", label: "Animal Handling", ability: "wis" },
-  { id: "arcana", label: "Arcana", ability: "int" },
-  { id: "athletics", label: "Athletics", ability: "str" },
-  { id: "deception", label: "Deception", ability: "cha" },
-  { id: "history", label: "History", ability: "int" },
-  { id: "insight", label: "Insight", ability: "wis" },
-  { id: "intimidation", label: "Intimidation", ability: "cha" },
-  { id: "investigation", label: "Investigation", ability: "int" },
-  { id: "medicine", label: "Medicine", ability: "wis" },
-  { id: "nature", label: "Nature", ability: "int" },
-  { id: "perception", label: "Perception", ability: "wis" },
-  { id: "performance", label: "Performance", ability: "cha" },
-  { id: "persuasion", label: "Persuasion", ability: "cha" },
-  { id: "religion", label: "Religion", ability: "int" },
-  { id: "sleight-of-hand", label: "Sleight of Hand", ability: "dex" },
-  { id: "stealth", label: "Stealth", ability: "dex" },
-  { id: "survival", label: "Survival", ability: "wis" },
+  { id: "acrobatics", command: "acrobatics", label: "Acrobatics", ability: "dex" },
+  { id: "animal-handling", command: "animalHandling", label: "Animal Handling", ability: "wis" },
+  { id: "arcana", command: "arcana", label: "Arcana", ability: "int" },
+  { id: "athletics", command: "athletics", label: "Athletics", ability: "str" },
+  { id: "deception", command: "deception", label: "Deception", ability: "cha" },
+  { id: "history", command: "history", label: "History", ability: "int" },
+  { id: "insight", command: "insight", label: "Insight", ability: "wis" },
+  { id: "intimidation", command: "intimidation", label: "Intimidation", ability: "cha" },
+  { id: "investigation", command: "investigation", label: "Investigation", ability: "int" },
+  { id: "medicine", command: "medicine", label: "Medicine", ability: "wis" },
+  { id: "nature", command: "nature", label: "Nature", ability: "int" },
+  { id: "perception", command: "perception", label: "Perception", ability: "wis" },
+  { id: "performance", command: "performance", label: "Performance", ability: "cha" },
+  { id: "persuasion", command: "persuasion", label: "Persuasion", ability: "cha" },
+  { id: "religion", command: "religion", label: "Religion", ability: "int" },
+  { id: "sleight-of-hand", command: "sleightOfHand", label: "Sleight of Hand", ability: "dex" },
+  { id: "stealth", command: "stealth", label: "Stealth", ability: "dex" },
+  { id: "survival", command: "survival", label: "Survival", ability: "wis" },
 ];
 
 const KIND_LABELS: Record<AvraeActionKind, string> = {
@@ -68,7 +68,7 @@ const KIND_LABELS: Record<AvraeActionKind, string> = {
   check: "Skills",
 };
 
-type AppView = "vault" | "roll" | "character" | "modifiers";
+type AppView = "vault" | "character" | "modifiers";
 
 type AuthUser = {
   username: string;
@@ -108,6 +108,12 @@ type AvraeModifier = {
   phrase: string;
   rawFlags: string;
   builtin?: boolean;
+};
+
+type CustomAttack = {
+  id: string;
+  name: string;
+  note?: string;
 };
 
 const BUILTIN_MODIFIERS: AvraeModifier[] = [
@@ -184,28 +190,15 @@ export default function AvraeCommandsPage(): ReactNode {
   const [outOfTurn, setOutOfTurn] = useState(false);
   const [combatantName, setCombatantName] = useState("");
   const [copied, setCopied] = useState(false);
+  const [modifierPanelOpen, setModifierPanelOpen] = useState(false);
+  const [customAttacks, setCustomAttacks] = useState<CustomAttack[]>([]);
+  const [customAttackFormOpen, setCustomAttackFormOpen] = useState(false);
+  const [customAttackName, setCustomAttackName] = useState("");
+  const [customAttackNote, setCustomAttackNote] = useState("");
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      const parsed = raw ? (JSON.parse(raw) as { characters?: SyncedDdbCharacter[]; selectedId?: string }) : null;
-      let characters = Array.isArray(parsed?.characters) ? parsed.characters.filter((entry) => entry?.name) : [];
-      const legacyRaw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
-      if (!characters.length && legacyRaw) {
-        const legacy = JSON.parse(legacyRaw) as SyncedDdbCharacter;
-        if (legacy?.name) {
-          characters = [legacy];
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ characters, selectedId: legacy.id }));
-          window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-        }
-      }
-      setSavedCharacters(characters);
-      const selected = characters.find((entry) => entry.id === parsed?.selectedId) || characters[0] || null;
-      if (selected) applyCharacterToBuilder(selected);
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-    }
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, []);
 
   useEffect(() => {
@@ -218,6 +211,8 @@ export default function AvraeCommandsPage(): ReactNode {
         if (!meResponse.ok) {
           if (!cancelled) {
             setUser(null);
+            setSavedCharacters([]);
+            setSavedModifiers([]);
             setAuthLoading(false);
           }
           return;
@@ -228,6 +223,8 @@ export default function AvraeCommandsPage(): ReactNode {
         if (!nextUser) {
           if (!cancelled) {
             setUser(null);
+            setSavedCharacters([]);
+            setSavedModifiers([]);
             setAuthLoading(false);
           }
           return;
@@ -253,12 +250,18 @@ export default function AvraeCommandsPage(): ReactNode {
           if (nextCharacters.length) {
             const selected = nextCharacters.find((entry) => entry.id === selectedCharacterId) || nextCharacters[0];
             applyCharacterToBuilder(selected);
+          } else {
+            setCharacter(null);
+            setSelectedCharacterId("");
+            setDdbUrl("");
           }
           setAuthLoading(false);
         }
       } catch {
         if (!cancelled) {
           setUser(null);
+          setSavedCharacters([]);
+          setSavedModifiers([]);
           setAuthLoading(false);
         }
       }
@@ -269,6 +272,14 @@ export default function AvraeCommandsPage(): ReactNode {
       cancelled = true;
     };
   }, [authApiBaseUrl]);
+
+  useEffect(() => {
+    if (!character?.id) { setCustomAttacks([]); return; }
+    try {
+      const stored = window.localStorage.getItem(`avrae-custom-attacks-${character.id}`);
+      setCustomAttacks(stored ? JSON.parse(stored) : []);
+    } catch { setCustomAttacks([]); }
+  }, [character?.id]);
 
   const classSummary = useMemo(
     () => character?.classes?.map((entry) => `${entry.subclass || entry.name} ${entry.level}`).join(" / ") || "",
@@ -341,17 +352,13 @@ export default function AvraeCommandsPage(): ReactNode {
     window.location.href = `${authApiBaseUrl}/auth/discord/login?returnTo=${encodeURIComponent(returnTo)}`;
   }
 
-  function saveCharactersToStorage(characters: SyncedDdbCharacter[], selectedId: string): void {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ characters, selectedId }));
-  }
-
   function applyCharacterToBuilder(nextCharacter: SyncedDdbCharacter): void {
     setCharacter(nextCharacter);
     setSelectedCharacterId(nextCharacter.id);
     setDdbUrl(nextCharacter.sourceUrl || "");
     if (nextCharacter.attacks?.[0]?.name) {
       setAttackName(nextCharacter.attacks[0].name);
-      setDamage(nextCharacter.attacks[0].damage || "");
+      setDamage("");
       setSheetTab("attacks");
     } else if (nextCharacter.spells?.length) {
       setSheetTab("spells");
@@ -363,9 +370,8 @@ export default function AvraeCommandsPage(): ReactNode {
   }
 
   function setActiveCharacter(nextCharacter: SyncedDdbCharacter): void {
-    saveCharactersToStorage(savedCharacters, nextCharacter.id);
     applyCharacterToBuilder(nextCharacter);
-    setView("roll");
+    setView("character");
   }
 
   function selectKind(nextKind: AvraeActionKind): void {
@@ -376,25 +382,53 @@ export default function AvraeCommandsPage(): ReactNode {
         return modifier?.appliesTo.includes(nextKind);
       }),
     );
-    if (nextKind === "attack") {
-      const selectedAttack = character?.attacks.find((attack) => attack.name === attackName);
-      setDamage(selectedAttack?.damage || "");
-    } else {
-      setDamage("");
-    }
+    setDamage("");
     if (nextKind !== "spell") setUpcastLevel("base");
   }
 
+  function addCustomAttack(): void {
+    if (!customAttackName.trim() || !character) return;
+    const next: CustomAttack[] = [
+      ...customAttacks,
+      { id: `custom-${Date.now()}`, name: customAttackName.trim(), note: customAttackNote.trim() || undefined },
+    ];
+    setCustomAttacks(next);
+    window.localStorage.setItem(`avrae-custom-attacks-${character.id}`, JSON.stringify(next));
+    setCustomAttackName("");
+    setCustomAttackNote("");
+    setCustomAttackFormOpen(false);
+  }
+
+  function removeCustomAttack(id: string): void {
+    if (!character) return;
+    const next = customAttacks.filter((a) => a.id !== id);
+    setCustomAttacks(next);
+    window.localStorage.setItem(`avrae-custom-attacks-${character.id}`, JSON.stringify(next));
+  }
+
   function chooseAttack(name: string): void {
-    const selectedAttack = character?.attacks.find((attack) => attack.name === name);
     setKind("attack");
     setAttackName(name);
-    setDamage(selectedAttack?.damage || "");
+    setDamage("");
   }
 
   function chooseSpell(name: string): void {
     setKind("spell");
     setSpellName(name);
+    setUpcastLevel("base");
+  }
+
+  function chooseSave(abilityId: string): void {
+    setKind("save");
+    setAbility(abilityId);
+    setDamage("");
+    setUpcastLevel("base");
+  }
+
+  function chooseSkill(skillId: string): void {
+    setKind("check");
+    setSkill(skillId);
+    setDamage("");
     setUpcastLevel("base");
   }
 
@@ -492,7 +526,6 @@ export default function AvraeCommandsPage(): ReactNode {
       ...savedCharacters.filter((entry) => entry.id !== nextCharacter.id && entry.sourceUrl !== nextCharacter.sourceUrl),
     ].sort((a, b) => a.name.localeCompare(b.name));
     setSavedCharacters(nextSavedCharacters);
-    saveCharactersToStorage(nextSavedCharacters, nextCharacter.id);
     applyCharacterToBuilder(nextCharacter);
   }
 
@@ -511,7 +544,6 @@ export default function AvraeCommandsPage(): ReactNode {
     const nextSavedCharacters = savedCharacters.filter((entry) => entry.id !== characterId);
     const nextSelected = nextSavedCharacters[0] || null;
     setSavedCharacters(nextSavedCharacters);
-    saveCharactersToStorage(nextSavedCharacters, nextSelected?.id || "");
     if (nextSelected) {
       applyCharacterToBuilder(nextSelected);
     } else {
@@ -522,15 +554,10 @@ export default function AvraeCommandsPage(): ReactNode {
   }
 
   async function syncDdbCharacter(sourceUrl = ddbUrl): Promise<void> {
-    if (!user) {
-      setSyncStatus("error");
-      setSyncError("Sign in with Discord before saving D&D Beyond characters.");
-      return;
-    }
     setSyncStatus("syncing");
     setSyncError("");
     try {
-      const response = await fetch(`${authApiBaseUrl}/api/avrae/ddb-character`, {
+      const response = await fetch(`${authApiBaseUrl}/api/avrae/ddb-character${user ? "" : "/preview"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -539,8 +566,13 @@ export default function AvraeCommandsPage(): ReactNode {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error || "Failed to sync D&D Beyond character.");
       const nextCharacter = payload.character as SyncedDdbCharacter;
-      upsertSavedCharacter(nextCharacter);
-      setView("roll");
+      if (user) {
+        upsertSavedCharacter(nextCharacter);
+      } else {
+        setSavedCharacters([nextCharacter]);
+        applyCharacterToBuilder(nextCharacter);
+      }
+      setView("character");
       setSyncStatus("success");
     } catch (error) {
       setSyncStatus("error");
@@ -560,7 +592,7 @@ export default function AvraeCommandsPage(): ReactNode {
               <p className={styles.appSubtitle}>{character ? `${character.name} · ${classSummary || "D&D Beyond"}` : "Vault"}</p>
             </div>
             <nav className={styles.appTabs} aria-label="Avrae tool sections">
-              {(["vault", "roll", "character", "modifiers"] as AppView[]).map((tab) => (
+              {(["vault", "character", "modifiers"] as AppView[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -590,7 +622,12 @@ export default function AvraeCommandsPage(): ReactNode {
                 {savedCharacters.map((entry) => (
                   <article key={entry.id} className={styles.vaultCard}>
                     <button type="button" className={styles.vaultCardMain} onClick={() => setActiveCharacter(entry)}>
-                      <span className={styles.vaultAvatar}>{entry.name.slice(0, 1)}</span>
+                      <span className={styles.vaultAvatar}>
+                        {entry.avatarUrl
+                          ? <img src={entry.avatarUrl} alt={entry.name} className={styles.vaultAvatarImg} />
+                          : entry.name.slice(0, 1)
+                        }
+                      </span>
                       <span>
                         <strong>{entry.name}</strong>
                         <em>{[entry.ancestry, entry.classes?.map((item) => item.subclass || item.name).join(" / ")].filter(Boolean).join(" · ")}</em>
@@ -598,7 +635,7 @@ export default function AvraeCommandsPage(): ReactNode {
                       </span>
                     </button>
                     <div className={styles.vaultCardActions}>
-                      <button type="button" onClick={() => syncDdbCharacter(entry.sourceUrl)} disabled={!user || syncStatus === "syncing"}>Refresh</button>
+                      <button type="button" onClick={() => syncDdbCharacter(entry.sourceUrl)} disabled={syncStatus === "syncing"}>Refresh</button>
                       <button type="button" onClick={() => removeCharacter(entry.id)}>Remove</button>
                     </div>
                   </article>
@@ -614,119 +651,13 @@ export default function AvraeCommandsPage(): ReactNode {
                       value={ddbUrl}
                       onChange={(event) => setDdbUrl(event.target.value)}
                     />
-                    <button type="button" className={styles.primaryButton} onClick={() => syncDdbCharacter()} disabled={!user || syncStatus === "syncing"}>
-                      {syncStatus === "syncing" ? "Syncing" : "Add / Sync"}
+                    <button type="button" className={styles.primaryButton} onClick={() => syncDdbCharacter()} disabled={syncStatus === "syncing"}>
+                      {syncStatus === "syncing" ? "Syncing" : user ? "Add / Sync" : "Preview"}
                     </button>
                   </div>
                 </article>
               </div>
               {syncStatus === "error" ? <p className={styles.errorText}>{syncError}</p> : null}
-            </section>
-          ) : null}
-
-          {view === "roll" ? (
-            <section className={styles.appView}>
-              <div className={styles.rollGrid}>
-                <div className={styles.rollMain}>
-                  <div className={styles.characterStrip}>
-                    <span className={styles.vaultAvatar}>{character?.name.slice(0, 1) || "?"}</span>
-                    <span>
-                      <strong>{character?.name || "No character selected"}</strong>
-                      <em>{classSummary || "Choose a character from the vault"}</em>
-                    </span>
-                  </div>
-                  <div className={styles.rollTabs}>
-                    {(Object.keys(KIND_LABELS) as AvraeActionKind[]).map((option) => (
-                      <button key={option} type="button" className={kind === option ? styles.rollTabActive : styles.rollTab} onClick={() => selectKind(option)}>
-                        {KIND_LABELS[option]}
-                      </button>
-                    ))}
-                  </div>
-                  <div className={styles.actionGrid}>
-                    {kind === "attack" && (character?.attacks.length ? character.attacks.map((attack) => (
-                      <button key={attack.id} type="button" className={attackName === attack.name ? styles.actionCardActive : styles.actionCard} onClick={() => chooseAttack(attack.name)}>
-                        <strong>{attack.name}</strong>
-                        <span>{attack.sub || attack.damage || "Attack"}</span>
-                      </button>
-                    )) : <ManualAction name="Attack name" value={attackName} onChange={setAttackName} />)}
-                    {kind === "spell" && (character?.spells.length ? spellsByLevel.map(([level, spells]) => (
-                      <div key={level} className={styles.actionGroup}>
-                        <h3>{level === 0 ? "Cantrips" : `Level ${level}`}</h3>
-                        {spells.map((spell) => (
-                          <button key={spell.id} type="button" className={spellName === spell.name ? styles.actionCardActive : styles.actionCard} onClick={() => chooseSpell(spell.name)}>
-                            <strong>{spell.name}</strong>
-                            <span>{spell.sub || (level === 0 ? "Cantrip" : `Level ${level}`)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )) : <ManualAction name="Spell name" value={spellName} onChange={setSpellName} />)}
-                    {kind === "save" && ABILITIES.map((item) => (
-                      <button key={item.id} type="button" className={ability === item.id ? styles.actionCardActive : styles.actionCard} onClick={() => setAbility(item.id)}>
-                        <strong>{item.label} Save</strong>
-                      </button>
-                    ))}
-                    {kind === "check" && SKILLS.map((item) => (
-                      <button key={item} type="button" className={skill === item ? styles.actionCardActive : styles.actionCard} onClick={() => setSkill(item)}>
-                        <strong>{skillLabel(item)}</strong>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <aside className={styles.rollSide}>
-                  <section>
-                    <div className={styles.sideHeader}>
-                      <h2>Modifiers</h2>
-                      <button type="button" onClick={() => setActiveModifierIds([])}>clear all</button>
-                    </div>
-                    <div className={styles.sideModifierGrid}>
-                      {availableModifiers.map((modifier) => {
-                        const isActive = activeModifierIds.includes(modifier.id);
-                        return (
-                          <div key={modifier.id} className={isActive ? styles.sideModifierActive : styles.sideModifier}>
-                            <label>
-                              <input type="checkbox" checked={isActive} onChange={() => toggleModifier(modifier.id)} />
-                              <span>{modifier.name}</span>
-                            </label>
-                            {modifier.id === "builtin:bardic" && isActive ? (
-                              <select
-                                className={styles.modifierParamSelect}
-                                value={modifierParams[modifier.id] || "1d8"}
-                                onChange={(event) =>
-                                  setModifierParams((params) => ({
-                                    ...params,
-                                    [modifier.id]: event.target.value,
-                                  }))
-                                }
-                              >
-                                <option value="1d6">d6</option>
-                                <option value="1d8">d8</option>
-                                <option value="1d10">d10</option>
-                                <option value="1d12">d12</option>
-                              </select>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                  <section className={styles.rollFields}>
-                    <label><span>Roll state</span><select value={rollMode} onChange={(event) => setRollMode(event.target.value as AvraeRollMode)}><option value="normal">Normal</option><option value="adv">Advantage</option><option value="dis">Disadvantage</option></select></label>
-                    {kind === "spell" && selectedSpell && selectedSpell.level > 0 ? (
-                      <label><span>Cast level</span><select value={upcastLevel} onChange={(event) => setUpcastLevel(event.target.value)}><option value="base">Base level {selectedSpell.level}</option>{Array.from({ length: 9 - selectedSpell.level }, (_, index) => selectedSpell.level + index + 1).map((level) => <option key={level} value={String(level)}>Level {level}</option>)}</select></label>
-                    ) : null}
-                    <label><span>Custom bonus</span><input placeholder="e.g. 2 or 1d4" value={bonus} onChange={(event) => setBonus(event.target.value)} /></label>
-                    {(kind === "attack" || kind === "spell") ? <label><span>Custom extra damage</span><input placeholder="e.g. 1d6[fire]" value={damage} onChange={(event) => setDamage(event.target.value)} /></label> : null}
-                    {(kind === "attack" || kind === "spell") ? <label><span>Targets</span><input placeholder="one per line or comma separated" value={targets} onChange={(event) => setTargets(event.target.value)} /></label> : null}
-                    <label><span>Flavor phrase</span><input value={phrase} onChange={(event) => setPhrase(event.target.value)} /></label>
-                    <div className={styles.toggleRow}>
-                      <label><input type="checkbox" checked={initContext} onChange={(event) => setInitContext(event.target.checked)} /><span>Use initiative command</span></label>
-                      <label><input type="checkbox" checked={outOfTurn} disabled={!initContext} onChange={(event) => setOutOfTurn(event.target.checked)} /><span>Out of turn</span></label>
-                    </div>
-                    {initContext && outOfTurn ? <label><span>Combatant name</span><input value={combatantName} onChange={(event) => setCombatantName(event.target.value)} /></label> : null}
-                  </section>
-                </aside>
-              </div>
             </section>
           ) : null}
 
@@ -738,9 +669,15 @@ export default function AvraeCommandsPage(): ReactNode {
                   <p>Select a character from the vault to view their sheet.</p>
                 </div>
               ) : (
-                <div className={styles.csSheet}>
-                  <div className={styles.csIdentity}>
-                    <span className={styles.vaultAvatar}>{character.name.slice(0, 1)}</span>
+                <div className={styles.csCommandGrid}>
+                  <div className={styles.csSheet}>
+                    <div className={styles.csIdentity}>
+                    <span className={styles.vaultAvatar}>
+                      {character.avatarUrl
+                        ? <img src={character.avatarUrl} alt={character.name} className={styles.vaultAvatarImg} />
+                        : character.name.slice(0, 1)
+                      }
+                    </span>
                     <div>
                       <p className={styles.csName}>{character.name}</p>
                       <p className={styles.csSub}>{[character.ancestry, classSummary].filter(Boolean).join(" · ")}</p>
@@ -824,6 +761,12 @@ export default function AvraeCommandsPage(): ReactNode {
                     )}
                   </div>
 
+                  <div className={styles.csCommandBar}>
+                    <span>CMD</span>
+                    <code>{command || "click a save, skill, attack or spell below…"}</code>
+                    <button type="button" onClick={copyCommand}>{copied ? "Copied" : "Copy"}</button>
+                  </div>
+
                   <div className={styles.csBody}>
                     <section className={styles.csSection}>
                       <h2 className={styles.csSectionTitle}>Saving Throws</h2>
@@ -835,11 +778,11 @@ export default function AvraeCommandsPage(): ReactNode {
                           const pb = character.proficiencyBonus || 2;
                           const bonus = prof === "expertise" ? pb * 2 : prof === "proficient" ? pb : prof === "half" ? Math.floor(pb / 2) : 0;
                           return (
-                            <div key={id} className={styles.csSaveRow}>
+                            <button key={id} type="button" className={ability === id && kind === "save" ? styles.csSaveRowActive : styles.csSaveRow} onClick={() => chooseSave(id)}>
                               <span className={prof !== "none" ? styles.csProfDot : styles.csEmptyDot} />
                               <span className={styles.csSaveAbility}>{label}</span>
                               <span className={styles.csSaveBonus}>{signedNum(base + bonus)}</span>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -848,19 +791,19 @@ export default function AvraeCommandsPage(): ReactNode {
                     <section className={styles.csSection}>
                       <h2 className={styles.csSectionTitle}>Skills</h2>
                       <div className={styles.csSaveList}>
-                        {SKILL_DEFS.map(({ id, label, ability }) => {
+                        {SKILL_DEFS.map(({ id, command, label, ability }) => {
                           const prof = character.skills?.[id] || "none";
                           const score = character.abilities?.[ability];
                           const base = score != null ? abilityMod(score) : 0;
                           const pb = character.proficiencyBonus || 2;
                           const bonus = prof === "expertise" ? pb * 2 : prof === "proficient" ? pb : prof === "half" ? Math.floor(pb / 2) : 0;
                           return (
-                            <div key={id} className={styles.csSkillRow}>
+                            <button key={id} type="button" className={skill === command && kind === "check" ? styles.csSkillRowActive : styles.csSkillRow} onClick={() => chooseSkill(command)}>
                               <span className={prof !== "none" ? styles.csProfDot : styles.csEmptyDot} />
                               <span className={styles.csSaveAbility}>{ability.toUpperCase()}</span>
                               <span className={styles.csSaveName}>{label}</span>
                               <span className={styles.csSaveBonus}>{signedNum(base + bonus)}</span>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
@@ -883,11 +826,32 @@ export default function AvraeCommandsPage(): ReactNode {
                       {effectiveSheetTab === "attacks" ? (
                         <div className={styles.csAttackList}>
                           {character.attacks.map((attack) => (
-                            <div key={attack.id} className={styles.csAttackRow}>
+                            <button key={attack.id} type="button" className={attackName === attack.name && kind === "attack" ? styles.csAttackRowActive : styles.csAttackRow} onClick={() => chooseAttack(attack.name)}>
                               <strong>{attack.name}</strong>
                               <span>{attack.damage || attack.sub || "—"}</span>
+                            </button>
+                          ))}
+                          {customAttacks.map((attack) => (
+                            <div key={attack.id} className={styles.csCustomAttackWrapper}>
+                              <button type="button" className={attackName === attack.name && kind === "attack" ? styles.csAttackRowActive : styles.csAttackRow} onClick={() => chooseAttack(attack.name)}>
+                                <strong>{attack.name}</strong>
+                                {attack.note ? <span>{attack.note}</span> : null}
+                              </button>
+                              <button type="button" className={styles.csRemoveAttack} onClick={() => removeCustomAttack(attack.id)} title="Remove">×</button>
                             </div>
                           ))}
+                          {customAttackFormOpen ? (
+                            <div className={styles.csCustomAttackForm}>
+                              <input className={styles.csCustomAttackInput} placeholder="Attack name" value={customAttackName} onChange={(e) => setCustomAttackName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustomAttack()} autoFocus />
+                              <input className={styles.csCustomAttackInput} placeholder="Note (e.g. 1d6[slashing])" value={customAttackNote} onChange={(e) => setCustomAttackNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCustomAttack()} />
+                              <div className={styles.csCustomAttackFormActions}>
+                                <button type="button" className={`${styles.csFormButton} ${styles.csFormButtonPrimary}`} onClick={addCustomAttack}>Add</button>
+                                <button type="button" className={styles.csFormButton} onClick={() => { setCustomAttackFormOpen(false); setCustomAttackName(""); setCustomAttackNote(""); }}>Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button type="button" className={styles.csAddAttack} onClick={() => setCustomAttackFormOpen(true)}>+ Custom attack</button>
+                          )}
                         </div>
                       ) : (
                         <div>
@@ -896,10 +860,10 @@ export default function AvraeCommandsPage(): ReactNode {
                               <h3 className={styles.csSpellGroupTitle}>{level === 0 ? "Cantrips" : `Level ${level}`}</h3>
                               <div className={styles.csSpellList}>
                                 {spells.map((spell) => (
-                                  <div key={spell.id} className={styles.csSpellRow}>
+                                  <button key={spell.id} type="button" className={spellName === spell.name && kind === "spell" ? styles.csSpellRowActive : styles.csSpellRow} onClick={() => chooseSpell(spell.name)}>
                                     <span>{spell.name}</span>
                                     {spell.prepared && level > 0 ? <span className={styles.csPreparedMark} title="Prepared" /> : null}
-                                  </div>
+                                  </button>
                                 ))}
                               </div>
                             </div>
@@ -907,6 +871,76 @@ export default function AvraeCommandsPage(): ReactNode {
                         </div>
                       )}
                     </section>
+                  </div>
+                  </div>
+                  <div className={styles.csDrawer}>
+                  <button
+                    type="button"
+                    className={styles.csModifierDrawerHandle}
+                    onClick={() => setModifierPanelOpen(!modifierPanelOpen)}
+                    aria-expanded={modifierPanelOpen}
+                    aria-controls="avrae-modifier-drawer"
+                  >
+                    Modifiers
+                    {activeModifierIds.length ? <span>{activeModifierIds.length}</span> : null}
+                  </button>
+                  <aside id="avrae-modifier-drawer" className={modifierPanelOpen ? styles.csModifierDrawerOpen : styles.csModifierDrawerClosed}>
+                  <div className={styles.csModifierDrawerInner}>
+                    <div className={styles.sideHeader}>
+                      <h2>Roll Modifiers</h2>
+                      <button type="button" onClick={() => setModifierPanelOpen(false)}>close</button>
+                    </div>
+                        <div className={styles.selectedCommandSummary}>
+                          <span>{KIND_LABELS[kind]}</span>
+                          <strong>{kind === "attack" ? attackName : kind === "spell" ? spellName : kind === "save" ? ability.toUpperCase() : skillLabel(skill)}</strong>
+                        </div>
+                        <div className={styles.sideModifierGrid}>
+                          {availableModifiers.map((modifier) => {
+                            const isActive = activeModifierIds.includes(modifier.id);
+                            return (
+                              <div key={modifier.id} className={isActive ? styles.sideModifierActive : styles.sideModifier}>
+                                <label>
+                                  <input type="checkbox" checked={isActive} onChange={() => toggleModifier(modifier.id)} />
+                                  <span>{modifier.name}</span>
+                                </label>
+                                {modifier.id === "builtin:bardic" && isActive ? (
+                                  <select
+                                    className={styles.modifierParamSelect}
+                                    value={modifierParams[modifier.id] || "1d8"}
+                                    onChange={(event) =>
+                                      setModifierParams((params) => ({
+                                        ...params,
+                                        [modifier.id]: event.target.value,
+                                      }))
+                                    }
+                                  >
+                                    <option value="1d6">d6</option>
+                                    <option value="1d8">d8</option>
+                                    <option value="1d10">d10</option>
+                                    <option value="1d12">d12</option>
+                                  </select>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <section className={styles.rollFields}>
+                          <label><span>Roll state</span><select value={rollMode} onChange={(event) => setRollMode(event.target.value as AvraeRollMode)}><option value="normal">Normal</option><option value="adv">Advantage</option><option value="dis">Disadvantage</option></select></label>
+                          {kind === "spell" && selectedSpell && selectedSpell.level > 0 ? (
+                            <label><span>Cast level</span><select value={upcastLevel} onChange={(event) => setUpcastLevel(event.target.value)}><option value="base">Base level {selectedSpell.level}</option>{Array.from({ length: 9 - selectedSpell.level }, (_, index) => selectedSpell.level + index + 1).map((level) => <option key={level} value={String(level)}>Level {level}</option>)}</select></label>
+                          ) : null}
+                          <label><span>Custom bonus</span><input placeholder="e.g. 2 or 1d4" value={bonus} onChange={(event) => setBonus(event.target.value)} /></label>
+                          {(kind === "attack" || kind === "spell") ? <label><span>Custom extra damage</span><input placeholder="e.g. 1d6[fire]" value={damage} onChange={(event) => setDamage(event.target.value)} /></label> : null}
+                          {(kind === "attack" || kind === "spell") ? <label><span>Targets</span><input placeholder="one per line or comma separated" value={targets} onChange={(event) => setTargets(event.target.value)} /></label> : null}
+                          <label><span>Flavor phrase</span><input value={phrase} onChange={(event) => setPhrase(event.target.value)} /></label>
+                          <div className={styles.toggleRow}>
+                            <label><input type="checkbox" checked={initContext} onChange={(event) => setInitContext(event.target.checked)} /><span>Use initiative command</span></label>
+                            <label><input type="checkbox" checked={outOfTurn} disabled={!initContext} onChange={(event) => setOutOfTurn(event.target.checked)} /><span>Out of turn</span></label>
+                          </div>
+                          {initContext && outOfTurn ? <label><span>Combatant name</span><input value={combatantName} onChange={(event) => setCombatantName(event.target.value)} /></label> : null}
+                        </section>
+                  </div>
+                  </aside>
                   </div>
                 </div>
               )}
@@ -946,11 +980,6 @@ export default function AvraeCommandsPage(): ReactNode {
             </section>
           ) : null}
 
-          <footer className={styles.commandBar}>
-            <span>CMD</span>
-            <code>{command || "click an action to compose a command..."}</code>
-            <button type="button" onClick={copyCommand}>{copied ? "Copied" : "Copy"}</button>
-          </footer>
         </div>
       </main>
     </Layout>

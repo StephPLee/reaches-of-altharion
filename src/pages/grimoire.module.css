@@ -13,10 +13,11 @@
     min-height: 100vh;
     padding: 5.3rem 0 3.8rem;
     background:
-        linear-gradient(rgba(7, 8, 18, 0.84), rgba(7, 8, 18, 0.92)),
+        linear-gradient(rgba(7, 8, 18, 0.72), rgba(7, 8, 18, 0.8)),
         url("/img/altharion-background.png");
     background-size: cover;
     background-position: center;
+    background-attachment: fixed;
     color: #e8e1f1;
 }
 
@@ -24,14 +25,10 @@
     width: min(1240px, calc(100% - 2rem));
     min-height: calc(100vh - 9rem);
     margin: 0 auto;
-    border: 1px solid rgba(190, 176, 138, 0.14);
+    border: 1px solid rgba(190, 176, 138, 0.1);
     border-radius: 1.25rem;
-    background:
-        radial-gradient(circle at 20% 0%, rgba(82, 57, 132, 0.12), transparent 34rem),
-        rgba(8, 10, 20, 0.76);
-    box-shadow: 0 24px 70px rgba(2, 4, 12, 0.5);
-    backdrop-filter: blur(6px);
-    overflow: hidden;
+    background: rgba(8, 9, 19, 0.2);
+    overflow: visible;
 }
 
 .appHeader {
@@ -182,16 +179,26 @@
 
 .vaultAvatar {
     display: grid;
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 4rem;
+    height: 4rem;
     place-items: center;
-    border: 1px solid rgba(202, 168, 255, 0.26);
+    border: 2px solid rgba(190, 176, 138, 0.5);
     border-radius: 50%;
     background: rgba(72, 54, 126, 0.42);
     color: #f4ecff;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     font-weight: 900;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.vaultAvatarImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
 }
 
 .vaultCard strong,
@@ -228,7 +235,7 @@
 }
 
 .vaultCardActions button,
-.commandBar button,
+.csCommandBar button,
 .sideHeader button {
     border: 1px solid rgba(190, 176, 138, 0.18);
     border-radius: 999px;
@@ -479,39 +486,38 @@
     padding: 0.4rem 0.55rem;
 }
 
-.commandBar {
-    position: sticky;
-    bottom: 0;
+.csCommandBar {
     display: grid;
     grid-template-columns: auto 1fr auto;
     gap: 0.8rem;
     align-items: center;
-    padding: 0.65rem 1.6rem;
-    border-top: 1px solid rgba(190, 176, 138, 0.2);
-    border-radius: 0 0 1.25rem 1.25rem;
-    background: rgba(5, 6, 14, 0.96);
+    padding: 0.65rem 0.85rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.85rem;
+    background: rgba(5, 6, 14, 0.55);
 }
 
-.commandBar span {
+.csCommandBar span {
     color: rgba(232, 225, 241, 0.7);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     letter-spacing: 0.08em;
 }
 
-.commandBar code {
+.csCommandBar code {
     color: #f4ecff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border-radius: 0.55rem;
-    background: rgba(232, 225, 241, 0.08);
-    padding: 0.28rem 0.55rem;
+    border-radius: 0.45rem;
+    background: rgba(232, 225, 241, 0.06);
+    padding: 0.22rem 0.5rem;
+    font-size: 0.9em;
 }
 
-.commandBar button {
-    min-height: 2rem;
-    padding-inline: 0.9rem;
+.csCommandBar button {
+    min-height: 1.85rem;
+    padding-inline: 0.85rem;
 }
 
 .sheetGrid,
@@ -523,8 +529,126 @@
 
 /* ── Character Sheet ─────────────────────────────────────────── */
 .csSheet {
+    flex: 1;
+    min-width: 0;
     display: grid;
     gap: 1rem;
+}
+
+.csCommandGrid {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0;
+    min-height: 32rem;
+}
+
+.csDrawer {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    flex-shrink: 0;
+    position: sticky;
+    top: 5.5rem;
+    align-self: flex-start;
+    max-height: calc(100vh - 6.5rem);
+    margin-left: 0.75rem;
+}
+
+.csModifierDrawerHandle {
+    position: relative;
+    display: grid;
+    gap: 0.35rem;
+    place-items: center;
+    width: 2.45rem;
+    flex-shrink: 0;
+    min-height: 8.5rem;
+    align-self: flex-start;
+    margin-top: 1rem;
+    border: 1px solid rgba(202, 168, 255, 0.32);
+    border-right: none;
+    border-radius: 0.85rem 0 0 0.85rem;
+    background: rgba(18, 17, 36, 0.96);
+    color: #f4ecff;
+    cursor: pointer;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    padding: 0.7rem 0.35rem;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+}
+
+.csModifierDrawerHandle span {
+    position: absolute;
+    top: 0.3rem;
+    right: -0.5rem;
+    display: grid;
+    width: 1.35rem;
+    height: 1.35rem;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(185, 145, 255, 0.78);
+    color: #090a14;
+    font-size: 0.7rem;
+    writing-mode: horizontal-tb;
+}
+
+.csModifierDrawerOpen,
+.csModifierDrawerClosed {
+    overflow: hidden;
+    transition: width 280ms ease;
+}
+
+.csModifierDrawerClosed {
+    width: 0;
+}
+
+.csModifierDrawerOpen {
+    width: 22rem;
+}
+
+.csModifierDrawerInner {
+    width: 22rem;
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    overflow-y: auto;
+    max-height: calc(100vh - 6.5rem);
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 1rem;
+    background:
+        radial-gradient(circle at 30% 0%, rgba(82, 57, 132, 0.18), transparent 24rem),
+        rgba(10, 11, 24, 0.98);
+    box-shadow: 0 20px 54px rgba(2, 4, 12, 0.42);
+    padding: 1.2rem;
+}
+
+.selectedCommandSummary {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(202, 168, 255, 0.2);
+    border-radius: 0.75rem;
+    background: rgba(6, 8, 18, 0.42);
+}
+
+.selectedCommandSummary span {
+    color: rgba(232, 225, 241, 0.58);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.selectedCommandSummary strong {
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.82rem;
+    line-height: 1.25;
 }
 
 .csIdentity {
@@ -594,7 +718,7 @@
 
 .csBody {
     display: grid;
-    grid-template-columns: minmax(9rem, 0.28fr) minmax(11rem, 0.38fr) minmax(0, 1fr);
+    grid-template-columns: minmax(9rem, 0.28fr) minmax(14rem, 0.5fr) minmax(12rem, 1fr);
     gap: 1rem;
     align-items: start;
 }
@@ -676,20 +800,43 @@
     gap: 0.22rem;
 }
 
-.csSaveRow {
+.csSaveRow,
+.csSaveRowActive {
     display: grid;
     grid-template-columns: 0.8rem 2.3rem auto;
     gap: 0.35rem;
     align-items: center;
+    width: 100%;
+    border: 0;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
     padding: 0.15rem 0.2rem;
+    text-align: left;
 }
 
-.csSkillRow {
+.csSkillRow,
+.csSkillRowActive {
     display: grid;
     grid-template-columns: 0.8rem 2.3rem 1fr auto;
     gap: 0.35rem;
     align-items: center;
+    width: 100%;
+    border: 0;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
     padding: 0.15rem 0.2rem;
+    text-align: left;
+}
+
+.csSaveRow:hover,
+.csSaveRowActive,
+.csSkillRow:hover,
+.csSkillRowActive {
+    background: rgba(72, 54, 126, 0.28);
 }
 
 .csSaveAbility {
@@ -813,16 +960,28 @@
     gap: 0.4rem;
 }
 
-.csAttackRow {
+.csAttackRow,
+.csAttackRowActive {
     display: grid;
     gap: 0.12rem;
+    width: 100%;
     padding: 0.5rem 0.6rem;
     border: 1px solid rgba(190, 176, 138, 0.14);
     border-radius: 0.65rem;
     background: rgba(6, 8, 18, 0.38);
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
 }
 
-.csAttackRow strong {
+.csAttackRow:hover,
+.csAttackRowActive {
+    border-color: rgba(202, 168, 255, 0.46);
+    background: rgba(72, 54, 126, 0.32);
+}
+
+.csAttackRow strong,
+.csAttackRowActive strong {
     display: block;
     color: #f4ecff;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
@@ -831,9 +990,108 @@
     text-transform: uppercase;
 }
 
-.csAttackRow span {
+.csAttackRow span,
+.csAttackRowActive span {
     color: rgba(232, 225, 241, 0.62);
     font-size: 0.78rem;
+}
+
+.csCustomAttackWrapper {
+    display: flex;
+    gap: 0.3rem;
+    align-items: stretch;
+}
+
+.csCustomAttackWrapper .csAttackRow,
+.csCustomAttackWrapper .csAttackRowActive {
+    flex: 1;
+    min-width: 0;
+}
+
+.csRemoveAttack {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    flex-shrink: 0;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.38);
+    color: rgba(232, 225, 241, 0.4);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.csRemoveAttack:hover {
+    border-color: rgba(255, 100, 100, 0.35);
+    background: rgba(70, 15, 15, 0.45);
+    color: #ffaaaa;
+}
+
+.csAddAttack {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px dashed rgba(190, 176, 138, 0.22);
+    border-radius: 0.65rem;
+    background: transparent;
+    color: rgba(232, 225, 241, 0.38);
+    cursor: pointer;
+    font-size: 0.8rem;
+    text-align: left;
+}
+
+.csAddAttack:hover {
+    border-color: rgba(190, 176, 138, 0.42);
+    color: rgba(232, 225, 241, 0.65);
+}
+
+.csCustomAttackForm {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.55rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.65rem;
+    background: rgba(8, 9, 19, 0.5);
+}
+
+.csCustomAttackInput {
+    width: 100%;
+    padding: 0.38rem 0.6rem;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 0.45rem;
+    background: rgba(6, 8, 18, 0.6);
+    color: #ece2ff;
+    font: inherit;
+    font-size: 0.84rem;
+    outline: none;
+}
+
+.csCustomAttackInput:focus {
+    border-color: rgba(190, 176, 138, 0.4);
+}
+
+.csCustomAttackFormActions {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+
+.csFormButton {
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    background: rgba(12, 12, 24, 0.6);
+    color: #e2ddf5;
+}
+
+.csFormButtonPrimary {
+    border-color: rgba(185, 145, 255, 0.35);
+    background: rgba(20, 16, 44, 0.8);
+    color: #f0e5ff;
 }
 
 .csSpellGroup {
@@ -859,19 +1117,26 @@
     gap: 0.18rem;
 }
 
-.csSpellRow {
+.csSpellRow,
+.csSpellRowActive {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    width: 100%;
+    border: 0;
     padding: 0.22rem 0.45rem;
     border-radius: 0.4rem;
+    background: transparent;
     color: rgba(232, 225, 241, 0.82);
+    cursor: pointer;
     font-size: 0.84rem;
+    text-align: left;
 }
 
-.csSpellRow:hover {
-    background: rgba(72, 54, 126, 0.18);
+.csSpellRow:hover,
+.csSpellRowActive {
+    background: rgba(72, 54, 126, 0.28);
 }
 
 .csPreparedMark {
@@ -953,6 +1218,65 @@
         grid-template-columns: 1fr;
     }
 
+    .csCommandGrid {
+        flex-direction: column;
+    }
+
+    .csDrawer {
+        position: static;
+    }
+
+    .csModifierDrawerHandle {
+        position: fixed;
+        top: auto;
+        right: 0.7rem;
+        bottom: 5.2rem;
+        min-width: 2.7rem;
+        min-height: 2.7rem;
+        margin-top: 0;
+        align-self: auto;
+        border: 1px solid rgba(202, 168, 255, 0.32);
+        border-radius: 999px;
+        padding: 0.55rem;
+        writing-mode: horizontal-tb;
+    }
+
+    .csModifierDrawerHandle span {
+        position: absolute;
+        top: -0.35rem;
+        right: -0.35rem;
+    }
+
+    .csModifierDrawerOpen,
+    .csModifierDrawerClosed {
+        position: fixed;
+        top: auto;
+        right: 0.75rem;
+        bottom: 8.3rem;
+        width: min(22rem, calc(100vw - 1.5rem));
+        max-height: calc(100vh - 10rem);
+        overflow: visible;
+        transition: transform 180ms ease, visibility 180ms ease;
+    }
+
+    .csModifierDrawerClosed {
+        width: min(22rem, calc(100vw - 1.5rem));
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(0.5rem);
+    }
+
+    .csModifierDrawerOpen {
+        width: min(22rem, calc(100vw - 1.5rem));
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .csModifierDrawerInner {
+        width: 100%;
+        max-height: calc(100vh - 10rem);
+    }
+
     .csStatBar {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -975,11 +1299,11 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .commandBar {
+    .csCommandBar {
         grid-template-columns: 1fr;
     }
 
-    .commandBar code {
+    .csCommandBar code {
         white-space: pre-wrap;
     }
 }
@@ -1267,10 +1591,50 @@
     font-weight: 700;
 }
 
-.toggleRow input {
-    width: 1rem;
-    height: 1rem;
-    accent-color: #b991ff;
+.toggleRow input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    max-width: 15px;
+    max-height: 15px;
+    box-sizing: border-box;
+    padding: 0;
+    border: 2px solid rgba(185, 145, 255, 0.45);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.toggleRow input[type="checkbox"]:checked {
+    background: #b991ff;
+    border-color: #b991ff;
+}
+
+.toggleRow input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+}
+
+.toggleRow input[type="checkbox"]:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 
 .checkboxGrid {
@@ -1288,10 +1652,45 @@
     font-weight: 700;
 }
 
-.checkboxGrid input {
-    width: 1rem;
-    height: 1rem;
-    accent-color: #b991ff;
+.checkboxGrid input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    max-width: 15px;
+    max-height: 15px;
+    box-sizing: border-box;
+    padding: 0;
+    border: 2px solid rgba(185, 145, 255, 0.45);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.checkboxGrid input[type="checkbox"]:checked {
+    background: #b991ff;
+    border-color: #b991ff;
+}
+
+.checkboxGrid input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
 }
 
 .savedModifierList {
@@ -1311,6 +1710,46 @@
     background: rgba(6, 8, 18, 0.5);
     color: #d6ddef;
     font-weight: 700;
+}
+
+.savedModifierItem input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    max-width: 15px;
+    max-height: 15px;
+    box-sizing: border-box;
+    border: 2px solid rgba(185, 145, 255, 0.45);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.savedModifierItem input[type="checkbox"]:checked {
+    background: #b991ff;
+    border-color: #b991ff;
+}
+
+.savedModifierItem input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
 }
 
 .savedModifierItemActions {

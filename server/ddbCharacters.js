@@ -377,6 +377,7 @@ function normalizeDdbCharacter(rawCharacter, sourceUrl) {
     id: String(rawCharacter.id || ""),
     sourceUrl,
     syncedAt: new Date().toISOString(),
+    avatarUrl: typeof rawCharacter.decorations?.avatarUrl === "string" && rawCharacter.decorations.avatarUrl ? rawCharacter.decorations.avatarUrl : null,
     name: normalizeName(rawCharacter.name) || "D&D Beyond Character",
     ancestry: normalizeName(
       rawCharacter.race?.fullName ||

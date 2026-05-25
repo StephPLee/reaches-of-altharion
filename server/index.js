@@ -483,6 +483,35 @@ app.get("/health", async (_req, res) => {
 });
 
 app.post(
+  "/api/avrae/ddb-character/preview",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "D&D Beyond character link is required." });
+      return;
+    }
+
+    try {
+      const character = await fetchDdbCharacter(url);
+      res.json({ character });
+    } catch (ddbError) {
+      const statusCode = Number(ddbError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to preview D&D Beyond character:", ddbError);
+      }
+      res.status(statusCode).json({
+        error:
+          ddbError instanceof Error
+            ? ddbError.message
+            : "Failed to preview D&D Beyond character.",
+      });
+    }
+  },
+);
+
+app.post(
   "/api/avrae/ddb-character",
   requireTrustedOrigin,
   sessionRateLimiter,
