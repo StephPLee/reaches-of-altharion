@@ -4,6 +4,7 @@ import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
+import ToolsSidebarFrame from "../components/ToolsSidebarFrame";
 import styles from "./rewards-calculator.module.css";
 
 type RewardRow = {
@@ -908,6 +909,7 @@ export default function RewardsCalculatorPage(): ReactNode {
       description="Rewards of Altharion calculator"
     >
       <main className={styles.page}>
+        <ToolsSidebarFrame sidebarOffset="6.5rem">
         <div className={styles.shell}>
           <section className={styles.hero}>
             <Heading as="h1">Rewards Calculator</Heading>
@@ -1274,6 +1276,7 @@ export default function RewardsCalculatorPage(): ReactNode {
             </div>
           </section>
         </div>
+      </ToolsSidebarFrame>
       </main>
     </Layout>
   );

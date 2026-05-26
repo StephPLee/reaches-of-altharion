@@ -3,14 +3,19 @@
   gap: 1rem;
 }
 
+.category {
+  border: 1px solid rgba(190, 176, 138, 0.18);
+  border-radius: 0.8rem;
+  background: rgba(8, 9, 19, 0.22);
+}
+
 .controlsPanel,
 .editorPanel,
 .editorCategory,
-.editorEntry,
-.category {
-  border: 1px solid rgba(154, 180, 235, 0.2);
+.editorEntry {
+  border: 1px solid rgba(190, 176, 138, 0.18);
   border-radius: 0.8rem;
-  background: rgba(14, 20, 36, 0.72);
+  background: rgba(10, 11, 24, 0.78);
 }
 
 .controlsPanel,
@@ -64,9 +69,9 @@
 .input,
 .textarea {
   width: 100%;
-  border: 1px solid rgba(196, 215, 255, 0.2);
+  border: 1px solid rgba(190, 176, 138, 0.22);
   border-radius: 0.75rem;
-  background: rgba(10, 15, 33, 0.8);
+  background: rgba(8, 9, 19, 0.55);
   color: #ece2ff;
   font: inherit;
 }
@@ -86,8 +91,8 @@
 .input:focus,
 .textarea:focus {
   outline: none;
-  border-color: rgba(224, 232, 255, 0.34);
-  box-shadow: 0 0 0 1px rgba(224, 232, 255, 0.18);
+  border-color: rgba(190, 176, 138, 0.4);
+  box-shadow: 0 0 0 1px rgba(190, 176, 138, 0.15);
 }
 
 .controlButton,
@@ -105,14 +110,14 @@
 
 .controlButton,
 .secondaryButton {
-  border: 1px solid rgba(196, 215, 255, 0.18);
-  background: rgba(17, 26, 56, 0.52);
-  color: #edf1ff;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  background: rgba(12, 12, 24, 0.6);
+  color: #e2ddf5;
 }
 
 .primaryButton {
-  border: 1px solid rgba(202, 168, 255, 0.28);
-  background: rgba(24, 21, 52, 0.7);
+  border: 1px solid rgba(185, 145, 255, 0.32);
+  background: rgba(20, 16, 44, 0.75);
   color: #f0e5ff;
 }
 
@@ -152,7 +157,7 @@
 .entry {
   padding-top: 0.8rem;
   margin-top: 0.8rem;
-  border-top: 1px solid rgba(154, 180, 235, 0.16);
+  border-top: 1px solid rgba(190, 176, 138, 0.14);
 }
 
 .entryTitle {
@@ -171,13 +176,37 @@
 
 .answer table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid rgba(190, 176, 138, 0.2);
+  border-radius: 0.5rem;
 }
 
-.answer th,
+.answer th {
+  padding: 0.45rem 0.55rem;
+  background: rgba(20, 16, 40, 0.82);
+  color: rgba(210, 192, 145, 0.82);
+  font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-right: 1px solid rgba(190, 176, 138, 0.12);
+  border-bottom: 1px solid rgba(190, 176, 138, 0.12);
+}
+
 .answer td {
   padding: 0.45rem 0.55rem;
-  border: 1px solid rgba(196, 215, 255, 0.18);
+  border-right: 1px solid rgba(190, 176, 138, 0.1);
+  border-bottom: 1px solid rgba(190, 176, 138, 0.1);
+}
+
+.answer th:last-child,
+.answer td:last-child {
+  border-right: none;
+}
+
+.answer tr:last-child td {
+  border-bottom: none;
 }
 
 @media (max-width: 720px) {

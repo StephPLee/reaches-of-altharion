@@ -1,0 +1,2139 @@
+.page {
+    min-height: 100vh;
+    padding: 6.5rem 1.5rem 3rem;
+    background:
+        linear-gradient(rgba(8, 9, 19, 0.76), rgba(8, 9, 19, 0.88)),
+        url("/img/altharion-background.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.appPage {
+    min-height: 100vh;
+    padding: 0 0 3.8rem;
+    background:
+        linear-gradient(rgba(7, 8, 18, 0.72), rgba(7, 8, 18, 0.8)),
+        url("/img/altharion-background.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    color: #e8e1f1;
+}
+
+.appShell {
+    position: relative;
+    width: min(1240px, calc(100% - 2rem));
+    min-height: calc(100vh - 9rem);
+    margin: 0 auto;
+    border: 1px solid rgba(190, 176, 138, 0.1);
+    border-radius: 1.25rem;
+    background: rgba(8, 9, 19, 0.2);
+    overflow: visible;
+}
+
+.appHeader {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1fr) auto minmax(12rem, 1fr);
+    gap: 1.2rem;
+    align-items: start;
+    padding: 1.45rem 1.6rem 1rem;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.12);
+}
+
+.appTitle {
+    margin: 0;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.appSubtitle {
+    margin: 0.35rem 0 0;
+    color: rgba(232, 225, 241, 0.72);
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-style: italic;
+}
+
+.appTabs {
+    display: inline-flex;
+    gap: 0.3rem;
+    padding: 0.35rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 999px;
+    background: rgba(6, 8, 18, 0.72);
+}
+
+.appTab,
+.appTabActive {
+    min-height: 1.85rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(216, 208, 229, 0.72);
+    cursor: pointer;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 0.35rem 0.82rem;
+    text-transform: uppercase;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.appTabActive {
+    background: linear-gradient(135deg, rgba(196, 176, 134, 0.28), rgba(128, 109, 74, 0.22));
+    box-shadow: 0 0 0 1px rgba(212, 193, 148, 0.22) inset, 0 4px 10px rgba(0, 0, 0, 0.18);
+    color: #fff7e6;
+}
+
+.appUser {
+    justify-self: end;
+    color: rgba(232, 225, 241, 0.7);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.appShell input,
+.appShell select,
+.appShell textarea {
+    width: 100%;
+    min-height: 2.35rem;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 0.65rem;
+    background: rgba(5, 6, 14, 0.56);
+    color: #f4ecff;
+    font: inherit;
+    padding: 0.55rem 0.65rem;
+}
+
+.appShell input:focus,
+.appShell select:focus,
+.appShell textarea:focus {
+    border-color: rgba(202, 168, 255, 0.62);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(137, 104, 220, 0.14);
+}
+
+.appView {
+    padding: 1.45rem 1.6rem 1.7rem;
+}
+
+.viewHeading {
+    margin-bottom: 1.35rem;
+}
+
+.viewHeading h1 {
+    margin: 0;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 1.45rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.viewHeading p {
+    margin: 0.3rem 0 0;
+    color: rgba(232, 225, 241, 0.72);
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-style: italic;
+}
+
+.vaultGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 1rem;
+}
+
+.vaultCard,
+.addCharacterCard,
+.sheetPanel,
+.modEditor,
+.modLibraryItem {
+    border: 1px solid rgba(190, 176, 138, 0.2);
+    border-radius: 1rem;
+    background: rgba(15, 16, 32, 0.76);
+}
+
+.vaultCard {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.9rem;
+    align-content: start;
+}
+
+.vaultCardMain {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.85rem;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+}
+
+.vaultAvatar {
+    display: grid;
+    width: 4rem;
+    height: 4rem;
+    place-items: center;
+    border: 2px solid rgba(190, 176, 138, 0.5);
+    border-radius: 50%;
+    background: rgba(72, 54, 126, 0.42);
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.vaultAvatarImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+}
+
+.vaultCard strong,
+.characterStrip strong,
+.actionCard strong,
+.actionCardActive strong,
+.modLibraryItem strong {
+    display: block;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.vaultCard em,
+.characterStrip em {
+    display: block;
+    color: rgba(232, 225, 241, 0.72);
+    font-style: normal;
+}
+
+.vaultCard small,
+.actionCard span,
+.actionCardActive span,
+.modLibraryItem span {
+    color: rgba(232, 225, 241, 0.64);
+}
+
+.vaultCardActions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.vaultCardActions button,
+.csCommandBar button,
+.sideHeader button {
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 999px;
+    background: rgba(7, 8, 18, 0.56);
+    color: #e8e1f1;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 0.28rem 0.7rem;
+}
+
+.commandBar button {
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0.35rem 0.75rem;
+}
+
+.addCharacterCard {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.9rem;
+    border-style: dashed;
+    border-radius: 1rem;
+    align-content: center;
+}
+
+.addCharacterHeading {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.addCharacterHeading strong {
+    color: #f4ecff;
+    font-size: 1.3rem;
+}
+
+.addCharacterHeading span {
+    color: rgba(232, 225, 241, 0.78);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.addCharacterForm {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.addCharacterForm input {
+    flex: 1;
+    min-width: 0;
+}
+
+.rollGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.85fr) minmax(18.5rem, 0.7fr);
+    gap: 1.6rem;
+}
+
+.characterStrip {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.85rem;
+    align-items: center;
+    margin-bottom: 1.15rem;
+}
+
+.rollTabs {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    padding: 0.3rem;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 999px;
+    background: rgba(6, 8, 18, 0.62);
+}
+
+.rollTab,
+.rollTabActive {
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(232, 225, 241, 0.6);
+    cursor: pointer;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 0.35rem 0.85rem;
+    text-transform: uppercase;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.rollTabActive {
+    background: linear-gradient(135deg, rgba(196, 176, 134, 0.26), rgba(128, 109, 74, 0.2));
+    box-shadow: 0 0 0 1px rgba(212, 193, 148, 0.2) inset;
+    color: #fff7e6;
+}
+
+.actionGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(14rem, 1fr));
+    gap: 0.75rem 0.85rem;
+    align-content: start;
+    align-items: start;
+}
+
+.actionGroup {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+    align-items: start;
+}
+
+.actionGroup h3 {
+    margin: 0.4rem 0 0;
+    color: rgba(232, 225, 241, 0.74);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.actionCard,
+.actionCardActive {
+    align-self: start;
+    min-height: 3.75rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.85rem;
+    background: rgba(15, 16, 32, 0.72);
+    cursor: pointer;
+    padding: 0.8rem 0.9rem;
+    text-align: left;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.actionCardActive {
+    border-color: rgba(202, 168, 255, 0.56);
+    background: rgba(72, 54, 126, 0.44);
+}
+
+.rollSide {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+}
+
+.sideHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.sideHeader h2 {
+    margin: 0;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.sideHeader button {
+    min-height: 1.8rem;
+    padding: 0.28rem 0.55rem;
+}
+
+.sideModifierGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+}
+
+.sideModifier,
+.sideModifierActive {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.5rem;
+    background: rgba(15, 16, 32, 0.62);
+    color: #e8e1f1;
+    cursor: pointer;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.15;
+    padding: 0.32rem 0.45rem;
+    text-transform: uppercase;
+}
+
+.sideModifier label,
+.sideModifierActive label {
+    display: contents;
+    cursor: pointer;
+}
+
+.sideModifier input[type="checkbox"],
+.sideModifierActive input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    max-width: 15px;
+    max-height: 15px;
+    box-sizing: border-box;
+    padding: 0;
+    border: 2px solid rgba(185, 145, 255, 0.45);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.sideModifierActive input[type="checkbox"] {
+    background: #b991ff;
+    border-color: #b991ff;
+}
+
+.sideModifierActive input[type="checkbox"]::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+}
+
+.modifierParamSelect {
+    min-height: 1.85rem !important;
+    font-size: 0.78rem !important;
+    padding: 0.2rem 0.4rem !important;
+}
+
+.sideModifierActive {
+    border-color: rgba(202, 168, 255, 0.54);
+    background: rgba(72, 54, 126, 0.44);
+}
+
+.rollFields {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.rollFields label,
+.manualAction {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.rollFields span,
+.manualAction span {
+    color: rgba(232, 225, 241, 0.62);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.rollFields input,
+.rollFields select {
+    min-height: 2.15rem;
+    background: rgba(5, 6, 14, 0.34);
+    padding: 0.4rem 0.55rem;
+}
+
+.csCommandBar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.85rem;
+    background: rgba(5, 6, 14, 0.55);
+}
+
+.csCommandBar span {
+    color: rgba(232, 225, 241, 0.7);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+}
+
+.csCommandBar code {
+    color: #f4ecff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 0.45rem;
+    background: rgba(232, 225, 241, 0.06);
+    padding: 0.22rem 0.5rem;
+    font-size: 0.9em;
+}
+
+.csCommandBar button {
+    min-height: 1.85rem;
+    padding-inline: 0.85rem;
+}
+
+.sheetGrid,
+.modForgeGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem;
+}
+
+/* ── Character Sheet ─────────────────────────────────────────── */
+.csSheet {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 1rem;
+}
+
+.csCommandGrid {
+    display: block;
+    min-height: 32rem;
+}
+
+.csDrawerAnchor {
+    position: absolute;
+    top: 7.6rem;
+    right: 0;
+    width: 0;
+    height: 0;
+    z-index: 20;
+}
+
+.csDrawerStack {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    z-index: 10;
+}
+
+.csHandleColumn {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 0.5rem;
+}
+
+.csModifierDrawerHandle {
+    position: relative;
+    display: grid;
+    gap: 0.35rem;
+    place-items: center;
+    width: 2.45rem;
+    flex-shrink: 0;
+    min-height: 8.5rem;
+    border: 1px solid rgba(202, 168, 255, 0.32);
+    border-left: none;
+    border-radius: 0 0.85rem 0.85rem 0;
+    background: rgba(18, 17, 36, 0.96);
+    color: #f4ecff;
+    cursor: pointer;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    padding: 0.7rem 0.35rem;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+}
+
+.csTargetDrawerHandle {
+    position: relative;
+    display: grid;
+    gap: 0.35rem;
+    place-items: center;
+    width: 2.45rem;
+    flex-shrink: 0;
+    min-height: 6.5rem;
+    border: 1px solid rgba(190, 176, 138, 0.28);
+    border-left: none;
+    border-radius: 0 0.85rem 0.85rem 0;
+    background: rgba(18, 17, 36, 0.96);
+    color: #f4ecff;
+    cursor: pointer;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    padding: 0.7rem 0.35rem;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+}
+
+.csTargetDrawerHandle span {
+    position: absolute;
+    top: 0.3rem;
+    right: -0.5rem;
+    display: grid;
+    width: 1.35rem;
+    height: 1.35rem;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(140, 180, 110, 0.82);
+    color: #090a14;
+    font-size: 0.7rem;
+    writing-mode: horizontal-tb;
+}
+
+.csModifierDrawerHandle span {
+    position: absolute;
+    top: 0.3rem;
+    right: -0.5rem;
+    display: grid;
+    width: 1.35rem;
+    height: 1.35rem;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(185, 145, 255, 0.78);
+    color: #090a14;
+    font-size: 0.7rem;
+    writing-mode: horizontal-tb;
+}
+
+.csPanelAreaOpen,
+.csPanelAreaClosed {
+    overflow: hidden;
+    transition: width 280ms ease;
+}
+
+.csPanelAreaClosed {
+    width: 0;
+}
+
+.csPanelAreaOpen {
+    width: 18rem;
+}
+
+.csModifierDrawerInner,
+.csTargetDrawerInner {
+    width: 18rem;
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    overflow-y: auto;
+    height: min(48rem, calc(100vh - 6.5rem));
+    max-height: calc(100vh - 6.5rem);
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 0 0 1rem 0;
+    background:
+        radial-gradient(circle at 30% 0%, rgba(82, 57, 132, 0.18), transparent 24rem),
+        rgba(10, 11, 24, 0.98);
+    box-shadow: 0 20px 54px rgba(2, 4, 12, 0.42);
+    padding: 1.2rem;
+}
+
+.csTargetDrawerInner {
+    border-color: rgba(190, 176, 138, 0.22);
+    grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.csTargetInputRow {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.csTargetInput {
+    min-height: 10rem !important;
+    resize: vertical;
+    line-height: 1.45;
+}
+
+.csTargetHint {
+    margin: 0;
+    color: rgba(232, 225, 241, 0.42);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+.csCombatantList {
+    display: grid;
+    grid-row: 3;
+    gap: 0.28rem;
+    align-content: start;
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.csTargetInput,
+.csCombatantList {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(222, 231, 255, 0.62) rgba(7, 11, 38, 0.3);
+}
+
+.csTargetInput::-webkit-scrollbar,
+.csCombatantList::-webkit-scrollbar {
+    width: 0.7rem;
+}
+
+.csTargetInput::-webkit-scrollbar-track,
+.csCombatantList::-webkit-scrollbar-track {
+    background: rgba(7, 11, 38, 0.3);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(123, 145, 219, 0.08);
+}
+
+.csTargetInput::-webkit-scrollbar-thumb,
+.csCombatantList::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgba(222, 231, 255, 0.72) 0%,
+        rgba(160, 180, 240, 0.46) 100%
+    );
+    background-clip: padding-box;
+    box-shadow:
+        inset 0 0 0 1px rgba(245, 248, 255, 0.12),
+        0 4px 10px rgba(4, 7, 24, 0.16);
+}
+
+.csTargetInput::-webkit-scrollbar-thumb:hover,
+.csCombatantList::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        rgba(236, 242, 255, 0.82) 0%,
+        rgba(176, 196, 250, 0.56) 100%
+    );
+}
+
+.csCombatantItem,
+.csCombatantItemActive {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.5rem;
+    background: rgba(6, 8, 18, 0.38);
+    color: rgba(232, 225, 241, 0.82);
+    cursor: pointer;
+    font-size: 0.84rem;
+    padding: 0.35rem 0.55rem;
+    text-align: left;
+}
+
+.csCombatantItem:hover {
+    border-color: rgba(202, 168, 255, 0.32);
+    background: rgba(72, 54, 126, 0.28);
+}
+
+.csCombatantItemActive {
+    border-color: rgba(202, 168, 255, 0.5);
+    background: rgba(72, 54, 126, 0.42);
+    color: #f4ecff;
+}
+
+.selectedCommandSummary {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(202, 168, 255, 0.2);
+    border-radius: 0.75rem;
+    background: rgba(6, 8, 18, 0.42);
+}
+
+.selectedCommandSummary span {
+    color: rgba(232, 225, 241, 0.58);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.selectedCommandSummary strong {
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.82rem;
+    line-height: 1.25;
+}
+
+.csIdentity {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.14);
+}
+
+.csName {
+    margin: 0;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csSub {
+    margin: 0.2rem 0 0;
+    color: rgba(232, 225, 241, 0.7);
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-style: italic;
+}
+
+.csStatBar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.csStat {
+    display: grid;
+    place-items: center;
+    min-width: 5rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid rgba(190, 176, 138, 0.2);
+    border-radius: 0.85rem;
+    background: rgba(15, 16, 32, 0.76);
+    gap: 0.1rem;
+    text-align: center;
+}
+
+.csStatLabel {
+    color: rgba(232, 225, 241, 0.6);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csStatValue {
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 1.15rem;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+}
+
+.csStatNote {
+    color: rgba(232, 225, 241, 0.6);
+    font-size: 0.7rem;
+}
+
+.csBody {
+    display: grid;
+    grid-template-columns: minmax(9rem, 0.28fr) minmax(14rem, 0.5fr) minmax(12rem, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.csSection {
+    border: 1px solid rgba(190, 176, 138, 0.2);
+    border-radius: 1rem;
+    background: rgba(15, 16, 32, 0.76);
+    padding: 0.85rem;
+}
+
+.csSectionTitle {
+    margin: 0 0 0.65rem;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.csAbilityRow {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.csAbilityBox {
+    display: grid;
+    gap: 0.12rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 0.75rem;
+    background: rgba(6, 8, 18, 0.42);
+}
+
+.csAbilityLabel {
+    color: rgba(232, 225, 241, 0.6);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csAbilityBottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.3rem;
+}
+
+.csAbilityScore {
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.csAbilityMod {
+    display: grid;
+    place-items: center;
+    min-width: 1.7rem;
+    height: 1.7rem;
+    padding: 0 0.25rem;
+    border: 1px solid rgba(202, 168, 255, 0.28);
+    border-radius: 0.4rem;
+    background: rgba(72, 54, 126, 0.32);
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.csSaveList {
+    display: grid;
+    gap: 0.22rem;
+}
+
+.csSaveRow,
+.csSaveRowActive {
+    display: grid;
+    grid-template-columns: 0.8rem 2.3rem auto;
+    gap: 0.35rem;
+    align-items: center;
+    width: 100%;
+    border: 0;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0.15rem 0.2rem;
+    text-align: left;
+}
+
+.csSkillRow,
+.csSkillRowActive {
+    display: grid;
+    grid-template-columns: 0.8rem 2.3rem 1fr auto;
+    gap: 0.35rem;
+    align-items: center;
+    width: 100%;
+    border: 0;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0.15rem 0.2rem;
+    text-align: left;
+}
+
+.csSaveRow:hover,
+.csSaveRowActive,
+.csSkillRow:hover,
+.csSkillRowActive {
+    background: rgba(72, 54, 126, 0.28);
+}
+
+.csSaveAbility {
+    color: rgba(232, 225, 241, 0.52);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.csOverrideBtn {
+    align-self: center;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 999px;
+    background: rgba(7, 8, 18, 0.56);
+    color: rgba(232, 225, 241, 0.6);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.72rem;
+    line-height: 1;
+    padding: 0.3rem 0.65rem;
+}
+
+.csOverrideRow {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid rgba(202, 168, 255, 0.22);
+    border-radius: 0.85rem;
+    background: rgba(6, 8, 18, 0.52);
+}
+
+.csOverrideField {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.csOverrideField span {
+    color: rgba(232, 225, 241, 0.62);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csOverrideField input {
+    width: 5rem;
+    min-height: 2rem !important;
+    padding: 0.3rem 0.5rem !important;
+}
+
+.csTabBar {
+    display: flex;
+    gap: 0.3rem;
+    margin-bottom: 0.75rem;
+    padding: 0.28rem;
+    border-radius: 999px;
+    background: rgba(6, 8, 18, 0.52);
+    border: 1px solid rgba(190, 176, 138, 0.14);
+}
+
+.csTab,
+.csTabActive {
+    flex: 1;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(232, 225, 241, 0.6);
+    cursor: pointer;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0.7rem;
+    text-transform: uppercase;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.csTabActive {
+    background: linear-gradient(135deg, rgba(196, 176, 134, 0.28), rgba(128, 109, 74, 0.22));
+    box-shadow: 0 0 0 1px rgba(212, 193, 148, 0.2) inset;
+    color: #fff7e6;
+}
+
+.csProfDot,
+.csEmptyDot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    border: 1px solid rgba(202, 168, 255, 0.38);
+    flex-shrink: 0;
+}
+
+.csProfDot {
+    background: rgba(185, 145, 255, 0.88);
+    border-color: rgba(202, 168, 255, 0.76);
+}
+
+.csEmptyDot {
+    background: transparent;
+}
+
+.csSaveName {
+    color: rgba(232, 225, 241, 0.8);
+    font-size: 0.82rem;
+}
+
+.csSaveBonus {
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.csAttackList {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.csAttackRow,
+.csAttackRowActive {
+    display: grid;
+    gap: 0.12rem;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.38);
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.csAttackRow:hover,
+.csAttackRowActive {
+    border-color: rgba(202, 168, 255, 0.46);
+    background: rgba(72, 54, 126, 0.32);
+}
+
+.csAttackRow strong,
+.csAttackRowActive strong {
+    display: block;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.csAttackRow span,
+.csAttackRowActive span {
+    color: rgba(232, 225, 241, 0.62);
+    font-size: 0.78rem;
+}
+
+.csCustomAttackWrapper {
+    display: flex;
+    gap: 0.3rem;
+    align-items: stretch;
+}
+
+.csCustomAttackWrapper .csAttackRow,
+.csCustomAttackWrapper .csAttackRowActive {
+    flex: 1;
+    min-width: 0;
+}
+
+.csRemoveAttack {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    flex-shrink: 0;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.38);
+    color: rgba(232, 225, 241, 0.4);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.csRemoveAttack:hover {
+    border-color: rgba(255, 100, 100, 0.35);
+    background: rgba(70, 15, 15, 0.45);
+    color: #ffaaaa;
+}
+
+.csAddAttack {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px dashed rgba(190, 176, 138, 0.22);
+    border-radius: 0.65rem;
+    background: transparent;
+    color: rgba(232, 225, 241, 0.38);
+    cursor: pointer;
+    font-size: 0.8rem;
+    text-align: left;
+}
+
+.csAddAttack:hover {
+    border-color: rgba(190, 176, 138, 0.42);
+    color: rgba(232, 225, 241, 0.65);
+}
+
+.csCustomAttackForm {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.55rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.65rem;
+    background: rgba(8, 9, 19, 0.5);
+}
+
+.csCustomAttackInput {
+    width: 100%;
+    padding: 0.38rem 0.6rem;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 0.45rem;
+    background: rgba(6, 8, 18, 0.6);
+    color: #ece2ff;
+    font: inherit;
+    font-size: 0.84rem;
+    outline: none;
+}
+
+.csCustomAttackInput:focus {
+    border-color: rgba(190, 176, 138, 0.4);
+}
+
+.csCustomAttackFormActions {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+
+.csFormButton {
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    background: rgba(12, 12, 24, 0.6);
+    color: #e2ddf5;
+}
+
+.csFormButtonPrimary {
+    border-color: rgba(185, 145, 255, 0.35);
+    background: rgba(20, 16, 44, 0.8);
+    color: #f0e5ff;
+}
+
+.csSpellGroup {
+    margin-bottom: 0.7rem;
+}
+
+.csSpellGroup:last-child {
+    margin-bottom: 0;
+}
+
+.csSpellGroupTitle {
+    margin: 0 0 0.3rem;
+    color: rgba(232, 225, 241, 0.58);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csSpellList {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.csSpellRow,
+.csSpellRowActive {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    border: 0;
+    padding: 0.22rem 0.45rem;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: rgba(232, 225, 241, 0.82);
+    cursor: pointer;
+    font-size: 0.84rem;
+    text-align: left;
+}
+
+.csSpellRow:hover,
+.csSpellRowActive {
+    background: rgba(72, 54, 126, 0.28);
+}
+
+.csPreparedMark {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: rgba(185, 145, 255, 0.72);
+    flex-shrink: 0;
+}
+
+.sheetPanel,
+.modEditor,
+.modLibrary {
+    padding: 1rem;
+}
+
+.sheetPanel h2,
+.modLibrary h2 {
+    margin: 0 0 0.9rem;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.bigName {
+    color: #f4ecff;
+    font-size: 1.45rem;
+    font-weight: 800;
+}
+
+.abilityGrid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.abilityGrid div {
+    display: grid;
+    gap: 0.25rem;
+    place-items: center;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    padding: 0.7rem 0.35rem;
+}
+
+.modForgeGrid {
+    grid-template-columns: minmax(17rem, 0.45fr) minmax(0, 1fr);
+}
+
+.modLibrary {
+    display: grid;
+    align-content: start;
+    gap: 0.6rem;
+}
+
+.modLibraryItem {
+    padding: 0.8rem;
+}
+
+@media screen and (max-width: 996px) {
+    .appPage {
+        padding: 4.8rem 0 3rem;
+    }
+
+    .appShell {
+        width: 100%;
+        min-height: calc(100vh - 7.8rem);
+        border-left: 0;
+        border-right: 0;
+        border-radius: 0;
+    }
+
+    .appHeader,
+    .rollGrid,
+    .sheetGrid,
+    .modForgeGrid,
+    .csBody {
+        grid-template-columns: 1fr;
+    }
+
+    .csCommandGrid {
+        flex-direction: column;
+    }
+
+    .csDrawerAnchor {
+        position: static;
+    }
+
+    .csDrawerStack {
+        position: static;
+    }
+
+    .csModifierDrawerHandle {
+        position: fixed;
+        top: auto;
+        right: 0.7rem;
+        bottom: 5.2rem;
+        min-width: 2.7rem;
+        min-height: 2.7rem;
+        border: 1px solid rgba(202, 168, 255, 0.32);
+        border-radius: 999px;
+        padding: 0.55rem;
+        writing-mode: horizontal-tb;
+    }
+
+    .csTargetDrawerHandle {
+        position: fixed;
+        top: auto;
+        right: 0.7rem;
+        bottom: 8.7rem;
+        min-width: 2.7rem;
+        min-height: 2.7rem;
+        border: 1px solid rgba(190, 176, 138, 0.28);
+        border-top: 1px solid rgba(190, 176, 138, 0.28);
+        border-radius: 999px;
+        padding: 0.55rem;
+        writing-mode: horizontal-tb;
+    }
+
+    .csModifierDrawerHandle span {
+        position: absolute;
+        top: -0.35rem;
+        right: -0.35rem;
+    }
+
+    .csTargetDrawerHandle span {
+        position: absolute;
+        top: -0.35rem;
+        right: -0.35rem;
+    }
+
+    .csPanelAreaOpen,
+    .csPanelAreaClosed {
+        position: fixed;
+        top: auto;
+        right: 0.75rem;
+        bottom: 12rem;
+        width: min(22rem, calc(100vw - 1.5rem));
+        max-height: calc(100vh - 14rem);
+        overflow: visible;
+        transition: transform 180ms ease, visibility 180ms ease;
+    }
+
+    .csPanelAreaClosed {
+        width: min(22rem, calc(100vw - 1.5rem));
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(0.5rem);
+    }
+
+    .csPanelAreaOpen {
+        width: min(22rem, calc(100vw - 1.5rem));
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .csModifierDrawerInner,
+    .csTargetDrawerInner {
+        width: 100%;
+        max-height: calc(100vh - 14rem);
+    }
+
+    .csStatBar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .appTabs {
+        overflow-x: auto;
+    }
+
+    .appUser {
+        justify-self: start;
+    }
+
+    .actionGrid,
+    .sideModifierGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .abilityGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .csCommandBar {
+        grid-template-columns: 1fr;
+    }
+
+    .csCommandBar code {
+        white-space: pre-wrap;
+    }
+}
+
+
+.shell {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    padding: 1.4rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 1.25rem;
+    background: rgba(8, 10, 20, 0.58);
+    box-shadow: 0 24px 60px rgba(2, 4, 12, 0.44);
+    backdrop-filter: blur(6px);
+}
+
+.hero {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 1rem;
+    background: linear-gradient(
+        135deg,
+        rgba(22, 25, 43, 0.88),
+        rgba(14, 16, 28, 0.82)
+    );
+}
+
+.eyebrow {
+    margin: 0;
+    color: rgba(224, 232, 255, 0.72);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.hero h1 {
+    margin: 0;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-variant: normal;
+    color: #f4ecff;
+}
+
+.hero p {
+    margin: 0;
+    max-width: 58rem;
+    color: #d6ddef;
+    line-height: 1.7;
+}
+
+.contentGrid,
+.builderGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
+    gap: 1.3rem;
+    align-items: stretch;
+    margin-top: 1.3rem;
+}
+
+.builderGrid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(19rem, 0.65fr);
+    align-items: start;
+}
+
+.syncPanel,
+.modifierManagerPanel {
+    grid-column: 1 / -1;
+}
+
+.panel {
+    padding: 1.35rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 1rem;
+    background: rgba(13, 15, 29, 0.82);
+    box-shadow:
+        0 10px 22px rgba(2, 4, 12, 0.16),
+        0 1px 0 rgba(233, 221, 186, 0.06) inset;
+}
+
+.panel h2 {
+    margin-top: 0;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    color: #f0e8fb;
+}
+
+.panel p,
+.panel li {
+    color: #d4dbed;
+    line-height: 1.65;
+}
+
+.panel ul {
+    margin-bottom: 0;
+    padding-left: 1.2rem;
+}
+
+.status {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 2.1rem;
+    align-items: center;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid rgba(202, 168, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(24, 21, 52, 0.68);
+    color: #f0e5ff;
+    font-weight: 700;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.panelHeader h2 {
+    margin: 0;
+}
+
+.panelHeader span {
+    color: rgba(214, 221, 239, 0.72);
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.segmented {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+    padding: 0.35rem;
+    border: 1px solid rgba(202, 168, 255, 0.18);
+    border-radius: 0.85rem;
+    background: rgba(6, 8, 18, 0.62);
+}
+
+.segmented button,
+.copyButton,
+.primaryButton,
+.secondaryButton {
+    border: 1px solid rgba(202, 168, 255, 0.18);
+    border-radius: 0.65rem;
+    background: rgba(20, 23, 42, 0.76);
+    color: #f0e8fb;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.segmented button {
+    min-height: 2.5rem;
+    padding: 0.55rem 0.7rem;
+}
+
+.segmented button:hover,
+.copyButton:hover,
+.primaryButton:hover,
+.secondaryButton:hover,
+.segmentActive {
+    border-color: rgba(202, 168, 255, 0.48) !important;
+    background: rgba(72, 54, 126, 0.72) !important;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.inlineHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.inlineHeader h3 {
+    margin: 0;
+    color: #f0e8fb;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 1.45rem;
+}
+
+.inlineHeader span {
+    color: rgba(214, 221, 239, 0.7);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.modifierSection,
+.modifierEditor {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(190, 176, 138, 0.12);
+}
+
+.modifierSection {
+    margin-top: 1.15rem;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.modifierChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.modifierChip,
+.modifierChipActive {
+    min-height: 3rem;
+    border: 1px solid rgba(202, 168, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(20, 23, 42, 0.76);
+    color: #f0e8fb;
+    cursor: pointer;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: clamp(1.05rem, 1.9vw, 1.55rem);
+    font-weight: 700;
+    line-height: 1.1;
+    padding: 0.55rem 1.15rem;
+}
+
+.modifierChipActive {
+    border-color: rgba(202, 168, 255, 0.52);
+    background: rgba(72, 54, 126, 0.76);
+}
+
+.field {
+    display: grid;
+    gap: 0.38rem;
+    color: #d4dbed;
+    font-weight: 700;
+}
+
+.field span {
+    color: rgba(224, 232, 255, 0.78);
+    font-size: 0.86rem;
+    letter-spacing: 0.02em;
+}
+
+.field input,
+.field select {
+    width: 100%;
+    min-height: 2.7rem;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.72);
+    color: #f4ecff;
+    font: inherit;
+    padding: 0.65rem 0.75rem;
+}
+
+.field input:focus,
+.field select:focus {
+    border-color: rgba(202, 168, 255, 0.64);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(137, 104, 220, 0.18);
+}
+
+.toggleRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.2rem;
+    margin: 1rem 0;
+}
+
+.toggleRow label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #d6ddef;
+    font-weight: 700;
+}
+
+.toggleRow input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    max-width: 15px;
+    max-height: 15px;
+    box-sizing: border-box;
+    padding: 0;
+    border: 2px solid rgba(185, 145, 255, 0.45);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.toggleRow input[type="checkbox"]:checked {
+    background: #b991ff;
+    border-color: #b991ff;
+}
+
+.toggleRow input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+}
+
+.toggleRow input[type="checkbox"]:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.checkboxGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.1rem;
+    margin: 1rem 0;
+}
+
+.checkboxGrid label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: #d6ddef;
+    font-weight: 700;
+}
+
+.checkboxGrid input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    max-width: 15px;
+    max-height: 15px;
+    box-sizing: border-box;
+    padding: 0;
+    border: 2px solid rgba(185, 145, 255, 0.45);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.checkboxGrid input[type="checkbox"]:checked {
+    background: #b991ff;
+    border-color: #b991ff;
+}
+
+.checkboxGrid input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+}
+
+.savedModifierList {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.savedModifierItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.85rem;
+    background: rgba(6, 8, 18, 0.5);
+    color: #d6ddef;
+    font-weight: 700;
+}
+
+.savedModifierItem input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    max-width: 15px;
+    max-height: 15px;
+    box-sizing: border-box;
+    border: 2px solid rgba(185, 145, 255, 0.45);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    flex-shrink: 0;
+    align-self: center;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.savedModifierItem input[type="checkbox"]:checked {
+    background: #b991ff;
+    border-color: #b991ff;
+}
+
+.savedModifierItem input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+}
+
+.savedModifierItemActions {
+    display: flex;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+
+.modEditorActions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.copyButton,
+.primaryButton,
+.secondaryButton {
+    min-height: 2.35rem;
+    padding: 0.45rem 0.9rem;
+}
+
+.primaryButton {
+    align-self: end;
+    min-height: 2.7rem;
+    padding-inline: 1.2rem;
+}
+
+.primaryButton:disabled {
+    cursor: wait;
+    opacity: 0.68;
+}
+
+.secondaryButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.savedRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: end;
+    margin-bottom: 1rem;
+}
+
+.savedActions {
+    display: flex;
+    gap: 0.55rem;
+    align-items: center;
+}
+
+.syncRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: end;
+}
+
+.characterSummary {
+    display: grid;
+    gap: 0.18rem;
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 0.85rem;
+    background: rgba(6, 8, 18, 0.52);
+    color: #d6ddef;
+}
+
+.characterSummary strong {
+    color: #f4ecff;
+}
+
+.characterSummary span {
+    color: rgba(214, 221, 239, 0.82);
+}
+
+.errorText {
+    margin: 0.85rem 0 0;
+    color: #ffb4c1 !important;
+    font-weight: 700;
+}
+
+.loginPrompt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(202, 168, 255, 0.18);
+    border-radius: 1rem;
+    background: rgba(6, 8, 18, 0.52);
+}
+
+.loginPrompt p {
+    margin: 0;
+}
+
+.commandOutput {
+    min-height: 8rem;
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.85rem;
+    background: rgba(3, 5, 13, 0.82);
+    color: #e9ddff;
+    font-size: 0.98rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.helpText {
+    margin-bottom: 0;
+    color: rgba(214, 221, 239, 0.82);
+    font-size: 0.95rem;
+}
+
+@media screen and (max-width: 996px) {
+    .page {
+        padding: 5.6rem 1rem 2rem;
+        background-attachment: scroll;
+    }
+
+    .shell,
+    .hero,
+    .panel {
+        padding: 1rem;
+    }
+
+    .contentGrid,
+    .builderGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .formGrid,
+    .segmented {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .syncRow,
+    .savedRow {
+        grid-template-columns: 1fr;
+    }
+
+    .primaryButton,
+    .savedActions,
+    .secondaryButton {
+        width: 100%;
+    }
+
+    .loginPrompt {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .savedActions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media screen and (max-width: 520px) {
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .panelHeader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

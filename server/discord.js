@@ -156,10 +156,35 @@ function memberHasRole(member, requiredRoleId) {
   return Array.isArray(member?.roles) && member.roles.includes(requiredRoleId);
 }
 
+async function fetchDiscordMessage(channelId, messageId) {
+  const response = await fetch(
+    `${DISCORD_API_BASE_URL}/channels/${channelId}/messages/${messageId}`,
+    {
+      headers: {
+        Authorization: `Bot ${discordBotToken}`,
+      },
+    },
+  );
+
+  if (response.status === 403 || response.status === 404) {
+    const error = new Error("Message not found or the bot cannot access that channel.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to fetch Discord message: ${response.status} ${errorText}`);
+  }
+
+  return response.json();
+}
+
 module.exports = {
   buildAuthorizationUrl: buildAuthorizationUrlWithState,
   editChannelMessage,
   exchangeCodeForToken,
+  fetchDiscordMessage,
   fetchDiscordUser,
   fetchGuildMember,
   fetchGuildRoles,

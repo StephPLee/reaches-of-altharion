@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo *)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx tsc *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\({docusaurus: p.dependencies['@docusaurus/core'], classic: p.dependencies['@docusaurus/preset-classic']}, null, 2\\)\\)\")",
+      "Bash(npx docusaurus *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/avrae)",
+      "Bash(ls /c/Users/Steph/AppData/Local/Temp/claude/bundled-skills/2.1.146/870b074a15e8a1866e9d16579d459d59/run/examples/)",
+      "Bash(npx playwright *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('docusaurus-plugin-content-docs',{}\\).get\\('default',{}\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/c/Users/Steph/reaches-of-altharion/.docusaurus/globalData.json'\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(node -e \"const d=require\\('/c/Users/Steph/reaches-of-altharion/.docusaurus/globalData.json'\\); console.log\\(Object.keys\\(d\\)\\)\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('C:/Users/Steph/reaches-of-altharion/.docusaurus/globalData.json','utf8'\\)\\); console.log\\(JSON.stringify\\(Object.keys\\(d\\)\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(xargs grep -l \"margin-top\\\\|navbar\")",
+      "Bash(xargs grep -l \"docSidebarContainer\\\\|navbar-height\")",
+      "Bash(cd /tmp)",
+      "Bash(where chromium-cli *)",
+      "Bash(where chromium *)",
+      "Bash(where playwright *)",
+      "Bash(node_modules/.bin/playwright --version)",
+      "Bash(npx --yes playwright eval ' *)",
+      "Bash(ls \"C:/Users/Steph/node_modules/playwright\" 2>/dev/null | head -3; ls \"C:/Users/Steph/AppData/Roaming/npm/node_modules\" 2>/dev/null | grep playwright)",
+      "Bash(npx --package playwright node -e \"const p = require\\('playwright'\\); console.log\\(Object.keys\\(p\\)\\)\")",
+      "Bash(cat > *)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s \"http://localhost:3000/avrae\")"
+    ]
+  }
+}

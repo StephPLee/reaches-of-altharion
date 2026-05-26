@@ -3,6 +3,7 @@ import { useState } from "react";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 
+import ToolsSidebarFrame from "../components/ToolsSidebarFrame";
 import styles from "./rewards-calculator.module.css";
 
 type ConversionRow = {
@@ -261,6 +262,7 @@ export default function StellarCoinConversionPage(): ReactNode {
       description="Convert Stellar Coins into gold or experience rewards."
     >
       <main className={styles.page}>
+        <ToolsSidebarFrame sidebarOffset="6.5rem">
         <div className={styles.shell}>
           <section className={styles.hero}>
             <Heading as="h1">Stellar Coin Conversion</Heading>
@@ -668,6 +670,7 @@ export default function StellarCoinConversionPage(): ReactNode {
             )}
           </section>
         </div>
+      </ToolsSidebarFrame>
       </main>
     </Layout>
   );

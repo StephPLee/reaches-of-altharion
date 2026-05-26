@@ -36,6 +36,29 @@ const sidebars: SidebarsConfig = {
         "homebrew/spells",
       ],
     },
+    {
+      type: "category",
+      label: "Tools",
+      collapsible: true,
+      collapsed: false,
+      items: [
+        {
+          type: "link",
+          label: "Avrae Commands",
+          href: "/avrae",
+        },
+        {
+          type: "link",
+          label: "Rewards Calculator",
+          href: "/rewards-calculator",
+        },
+        {
+          type: "link",
+          label: "Stellar Coin Conversion",
+          href: "/stellar-coin-conversion",
+        },
+      ],
+    },
   ],
 };
 
