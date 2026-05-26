@@ -4,7 +4,6 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
-import DirectorySidebarIndex from "./DirectorySidebarIndex";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./SubclassesDirectory.module.css";
 
@@ -291,15 +290,6 @@ export default function SpeciesDirectory({
 
     return filterItems(entry.items);
   }, [entry, normalizedQuery]);
-  const sidebarItems = useMemo(
-    () =>
-      visibleItems.map((item) => ({
-        id: `item-${item.id}`,
-        label: item.label,
-      })),
-    [visibleItems],
-  );
-
   function resetItemForm() {
     setItemForm({ label: "", href: "" });
     setEditingItemId(null);
@@ -1055,7 +1045,6 @@ export default function SpeciesDirectory({
         <p className={styles.searchHint}>{searchHint}</p>
         <p className={styles.count}>Showing 1 section.</p>
       </div>
-      <DirectorySidebarIndex items={sidebarItems} />
 
       {loading ? (
         <p className={styles.status}>Loading {nounPlural}...</p>

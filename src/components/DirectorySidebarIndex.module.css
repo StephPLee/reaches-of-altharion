@@ -85,6 +85,10 @@
     .sidebar {
         display: block;
     }
+
+    :global(.theme-doc-markdown.has-directory-index) {
+        padding-right: 14.5rem;
+    }
 }
 
 @media (max-width: 996px) {

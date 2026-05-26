@@ -3,7 +3,6 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
-import DirectorySidebarIndex from "./DirectorySidebarIndex";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./BoonsDirectory.module.css";
 
@@ -404,15 +403,6 @@ export default function BoonsDirectory() {
       return haystack.includes(normalizedQuery);
     });
   }, [boons, normalizedQuery]);
-
-  const sidebarItems = useMemo(
-    () =>
-      visibleBoons.map((boon) => ({
-        id: `boon-${boon.slug}`,
-        label: boon.title,
-      })),
-    [visibleBoons],
-  );
 
   function isBoonCollapsed(boonId: number) {
     return collapsedBoons[boonId] ?? true;
@@ -905,7 +895,6 @@ export default function BoonsDirectory() {
           ? renderBoonComposer("Add Boon", "Clear", resetBoonForm)
           : null}
       </div>
-      <DirectorySidebarIndex items={sidebarItems} />
 
       {loading || authLoading ? <p>Loading boons...</p> : null}
       {error ? <p className={styles.error}>{error}</p> : null}

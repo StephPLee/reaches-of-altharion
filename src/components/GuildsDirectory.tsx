@@ -3,7 +3,6 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
-import DirectorySidebarIndex from "./DirectorySidebarIndex";
 import GuildEmblem from "./GuildEmblem";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./GuildsDirectory.module.css";
@@ -377,15 +376,6 @@ export default function GuildsDirectory() {
       return haystack.includes(normalizedQuery);
     });
   }, [guilds, normalizedQuery]);
-  const sidebarItems = useMemo(
-    () =>
-      visibleGuilds.map((guild) => ({
-        id: `guild-${guild.slug}`,
-        label: guild.name,
-      })),
-    [visibleGuilds],
-  );
-
   useEffect(() => {
     if (!guilds.length) {
       return;
@@ -1062,7 +1052,6 @@ export default function GuildsDirectory() {
           ? renderGuildComposer("Add Guild", "Clear", resetGuildForm)
           : null}
       </div>
-      <DirectorySidebarIndex items={sidebarItems} />
 
       {loading || authLoading ? <p>Loading guilds...</p> : null}
       {error ? <p className={styles.error}>{error}</p> : null}
