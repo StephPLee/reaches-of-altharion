@@ -4,7 +4,7 @@
 // DM mode). STORAGE_KEY keeps its historical "v1" suffix for backwards-compat
 // with existing installs; the inner `schemaVersion` field is the canonical version marker.
 
-import { DEFAULT_THEME_ID, DEFAULT_FONT_PRESET_ID } from './themes.js';
+import { DEFAULT_THEME_ID, DEFAULT_FONT_PRESET_ID } from "./themes.js";
 
 export const SCHEMA_VERSION = 3;
 
@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS = {
   dmMode: false,
 };
 
-const STORAGE_KEY = 'grimoire.state.v1';
+const STORAGE_KEY = "grimoire.state.v1";
 
 // 8-char base36 id, ~47 bits of entropy. Collision-safe for personal vault
 // sizes; not a real UUID because we don't need globally-unique identifiers.
@@ -36,7 +36,7 @@ export function makeMonsterId() {
 // Minimal monster shape for slice 1 — name + active + optional folderId.
 // Richer fields (AC, HP, abilities, actions, legendary actions, …) land in
 // later slices as the 5e.tools importer and DM Roll view land.
-export function makeBlankMonster(name = 'New Monster') {
+export function makeBlankMonster(name = "New Monster") {
   return {
     id: makeMonsterId(),
     name,
@@ -50,42 +50,42 @@ export function makeBlankMonster(name = 'New Monster') {
 // Each row is editable for prof + mod string, but the rows themselves are fixed.
 
 export const SAVE_DEFS = [
-  { id: 'str', name: 'STR' },
-  { id: 'dex', name: 'DEX' },
-  { id: 'con', name: 'CON' },
-  { id: 'int', name: 'INT' },
-  { id: 'wis', name: 'WIS' },
-  { id: 'cha', name: 'CHA' },
+  { id: "str", name: "STR" },
+  { id: "dex", name: "DEX" },
+  { id: "con", name: "CON" },
+  { id: "int", name: "INT" },
+  { id: "wis", name: "WIS" },
+  { id: "cha", name: "CHA" },
 ];
 
 export const SKILL_DEFS = [
-  { id: 'acrobatics',     name: 'Acrobatics',      ability: 'dex' },
-  { id: 'animalHandling', name: 'Animal Handling', ability: 'wis' },
-  { id: 'arcana',         name: 'Arcana',          ability: 'int' },
-  { id: 'athletics',      name: 'Athletics',       ability: 'str' },
-  { id: 'deception',      name: 'Deception',       ability: 'cha' },
-  { id: 'history',        name: 'History',         ability: 'int' },
-  { id: 'insight',        name: 'Insight',         ability: 'wis' },
-  { id: 'intimidation',   name: 'Intimidation',    ability: 'cha' },
-  { id: 'investigation',  name: 'Investigation',   ability: 'int' },
-  { id: 'medicine',       name: 'Medicine',        ability: 'wis' },
-  { id: 'nature',         name: 'Nature',          ability: 'int' },
-  { id: 'perception',     name: 'Perception',      ability: 'wis' },
-  { id: 'performance',    name: 'Performance',     ability: 'cha' },
-  { id: 'persuasion',     name: 'Persuasion',      ability: 'cha' },
-  { id: 'religion',       name: 'Religion',        ability: 'int' },
-  { id: 'sleightOfHand',  name: 'Sleight of Hand', ability: 'dex' },
-  { id: 'stealth',        name: 'Stealth',         ability: 'dex' },
-  { id: 'survival',       name: 'Survival',        ability: 'wis' },
+  { id: "acrobatics", name: "Acrobatics", ability: "dex" },
+  { id: "animalHandling", name: "Animal Handling", ability: "wis" },
+  { id: "arcana", name: "Arcana", ability: "int" },
+  { id: "athletics", name: "Athletics", ability: "str" },
+  { id: "deception", name: "Deception", ability: "cha" },
+  { id: "history", name: "History", ability: "int" },
+  { id: "insight", name: "Insight", ability: "wis" },
+  { id: "intimidation", name: "Intimidation", ability: "cha" },
+  { id: "investigation", name: "Investigation", ability: "int" },
+  { id: "medicine", name: "Medicine", ability: "wis" },
+  { id: "nature", name: "Nature", ability: "int" },
+  { id: "perception", name: "Perception", ability: "wis" },
+  { id: "performance", name: "Performance", ability: "cha" },
+  { id: "persuasion", name: "Persuasion", ability: "cha" },
+  { id: "religion", name: "Religion", ability: "int" },
+  { id: "sleightOfHand", name: "Sleight of Hand", ability: "dex" },
+  { id: "stealth", name: "Stealth", ability: "dex" },
+  { id: "survival", name: "Survival", ability: "wis" },
 ];
 
 // ─── Default character ─────────────────────────────────────────────────────
 
 export const DEFAULT_CHARACTER = {
-  name: 'Thora Stormhold',
-  pronouns: 'she/her',
-  ancestry: 'Half-Orc',
-  klass: 'Oath of Vengeance Paladin',
+  name: "Thora Stormhold",
+  pronouns: "she/her",
+  ancestry: "Half-Orc",
+  klass: "Oath of Vengeance Paladin",
   level: 5,
   hp: { current: 47, max: 47, temp: 0 },
   ac: 18,
@@ -94,29 +94,85 @@ export const DEFAULT_CHARACTER = {
   inspiration: false,
   abilities: { str: 18, dex: 12, con: 14, int: 8, wis: 10, cha: 16 },
   attacks: [
-    { id: 'longsword',    name: 'Longsword',      sub: '1d8+4 slash · versatile' },
-    { id: 'longsword2h',  name: 'Longsword (2H)', sub: '1d10+4 slash' },
-    { id: 'javelin',      name: 'Javelin',        sub: '1d6+4 pierce · 30/120 ft' },
-    { id: 'shield bash',  name: 'Shield Bash',    sub: 'unarmed · 1+4 bldg' },
+    { id: "longsword", name: "Longsword", sub: "1d8+4 slash · versatile" },
+    { id: "longsword2h", name: "Longsword (2H)", sub: "1d10+4 slash" },
+    { id: "javelin", name: "Javelin", sub: "1d6+4 pierce · 30/120 ft" },
+    { id: "shield bash", name: "Shield Bash", sub: "unarmed · 1+4 bldg" },
   ],
   spells: {
     0: [
-      { id: 'sacred flame', name: 'Sacred Flame', sub: 'DEX save · 1d8 radiant',         prepared: true },
-      { id: 'thaumaturgy',  name: 'Thaumaturgy',  sub: 'minor magic effect · 1 min',     prepared: true },
+      {
+        id: "sacred flame",
+        name: "Sacred Flame",
+        sub: "DEX save · 1d8 radiant",
+        prepared: true,
+      },
+      {
+        id: "thaumaturgy",
+        name: "Thaumaturgy",
+        sub: "minor magic effect · 1 min",
+        prepared: true,
+      },
     ],
     1: [
-      { id: 'cure wounds',     name: 'Cure Wounds',     sub: 'touch · 1d8+CHA hp',        prepared: true },
-      { id: 'bless',           name: 'Bless',           sub: '3 targets · +1d4 atk/save', prepared: true },
-      { id: 'shield of faith', name: 'Shield of Faith', sub: '+2 AC · 10 min · conc',     prepared: false },
-      { id: 'compelled duel',  name: 'Compelled Duel',  sub: 'WIS save · conc',           prepared: false },
+      {
+        id: "cure wounds",
+        name: "Cure Wounds",
+        sub: "touch · 1d8+CHA hp",
+        prepared: true,
+      },
+      {
+        id: "bless",
+        name: "Bless",
+        sub: "3 targets · +1d4 atk/save",
+        prepared: true,
+      },
+      {
+        id: "shield of faith",
+        name: "Shield of Faith",
+        sub: "+2 AC · 10 min · conc",
+        prepared: false,
+      },
+      {
+        id: "compelled duel",
+        name: "Compelled Duel",
+        sub: "WIS save · conc",
+        prepared: false,
+      },
     ],
     2: [
-      { id: 'lesser restoration', name: 'Lesser Restoration', sub: 'cure 1 condition',     prepared: false },
-      { id: 'branding smite',     name: 'Branding Smite',     sub: '+2d6 radiant · conc',  prepared: true },
-      { id: 'aid',                name: 'Aid',                sub: '+5 max & current HP · 8h', prepared: false },
-      { id: 'misty step',         name: 'Misty Step',         sub: '30 ft teleport · bonus', prepared: true },
+      {
+        id: "lesser restoration",
+        name: "Lesser Restoration",
+        sub: "cure 1 condition",
+        prepared: false,
+      },
+      {
+        id: "branding smite",
+        name: "Branding Smite",
+        sub: "+2d6 radiant · conc",
+        prepared: true,
+      },
+      {
+        id: "aid",
+        name: "Aid",
+        sub: "+5 max & current HP · 8h",
+        prepared: false,
+      },
+      {
+        id: "misty step",
+        name: "Misty Step",
+        sub: "30 ft teleport · bonus",
+        prepared: true,
+      },
     ],
-    3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [],
+    3: [],
+    4: [],
+    5: [],
+    6: [],
+    7: [],
+    8: [],
+    9: [],
   },
   // Cantrips (level 0) are at-will; no slot tracking.
   spellSlots: {
@@ -133,22 +189,22 @@ export const DEFAULT_CHARACTER = {
   // Saves and skills store overrides; lookups go through SAVE_DEFS / SKILL_DEFS.
   // Each entry: { mod: '+8', prof: true }. Missing entries => unproficient & blank mod.
   saves: {
-    str: { mod: '+6', prof: false },
-    dex: { mod: '+1', prof: false },
-    con: { mod: '+3', prof: false },
-    int: { mod: '−1', prof: false },
-    wis: { mod: '+5', prof: true },
-    cha: { mod: '+8', prof: true },
+    str: { mod: "+6", prof: false },
+    dex: { mod: "+1", prof: false },
+    con: { mod: "+3", prof: false },
+    int: { mod: "−1", prof: false },
+    wis: { mod: "+5", prof: true },
+    cha: { mod: "+8", prof: true },
   },
   skills: {
-    athletics:    { mod: '+6', prof: true },
-    intimidation: { mod: '+8', prof: true },
-    persuasion:   { mod: '+8', prof: true },
-    insight:      { mod: '+5', prof: true },
-    religion:     { mod: '+2', prof: false },
-    perception:   { mod: '+2', prof: false },
-    investigation:{ mod: '−1', prof: false },
-    history:      { mod: '+2', prof: false },
+    athletics: { mod: "+6", prof: true },
+    intimidation: { mod: "+8", prof: true },
+    persuasion: { mod: "+8", prof: true },
+    insight: { mod: "+5", prof: true },
+    religion: { mod: "+2", prof: false },
+    perception: { mod: "+2", prof: false },
+    investigation: { mod: "−1", prof: false },
+    history: { mod: "+2", prof: false },
   },
   // Per-character slices added in schema v2 (vault). Portrait is a base64
   // data URL (downscaled to ~256px); modifiers is the character's private
@@ -160,7 +216,7 @@ export const DEFAULT_CHARACTER = {
 // Factory for a fresh character with a unique id. `name` lets callers
 // pass a starter label (e.g. "New Character" for blank, the imported
 // name for PDF imports).
-export function makeBlankCharacter(name = 'New Character') {
+export function makeBlankCharacter(name = "New Character") {
   return {
     ...DEFAULT_CHARACTER,
     id: makeCharacterId(),
@@ -186,11 +242,19 @@ export function applyCharacterPatch(character, patch) {
   return {
     ...character,
     ...patch,
-    hp:         patch.hp         ? { ...character.hp,         ...patch.hp }         : character.hp,
-    abilities:  patch.abilities  ? { ...character.abilities,  ...patch.abilities }  : character.abilities,
-    saves:      patch.saves      ? { ...character.saves,      ...patch.saves }      : character.saves,
-    skills:     patch.skills     ? { ...character.skills,     ...patch.skills }     : character.skills,
-    spellSlots: patch.spellSlots ? { ...character.spellSlots, ...patch.spellSlots } : character.spellSlots,
+    hp: patch.hp ? { ...character.hp, ...patch.hp } : character.hp,
+    abilities: patch.abilities
+      ? { ...character.abilities, ...patch.abilities }
+      : character.abilities,
+    saves: patch.saves
+      ? { ...character.saves, ...patch.saves }
+      : character.saves,
+    skills: patch.skills
+      ? { ...character.skills, ...patch.skills }
+      : character.skills,
+    spellSlots: patch.spellSlots
+      ? { ...character.spellSlots, ...patch.spellSlots }
+      : character.spellSlots,
   };
 }
 
@@ -202,44 +266,70 @@ export function applyCharacterPatch(character, patch) {
 // a modifier global; modifiers themselves don't carry a `global` flag.
 
 export const DEFAULT_MODIFIERS = [
-  { id: 'adv', name: 'Advantage', sub: 'roll twice, take higher',
-    applies: ['attack', 'save', 'check'], excludes: ['dis'],
-    effects: [{ type: 'adv' }], params: [] },
-  { id: 'dis', name: 'Disadvantage', sub: 'roll twice, take lower',
-    applies: ['attack', 'save', 'check'], excludes: ['adv'],
-    effects: [{ type: 'dis' }], params: [] },
-  { id: 'bless', name: 'Bless',
-    sub: '+1d4 to attacks & saves · concentration',
-    applies: ['attack', 'save'], excludes: [],
+  {
+    id: "adv",
+    name: "Advantage",
+    sub: "roll twice, take higher",
+    applies: ["attack", "save", "check"],
+    excludes: ["dis"],
+    effects: [{ type: "adv" }],
+    params: [],
+  },
+  {
+    id: "dis",
+    name: "Disadvantage",
+    sub: "roll twice, take lower",
+    applies: ["attack", "save", "check"],
+    excludes: ["adv"],
+    effects: [{ type: "dis" }],
+    params: [],
+  },
+  {
+    id: "bless",
+    name: "Bless",
+    sub: "+1d4 to attacks & saves · concentration",
+    applies: ["attack", "save"],
+    excludes: [],
     effects: [
-      { type: 'bonus',  value: '1d4' },
-      { type: 'phrase', value: 'blessed by the divine' },
-    ], params: [] },
-  { id: 'inspire', name: 'Bardic Inspiration', sub: '+1d8 to one roll',
-    applies: ['attack', 'save', 'check'], excludes: [],
-    effects: [{ type: 'bonus', value: '1d8' }], params: [] },
+      { type: "bonus", value: "1d4" },
+      { type: "phrase", value: "blessed by the divine" },
+    ],
+    params: [],
+  },
+  {
+    id: "inspire",
+    name: "Bardic Inspiration",
+    sub: "+1d8 to one roll",
+    applies: ["attack", "save", "check"],
+    excludes: [],
+    effects: [{ type: "bonus", value: "1d8" }],
+    params: [],
+  },
 ];
 
-export const APPLIES_KINDS = ['attack', 'spell', 'save', 'check'];
+export const APPLIES_KINDS = ["attack", "spell", "save", "check"];
 
 export const EFFECT_LABELS = {
-  bonus: 'Bonus to hit', damage: 'Extra damage',
-  adv: 'Advantage', dis: 'Disadvantage',
-  phrase: 'Flavor phrase', raw: 'Raw arg',
+  bonus: "Bonus to hit",
+  damage: "Extra damage",
+  adv: "Advantage",
+  dis: "Disadvantage",
+  phrase: "Flavor phrase",
+  raw: "Raw arg",
 };
 export const EFFECT_PLACEHOLDERS = {
-  bonus: '1d4   or   2',
-  damage: '2d6 [fire]',
-  phrase: 'critical strike!',
-  raw: '-rr 2   or   -h',
+  bonus: "1d4   or   2",
+  damage: "2d6 [fire]",
+  phrase: "critical strike!",
+  raw: "-rr 2   or   -h",
 };
 export const EFFECT_HAS_VALUE = (t) =>
-  t === 'bonus' || t === 'damage' || t === 'phrase' || t === 'raw';
+  t === "bonus" || t === "damage" || t === "phrase" || t === "raw";
 
 // ─── Fresh-install initial state ──────────────────────────────────────────
 
 export function defaultVault() {
-  const seed = makeBlankCharacter('Default Character');
+  const seed = makeBlankCharacter("Default Character");
   return {
     characters: { [seed.id]: seed },
     activeCharacterId: seed.id,
@@ -273,7 +363,9 @@ function migrateV1ToV2(v1) {
     schemaVersion: 2,
     characters: { [character.id]: character },
     activeCharacterId: character.id,
-    globalModifiers: Array.isArray(v1.modifiers) ? v1.modifiers : DEFAULT_MODIFIERS,
+    globalModifiers: Array.isArray(v1.modifiers)
+      ? v1.modifiers
+      : DEFAULT_MODIFIERS,
     targets: v1.targets || [],
     folders: v1.folders || [],
     settings: { ...DEFAULT_SETTINGS, ...(v1.settings || {}) },
@@ -316,12 +408,15 @@ export function loadState() {
 
 export function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      schemaVersion: SCHEMA_VERSION,
-      ...state,
-    }));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: SCHEMA_VERSION,
+        ...state,
+      }),
+    );
   } catch (err) {
-    console.warn('grimoire: failed to persist state', err);
+    console.warn("grimoire: failed to persist state", err);
   }
 }
 
@@ -340,18 +435,22 @@ export function downloadExport(state) {
     ...state,
   };
   const json = JSON.stringify(payload, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
+  const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
   // Pick a filename slug. With one character, use its name (preserves the
   // old "grimoire-thora-stormhold-…" feel). With multiple, use "vault".
   const chars = Object.values(state.characters || {});
-  const slug = chars.length === 1
-    ? (chars[0].name || 'export').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'export'
-    : 'vault';
+  const slug =
+    chars.length === 1
+      ? (chars[0].name || "export")
+          .toLowerCase()
+          .replace(/[^a-z0-9-]+/g, "-")
+          .replace(/^-+|-+$/g, "") || "export"
+      : "vault";
   const date = new Date().toISOString().slice(0, 10);
 
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `grimoire-${slug}-${date}.json`;
   document.body.appendChild(a);
@@ -371,16 +470,16 @@ export function parseImport(text) {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('not valid JSON');
+    throw new Error("not valid JSON");
   }
-  if (typeof parsed !== 'object' || parsed === null) {
-    throw new Error('not a Grimoire export file');
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("not a Grimoire export file");
   }
 
   // v1 export validation — the migrator chain handles the rest.
   if (parsed.schemaVersion === 1) {
-    if (!parsed.character || typeof parsed.character !== 'object') {
-      throw new Error('v1 export is missing the character section');
+    if (!parsed.character || typeof parsed.character !== "object") {
+      throw new Error("v1 export is missing the character section");
     }
   }
 
@@ -390,14 +489,14 @@ export function parseImport(text) {
 
   if (migrated?.schemaVersion !== SCHEMA_VERSION) {
     throw new Error(
-      `incompatible schema version (file is v${parsed.schemaVersion ?? '?'}, app is v${SCHEMA_VERSION})`
+      `incompatible schema version (file is v${parsed.schemaVersion ?? "?"}, app is v${SCHEMA_VERSION})`,
     );
   }
 
   // Loose shape check — enough to reject unrelated JSON without being so
   // strict that future small additions to the payload would block import.
-  if (!migrated.characters || typeof migrated.characters !== 'object') {
-    throw new Error('export is missing the characters section');
+  if (!migrated.characters || typeof migrated.characters !== "object") {
+    throw new Error("export is missing the characters section");
   }
   return migrated;
 }

@@ -35,6 +35,7 @@ const { recordAuditEvent } = require("./audit");
 const {
   deleteSavedAvraeCharacter,
   listSavedAvraeCharacters,
+  updateAvraeCharacterOverrides,
   upsertSavedAvraeCharacter,
 } = require("./avraeCharacters");
 const {
@@ -113,6 +114,7 @@ const {
   buildAuthorizationUrl,
   editChannelMessage,
   exchangeCodeForToken,
+  fetchDiscordMessage,
   fetchDiscordUser,
   fetchGuildMember,
   fetchGuildRoles,
@@ -560,6 +562,41 @@ app.get(
   },
 );
 
+app.patch(
+  "/api/avrae/characters/:characterId/overrides",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const characterId = req.params.characterId;
+    if (typeof characterId !== "string" || !characterId.trim()) {
+      res.status(400).json({ error: "Invalid character id." });
+      return;
+    }
+    const { hpOverride, acOverride } = req.body ?? {};
+    const hpVal = hpOverride != null ? parseInt(hpOverride, 10) : null;
+    const acVal = acOverride != null ? parseInt(acOverride, 10) : null;
+    const patch = {};
+    if (hpOverride !== undefined) patch.hpOverride = !isNaN(hpVal) && hpVal > 0 ? hpVal : null;
+    if (acOverride !== undefined) patch.acOverride = !isNaN(acVal) && acVal > 0 ? acVal : null;
+    try {
+      const updated = await updateAvraeCharacterOverrides({
+        userId: req.memberUser.id,
+        characterId,
+        ...patch,
+      });
+      if (!updated) {
+        res.status(404).json({ error: "Character not found." });
+        return;
+      }
+      res.json({ character: updated });
+    } catch (err) {
+      console.error("Failed to update character overrides:", err);
+      res.status(500).json({ error: "Failed to save overrides." });
+    }
+  },
+);
+
 app.delete(
   "/api/avrae/characters/:characterId",
   requireTrustedOrigin,
@@ -587,6 +624,44 @@ app.delete(
     } catch (avraeError) {
       console.error("Failed to delete Avrae character:", avraeError);
       res.status(500).json({ error: "Failed to remove saved character." });
+    }
+  },
+);
+
+app.get(
+  "/api/avrae/discord-message",
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const url = typeof req.query.url === "string" ? req.query.url.trim() : "";
+    if (!url) {
+      res.status(400).json({ error: "Discord message URL is required." });
+      return;
+    }
+
+    const match = url.match(/\/channels\/\d+\/(\d+)\/(\d+)/);
+    if (!match) {
+      res.status(400).json({ error: "Invalid Discord message URL." });
+      return;
+    }
+
+    const [, channelId, messageId] = match;
+
+    try {
+      const message = await fetchDiscordMessage(channelId, messageId);
+      const embedTexts = (message.embeds || []).map((embed) => [
+        embed.title || "",
+        embed.description || "",
+        ...(embed.fields || []).map((f) => `${f.name}\n${f.value}`),
+      ].join("\n")).join("\n");
+      res.json({
+        content: [typeof message.content === "string" ? message.content : "", embedTexts].filter(Boolean).join("\n"),
+      });
+    } catch (discordError) {
+      const statusCode = Number(discordError.statusCode) || 500;
+      res.status(statusCode).json({
+        error: discordError instanceof Error ? discordError.message : "Failed to fetch Discord message.",
+      });
     }
   },
 );

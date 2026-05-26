@@ -42,7 +42,10 @@ async function upsertSavedAvraeCharacter({ userId, character }) {
     DO UPDATE SET
       source_url = EXCLUDED.source_url,
       name = EXCLUDED.name,
-      payload = EXCLUDED.payload,
+      payload = EXCLUDED.payload || jsonb_strip_nulls(jsonb_build_object(
+        'hpOverride', avrae_saved_characters.payload->'hpOverride',
+        'acOverride', avrae_saved_characters.payload->'acOverride'
+      )),
       synced_at = NOW(),
       updated_at = NOW()
     RETURNING id, ddb_character_id, source_url, name, payload, synced_at
@@ -56,6 +59,33 @@ async function upsertSavedAvraeCharacter({ userId, character }) {
     ],
   );
 
+  return mapRow(result.rows[0]);
+}
+
+async function updateAvraeCharacterOverrides({
+  userId,
+  characterId,
+  hpOverride,
+  acOverride,
+}) {
+  const overridesPatch = {};
+  if (hpOverride != null) overridesPatch.hpOverride = hpOverride;
+  if (acOverride != null) overridesPatch.acOverride = acOverride;
+
+  const result = await pool.query(
+    `
+    UPDATE avrae_saved_characters
+    SET
+      payload = payload || $3::jsonb,
+      updated_at = NOW()
+    WHERE user_id = $1
+      AND ddb_character_id = $2
+    RETURNING id, ddb_character_id, source_url, name, payload, synced_at
+    `,
+    [userId, characterId, JSON.stringify(overridesPatch)],
+  );
+
+  if (result.rowCount === 0) return null;
   return mapRow(result.rows[0]);
 }
 
@@ -75,6 +105,7 @@ async function deleteSavedAvraeCharacter({ userId, characterId }) {
 module.exports = {
   deleteSavedAvraeCharacter,
   listSavedAvraeCharacters,
+  updateAvraeCharacterOverrides,
   upsertSavedAvraeCharacter,
 };
 
