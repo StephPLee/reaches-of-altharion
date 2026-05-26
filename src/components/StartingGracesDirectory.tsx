@@ -3,7 +3,6 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
-import DirectorySidebarIndex from "./DirectorySidebarIndex";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./StartingGracesDirectory.module.css";
 
@@ -587,15 +586,6 @@ export default function StartingGracesDirectory() {
       return haystack.includes(normalizedQuery);
     });
   }, [graces, normalizedQuery]);
-  const sidebarItems = useMemo(
-    () =>
-      visibleGraces.map((grace) => ({
-        id: `grace-${grace.slug}`,
-        label: grace.title,
-      })),
-    [visibleGraces],
-  );
-
   function isGraceCollapsed(graceId: number) {
     return collapsedGraces[graceId] ?? true;
   }
@@ -1094,7 +1084,6 @@ export default function StartingGracesDirectory() {
           ? renderGraceComposer("Add Grace", "Clear", resetGraceForm)
           : null}
       </div>
-      <DirectorySidebarIndex items={sidebarItems} />
 
       {loading || authLoading ? <p>Loading starting graces...</p> : null}
       {error ? <p className={styles.error}>{error}</p> : null}

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import styles from "./DirectorySidebarIndex.module.css";
 
 type DirectorySidebarIndexItem = {
@@ -14,12 +15,21 @@ export default function DirectorySidebarIndex({
   title = "",
   items,
 }: DirectorySidebarIndexProps) {
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = ref.current?.closest(".theme-doc-markdown") as HTMLElement | null;
+    if (!el) return;
+    el.classList.add("has-directory-index");
+    return () => el.classList.remove("has-directory-index");
+  }, []);
+
   if (!items.length) {
     return null;
   }
 
   return (
-    <aside className={styles.sidebar}>
+    <aside ref={ref} className={styles.sidebar}>
       <div className={styles.panel}>
         {title ? <p className={styles.title}>{title}</p> : null}
         <nav aria-label={title}>

@@ -27,7 +27,8 @@
       "Bash(npx --package playwright node -e \"const p = require\\('playwright'\\); console.log\\(Object.keys\\(p\\)\\)\")",
       "Bash(cat > *)",
       "WebFetch(domain:localhost)",
-      "Bash(curl -s \"http://localhost:3000/avrae\")"
+      "Bash(curl -s \"http://localhost:3000/avrae\")",
+      "Bash(xargs grep -l \"docItemCol\\\\|col--\")"
     ]
   }
 }

@@ -4,7 +4,6 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
-import DirectorySidebarIndex from "./DirectorySidebarIndex";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./SubclassesDirectory.module.css";
 
@@ -340,14 +339,6 @@ export default function SubclassesDirectory({
   const visibleSections = useMemo(
     () => sections.filter((section) => matchesQuery(section, normalizedQuery)),
     [normalizedQuery, sections],
-  );
-  const sidebarItems = useMemo(
-    () =>
-      visibleSections.map((section) => ({
-        id: `section-${section.slug}`,
-        label: section.title,
-      })),
-    [visibleSections],
   );
   const isStaff = Boolean(currentUser?.isStaff);
 
@@ -783,7 +774,6 @@ export default function SubclassesDirectory({
           Showing {visibleSections.length} of {sections.length} {nounPlural}.
         </p>
       </div>
-      <DirectorySidebarIndex items={sidebarItems} />
 
       {loading ? (
         <p className={styles.status}>Loading {nounPlural}...</p>
