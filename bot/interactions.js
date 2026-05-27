@@ -14,10 +14,7 @@ const {
   recordBossHpEntry,
   startBossFight,
 } = require("./services/bosses");
-const {
-  buildFaqEmbeds,
-  listFaqEntries,
-} = require("./services/faq");
+const { buildFaqEmbeds, listFaqEntries } = require("./services/faq");
 const {
   awardScToCharacters,
   approveWestMarchesCharacter,
@@ -76,10 +73,7 @@ const {
   resumeRpSession,
   startRpSession,
 } = require("./services/rpSessions");
-const {
-  rollFiveStatLines,
-  saveStatRollSets,
-} = require("./services/statRolls");
+const { rollFiveStatLines, saveStatRollSets } = require("./services/statRolls");
 
 function getBossDamageQuestMultiplier(questLevel) {
   if (questLevel >= 18 && questLevel <= 20) {
@@ -110,7 +104,6 @@ function getRpContext(interaction) {
   };
 }
 
-
 function buildRpStatusText(session) {
   if (!session) {
     return "No RP timer is active in this channel or thread.";
@@ -136,7 +129,8 @@ async function handleInteraction(interaction) {
       const ownerId = interaction.customId.slice("approve-category:".length);
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/approve` command so the menu belongs to you.",
+          content:
+            "Use your own `/approve` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -168,7 +162,7 @@ async function handleInteraction(interaction) {
               ? "Choose the spell level."
               : category === "subclasses"
                 ? "Choose the class this subclass belongs to."
-              : "Choose the item rarity.",
+                : "Choose the item rarity.",
           components: [buildApproveDetailRow(interaction.user.id, category)],
         });
         return;
@@ -184,7 +178,8 @@ async function handleInteraction(interaction) {
       const [, ownerId, category] = interaction.customId.split(":");
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/approve` command so the menu belongs to you.",
+          content:
+            "Use your own `/approve` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -217,7 +212,8 @@ async function handleInteraction(interaction) {
       const ownerId = interaction.customId.slice("sc-character:".length);
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/sc-character` command so the menu belongs to you.",
+          content:
+            "Use your own `/sc-character` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -258,8 +254,7 @@ async function handleInteraction(interaction) {
         });
 
         await interaction.editReply({
-          content:
-            `Set **${characterName}** as your default character for automatic SC-only rewards.`,
+          content: `Set **${characterName}** as your default character for automatic SC-only rewards.`,
           components: [],
         });
       } catch (error) {
@@ -283,10 +278,13 @@ async function handleInteraction(interaction) {
     }
 
     if (interaction.customId.startsWith("join-guild-character:")) {
-      const ownerId = interaction.customId.slice("join-guild-character:".length);
+      const ownerId = interaction.customId.slice(
+        "join-guild-character:".length,
+      );
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/join-guild` command so the menu belongs to you.",
+          content:
+            "Use your own `/join-guild` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -374,7 +372,8 @@ async function handleInteraction(interaction) {
       const parsedCustomId = parseJoinGuildGuildCustomId(interaction.customId);
       if (!parsedCustomId || parsedCustomId.ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/join-guild` command so the menu belongs to you.",
+          content:
+            "Use your own `/join-guild` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -444,10 +443,7 @@ async function handleInteraction(interaction) {
 
         await updateGuildRosterMessages(
           interaction,
-          [
-            previousMembership?.guildId,
-            membership.guildId,
-          ].filter(Boolean),
+          [previousMembership?.guildId, membership.guildId].filter(Boolean),
         );
 
         await interaction.editReply({
@@ -486,10 +482,13 @@ async function handleInteraction(interaction) {
     }
 
     if (interaction.customId.startsWith("leave-guild-character:")) {
-      const ownerId = interaction.customId.slice("leave-guild-character:".length);
+      const ownerId = interaction.customId.slice(
+        "leave-guild-character:".length,
+      );
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/leave-guild` command so the menu belongs to you.",
+          content:
+            "Use your own `/leave-guild` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -552,7 +551,10 @@ async function handleInteraction(interaction) {
           });
         }
       } catch (error) {
-        console.error("Failed to process /leave-guild character select:", error);
+        console.error(
+          "Failed to process /leave-guild character select:",
+          error,
+        );
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply({
             content:
@@ -578,7 +580,8 @@ async function handleInteraction(interaction) {
     const ownerId = interaction.customId.slice("magicitem:".length);
     if (ownerId !== interaction.user.id) {
       await interaction.reply({
-        content: "Use your own `/magicitem` command so the menu belongs to you.",
+        content:
+          "Use your own `/magicitem` command so the menu belongs to you.",
         ephemeral: true,
       });
       return;
@@ -601,8 +604,7 @@ async function handleInteraction(interaction) {
       const item = await getRandomMagicItem(selectedRarity);
       if (!item) {
         await interaction.update({
-          content:
-            `No published magic items are available for **${rarity.label}** yet.`,
+          content: `No published magic items are available for **${rarity.label}** yet.`,
           components: [
             buildMagicItemRarityRow(interaction.user.id, selectedRarity),
           ],
@@ -611,8 +613,7 @@ async function handleInteraction(interaction) {
       }
 
       await interaction.update({
-        content:
-          `**${rarity.label} Magic Item:** ${item.item_label}\nUse the menu to roll again.`,
+        content: `**${rarity.label} Magic Item:** ${item.item_label}\nUse the menu to roll again.`,
         components: [
           buildMagicItemRarityRow(interaction.user.id, selectedRarity),
         ],
@@ -732,7 +733,7 @@ async function handleInteraction(interaction) {
           ? "That URL is not valid. Please run `/approve` again with a full URL."
           : error.message === "invalid_markdown_homebrew"
             ? "The name and markdown text are required. Please run `/approve` again with both fields filled in."
-          : "Something went wrong while approving that homebrew. Please try again.";
+            : "Something went wrong while approving that homebrew. Please try again.";
 
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(message);
@@ -800,7 +801,9 @@ async function handleInteraction(interaction) {
 
       const visibleCharacters = characters.slice(0, 25);
       const currentCharacter = preference
-        ? characters.find((character) => character.id === preference.characterId)
+        ? characters.find(
+            (character) => character.id === preference.characterId,
+          )
         : null;
       const overflowText =
         characters.length > visibleCharacters.length
@@ -811,8 +814,7 @@ async function handleInteraction(interaction) {
         : "";
 
       await interaction.editReply({
-        content:
-          `Choose the character that should receive automatic SC-only rewards.${currentText}${overflowText}`,
+        content: `Choose the character that should receive automatic SC-only rewards.${currentText}${overflowText}`,
         components: [
           buildScRewardCharacterRow(
             interaction.user.id,
@@ -899,7 +901,8 @@ async function handleInteraction(interaction) {
         );
       } else {
         await interaction.reply({
-          content: "Something went wrong while loading the FAQ. Please try again.",
+          content:
+            "Something went wrong while loading the FAQ. Please try again.",
           ephemeral: true,
         });
       }
@@ -1062,15 +1065,15 @@ async function handleInteraction(interaction) {
           ? "I could not find a thread ID in the thread option."
           : error.message === "not_thread"
             ? "That thread option did not resolve to a Discord thread."
-          : error.message === "invalid_message"
-            ? "I could not find a message ID in the message option."
-          : error.message === "missing_message_channel"
-            ? "Use a Discord message link, or run the command in the same channel as the submission message."
-          : error.message === "message_channel_unavailable"
-            ? "I could not access the submission message channel."
-          : error.message === "missing_sc_currency_id"
-            ? "WEST_MARCHES_SC_CURRENCY_ID is not configured, so I cannot award SC automatically."
-          : "Something went wrong while gathering homebrew discussion participants. Check that I can view the thread, the submission channel, message history, and reactions.";
+            : error.message === "invalid_message"
+              ? "I could not find a message ID in the message option."
+              : error.message === "missing_message_channel"
+                ? "Use a Discord message link, or run the command in the same channel as the submission message."
+                : error.message === "message_channel_unavailable"
+                  ? "I could not access the submission message channel."
+                  : error.message === "missing_sc_currency_id"
+                    ? "WEST_MARCHES_SC_CURRENCY_ID is not configured, so I cannot award SC automatically."
+                    : "Something went wrong while gathering homebrew discussion participants. Check that I can view the thread, the submission channel, message history, and reactions.";
 
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(message);
@@ -1421,7 +1424,8 @@ async function handleInteraction(interaction) {
 
     if (trackingMode !== "countup_unbounded" && maxHp === null) {
       await interaction.reply({
-        content: "Max HP is required unless this is a count-up tracker with target set to none.",
+        content:
+          "Max HP is required unless this is a count-up tracker with target set to none.",
         ephemeral: true,
       });
       return;
@@ -1429,7 +1433,12 @@ async function handleInteraction(interaction) {
 
     try {
       await interaction.deferReply({ ephemeral: true });
-      const boss = await startBossFight({ name, maxHp, imageUrl, trackingMode });
+      const boss = await startBossFight({
+        name,
+        maxHp,
+        imageUrl,
+        trackingMode,
+      });
       const status = await postOrRefreshBossStatus(interaction, boss);
       const startedValue =
         boss.trackingMode === "countup_unbounded"
@@ -1550,9 +1559,12 @@ async function handleInteraction(interaction) {
 
       await postOrRefreshBossStatus(interaction, boss);
       const isCountUpBoss =
-        boss.trackingMode === "countup" || boss.trackingMode === "countup_unbounded";
+        boss.trackingMode === "countup" ||
+        boss.trackingMode === "countup_unbounded";
       const targetText =
-        boss.trackingMode === "countup_unbounded" ? "∞" : formatBossHp(boss.maxHp);
+        boss.trackingMode === "countup_unbounded"
+          ? "∞"
+          : formatBossHp(boss.maxHp);
       const updateMessage = isCountUpBoss
         ? isHeal
           ? `Removed ${formatBossHp(amount)} progress from **${boss.name}**. Progress: ${formatBossHp(boss.currentHp)} / ${targetText}.`
@@ -1624,7 +1636,9 @@ async function handleInteraction(interaction) {
       }
 
       const entries = await listBossLogEntries(boss.id);
-      await interaction.editReply({ embeds: [buildBossLogEmbed(boss, entries)] });
+      await interaction.editReply({
+        embeds: [buildBossLogEmbed(boss, entries)],
+      });
     } catch (error) {
       console.error("Failed to process /boss-log:", error);
       if (interaction.deferred || interaction.replied) {
@@ -1710,8 +1724,7 @@ async function handleInteraction(interaction) {
             500,
           ),
         });
-        approverRewardText =
-          `\nAwarded **2 SC** to **${approverRewardCharacter.characterName}** for the approval.`;
+        approverRewardText = `\nAwarded **2 SC** to **${approverRewardCharacter.characterName}** for the approval.`;
       } else {
         approverRewardText = config.westMarchesScCurrencyId
           ? "\nI could not find an active character for the approver, so no approval SC was awarded."
@@ -1722,7 +1735,9 @@ async function handleInteraction(interaction) {
         ? `<#${config.beginnerRoleChannelId}>`
         : "Channels & Roles";
       const approvalConfirmed =
-        approved?.isApproved === true ? "has been approved" : "was submitted for approval";
+        approved?.isApproved === true
+          ? "has been approved"
+          : "was submitted for approval";
 
       await interaction.editReply({
         content:
@@ -1768,7 +1783,6 @@ async function handleInteraction(interaction) {
         ...lines,
         "",
         `Rolled by ${interaction.user}`,
-        `Claim at ${config.publicSiteUrl}/stat-rolls`,
       ].join("\n");
 
       await interaction.editReply({ content });
@@ -1784,7 +1798,9 @@ async function handleInteraction(interaction) {
     } catch (error) {
       console.error("Failed to process /rollstats:", error);
       if (interaction.deferred || interaction.replied) {
-        await interaction.editReply("Something went wrong while rolling stat lines. Please try again.");
+        await interaction.editReply(
+          "Something went wrong while rolling stat lines. Please try again.",
+        );
       }
     }
     return;
