@@ -262,6 +262,10 @@ const config: Config = {
               to: "/stellar-coin-conversion",
               label: "Stellar Coin Conversion",
             },
+            {
+              to: "/stat-rolls",
+              label: "Stat Rolls",
+            },
           ],
         },
         {

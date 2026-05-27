@@ -45,6 +45,10 @@ const {
   normalizeModifierPayload,
   updateSavedAvraeModifier,
 } = require("./avraeModifiers");
+const {
+  claimStatRollSet,
+  listUnclaimedStatRollSets,
+} = require("./statRolls");
 const { pool } = require("./db");
 const {
   createCalendarEvent,
@@ -767,6 +771,48 @@ app.delete(
     } catch (avraeError) {
       console.error("Failed to delete Avrae modifier:", avraeError);
       res.status(500).json({ error: "Failed to delete modifier." });
+    }
+  },
+);
+
+app.get(
+  "/api/stat-rolls",
+  sessionRateLimiter,
+  async (req, res) => {
+    try {
+      const statRolls = await listUnclaimedStatRollSets();
+      res.json({ statRolls });
+    } catch (err) {
+      console.error("Failed to list stat roll sets:", err);
+      res.status(500).json({ error: "Failed to load stat rolls." });
+    }
+  },
+);
+
+app.post(
+  "/api/stat-rolls/:id/claim",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({ error: "Invalid stat roll id." });
+      return;
+    }
+    try {
+      const claimed = await claimStatRollSet({
+        id,
+        discordUserId: req.memberUser.discordId,
+      });
+      if (!claimed) {
+        res.status(409).json({ error: "Stat roll not found or already claimed." });
+        return;
+      }
+      res.json({ statRoll: claimed });
+    } catch (err) {
+      console.error("Failed to claim stat roll set:", err);
+      res.status(500).json({ error: "Failed to claim stat roll." });
     }
   },
 );
