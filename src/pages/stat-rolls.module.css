@@ -1,41 +1,28 @@
-.appPage {
-    min-height: 100vh;
+.page {
     padding: 0 0 3.8rem;
-    background:
-        linear-gradient(rgba(7, 8, 18, 0.72), rgba(7, 8, 18, 0.8)),
-        url("/img/altharion-background.png");
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    color: #e8e1f1;
 }
 
-.appShell {
+.shell {
     position: relative;
     width: min(860px, calc(100% - 2rem));
     margin: 0 auto;
     border: 1px solid rgba(190, 176, 138, 0.1);
     border-radius: 1.25rem;
-    background: rgba(8, 9, 19, 0.2);
+    background: rgba(8, 9, 19, 0.48);
+    padding: 1.45rem 1.6rem 1.7rem;
+    color: #e8e1f1;
 }
 
-.appHeader {
-    padding: 1.45rem 1.6rem 1rem;
+.heading {
+    margin: 0 0 1rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid rgba(190, 176, 138, 0.12);
-}
-
-.appTitle {
-    margin: 0;
     color: #f4ecff;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 1.45rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-}
-
-.appView {
-    padding: 1.45rem 1.6rem 1.7rem;
 }
 
 .intro {
@@ -47,8 +34,8 @@
     max-width: 62ch;
 }
 
-/* Login prompt */
-.loginPrompt {
+/* Login banner */
+.loginBanner {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -60,15 +47,15 @@
     background: rgba(6, 8, 18, 0.52);
 }
 
-.loginPrompt p {
+.loginBanner p {
     margin: 0;
     color: rgba(232, 225, 241, 0.72);
     font-size: 0.88rem;
 }
 
 /* Buttons */
-.primaryButton,
-.secondaryButton {
+.loginButton,
+.claimButton {
     border: 1px solid rgba(202, 168, 255, 0.18);
     border-radius: 0.65rem;
     background: rgba(20, 23, 42, 0.76);
@@ -79,24 +66,27 @@
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    min-height: 2.35rem;
     padding: 0.45rem 0.9rem;
     transition: background 140ms ease, border-color 140ms ease;
 }
 
-.primaryButton {
+.loginButton {
     min-height: 2.7rem;
     padding-inline: 1.2rem;
 }
 
-.primaryButton:hover,
-.secondaryButton:hover {
+.claimButton {
+    min-height: 2.35rem;
+}
+
+.loginButton:hover,
+.claimButton:hover {
     border-color: rgba(202, 168, 255, 0.48);
     background: rgba(72, 54, 126, 0.72);
 }
 
-.primaryButton:disabled,
-.secondaryButton:disabled {
+.loginButton:disabled,
+.claimButton:disabled {
     cursor: not-allowed;
     opacity: 0.55;
 }
@@ -192,7 +182,7 @@
     margin: 0;
 }
 
-.errorText {
+.error {
     margin: 0 0 0.85rem;
     color: #ffb4c1;
     font-weight: 700;
