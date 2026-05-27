@@ -265,6 +265,11 @@ const COMMAND_DEFINITIONS = [
     description: "Show the frequently asked questions.",
     help: "Show the site-backed frequently asked questions.",
   },
+  {
+    name: "rollstats",
+    description: "Roll 5 valid stat lines and post them to the stat roll repository.",
+    help: "Roll 5 valid stat lines (80–84 total, ≥2 over 12, ≥1 over 15, ≥1 under 10) and save them to the site.",
+  },
 ];
 
 const commands = COMMAND_DEFINITIONS.map((definition) => {

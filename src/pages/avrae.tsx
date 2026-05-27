@@ -313,9 +313,25 @@ export default function AvraeCommandsPage(): ReactNode {
   const [combatantFetchError, setCombatantFetchError] = useState("");
 
   useEffect(() => {
-    window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, []);
+
+  function loadGuestCharacters(preferredId?: string): void {
+    try {
+      const storedChars = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
+      const storedOverrides = JSON.parse(window.localStorage.getItem(OVERRIDES_STORAGE_KEY) ?? "{}");
+      const guestChars: SyncedDdbCharacter[] = (Array.isArray(storedChars) ? storedChars : []).map(
+        (c: SyncedDdbCharacter) => storedOverrides[c.id] ? { ...c, ...storedOverrides[c.id] } : c,
+      );
+      setSavedCharacters(guestChars);
+      if (guestChars.length) {
+        const selected = guestChars.find((c) => c.id === preferredId) || guestChars[0];
+        applyCharacterToBuilder(selected);
+      }
+    } catch {
+      setSavedCharacters([]);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -329,7 +345,7 @@ export default function AvraeCommandsPage(): ReactNode {
         if (!meResponse.ok) {
           if (!cancelled) {
             setUser(null);
-            setSavedCharacters([]);
+            loadGuestCharacters(selectedCharacterId);
             setSavedModifiers([]);
             setAuthLoading(false);
           }
@@ -341,7 +357,7 @@ export default function AvraeCommandsPage(): ReactNode {
         if (!nextUser) {
           if (!cancelled) {
             setUser(null);
-            setSavedCharacters([]);
+            loadGuestCharacters(selectedCharacterId);
             setSavedModifiers([]);
             setAuthLoading(false);
           }
@@ -389,7 +405,7 @@ export default function AvraeCommandsPage(): ReactNode {
       } catch {
         if (!cancelled) {
           setUser(null);
-          setSavedCharacters([]);
+          loadGuestCharacters(selectedCharacterId);
           setSavedModifiers([]);
           setAuthLoading(false);
         }
@@ -883,6 +899,11 @@ export default function AvraeCommandsPage(): ReactNode {
     ].sort((a, b) => a.name.localeCompare(b.name));
     setSavedCharacters(nextSavedCharacters);
     applyCharacterToBuilder(nextCharacter);
+    if (!user) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSavedCharacters));
+      } catch {}
+    }
   }
 
   async function removeCharacter(characterId: string): Promise<void> {
@@ -899,6 +920,16 @@ export default function AvraeCommandsPage(): ReactNode {
         setSyncError("Failed to remove saved character.");
         return;
       }
+    } else {
+      try {
+        const storedChars: SyncedDdbCharacter[] = JSON.parse(
+          window.localStorage.getItem(STORAGE_KEY) ?? "[]",
+        );
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(storedChars.filter((c) => c.id !== characterId)),
+        );
+      } catch {}
     }
     const nextSavedCharacters = savedCharacters.filter(
       (entry) => entry.id !== characterId,
@@ -945,8 +976,7 @@ export default function AvraeCommandsPage(): ReactNode {
             nextCharacter = { ...nextCharacter, ...overrides };
           }
         } catch {}
-        setSavedCharacters([nextCharacter]);
-        applyCharacterToBuilder(nextCharacter);
+        upsertSavedCharacter(nextCharacter);
       }
       setView("character");
       setSyncStatus("success");

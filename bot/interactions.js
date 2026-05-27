@@ -76,6 +76,10 @@ const {
   resumeRpSession,
   startRpSession,
 } = require("./services/rpSessions");
+const {
+  rollFiveStatLines,
+  saveStatRollSets,
+} = require("./services/statRolls");
 
 function getBossDamageQuestMultiplier(questLevel) {
   if (questLevel >= 18 && questLevel <= 20) {
@@ -1744,6 +1748,45 @@ async function handleInteraction(interaction) {
       }
     }
 
+    return;
+  }
+
+  if (interaction.commandName === "rollstats") {
+    await interaction.deferReply();
+
+    try {
+      const statLines = rollFiveStatLines();
+
+      const lines = statLines.map((stats, i) => {
+        const total = stats.reduce((a, b) => a + b, 0);
+        return `**Set ${i + 1}** — ${stats.join(", ")} *(total: ${total})*`;
+      });
+
+      const content = [
+        "## Stat Rolls",
+        "",
+        ...lines,
+        "",
+        `Rolled by ${interaction.user}`,
+        `Claim at ${config.publicSiteUrl}/stat-rolls`,
+      ].join("\n");
+
+      await interaction.editReply({ content });
+
+      const message = await interaction.fetchReply();
+      const discordMessageUrl = `https://discord.com/channels/${interaction.guildId}/${message.channelId}/${message.id}`;
+
+      await saveStatRollSets({
+        statLines,
+        discordMessageUrl,
+        rolledByDiscordUserId: interaction.user.id,
+      });
+    } catch (error) {
+      console.error("Failed to process /rollstats:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply("Something went wrong while rolling stat lines. Please try again.");
+      }
+    }
     return;
   }
 

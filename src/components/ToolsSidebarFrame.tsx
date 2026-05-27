@@ -70,6 +70,7 @@ const SIDEBAR: SidebarItem[] = [
       { type: "link", label: "Avrae Commands", href: "/avrae" },
       { type: "link", label: "Rewards Calculator", href: "/rewards-calculator" },
       { type: "link", label: "Stellar Coin Conversion", href: "/stellar-coin-conversion" },
+      { type: "link", label: "Stat Rolls", href: "/stat-rolls" },
     ],
   },
 ];
