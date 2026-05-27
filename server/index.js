@@ -47,7 +47,7 @@ const {
 } = require("./avraeModifiers");
 const {
   claimStatRollSet,
-  listUnclaimedStatRollSets,
+  listStatRollSets,
 } = require("./statRolls");
 const { pool } = require("./db");
 const {
@@ -780,7 +780,7 @@ app.get(
   sessionRateLimiter,
   async (req, res) => {
     try {
-      const statRolls = await listUnclaimedStatRollSets();
+      const statRolls = await listStatRollSets();
       res.json({ statRolls });
     } catch (err) {
       console.error("Failed to list stat roll sets:", err);

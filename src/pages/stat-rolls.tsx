@@ -11,6 +11,8 @@ type StatRollSet = {
   stats: number[];
   total: number;
   discordMessageUrl: string | null;
+  claimedByDiscordUserId: string | null;
+  claimedByUsername: string | null;
   createdAt: string;
 };
 
@@ -66,14 +68,20 @@ function StatCard({
         ) : (
           <span />
         )}
-        <button
-          type="button"
-          className={styles.claimButton}
-          onClick={() => onClaim(roll.id)}
-          disabled={claiming}
-        >
-          {claiming ? "Claiming…" : "Claim"}
-        </button>
+        {roll.claimedByDiscordUserId ? (
+          <span className={styles.claimedLabel}>
+            Claimed by {roll.claimedByUsername ?? "someone"}
+          </span>
+        ) : (
+          <button
+            type="button"
+            className={styles.claimButton}
+            onClick={() => onClaim(roll.id)}
+            disabled={claiming}
+          >
+            {claiming ? "Claiming…" : "Claim"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -135,12 +143,13 @@ export default function StatRollsPage(): ReactNode {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
       });
+      const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
         setClaimError(payload.error ?? "Failed to claim stat roll.");
         return;
       }
-      setRolls((prev) => prev.filter((r) => r.id !== id));
+      const claimed = payload.statRoll as StatRollSet;
+      setRolls((prev) => prev.map((r) => r.id === id ? claimed : r));
     } catch {
       setClaimError("Something went wrong. Please try again.");
     } finally {
