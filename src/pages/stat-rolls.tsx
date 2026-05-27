@@ -183,7 +183,7 @@ export default function StatRollsPage(): ReactNode {
             {!rollsLoading && !rollsError && rolls.length === 0 && (
               <p className={styles.hint}>
                 No stat roll sets are currently available. Check back after a
-                staff member runs <code>/statrolls</code> in Discord.
+                staff member runs <code>/rollstats</code> in Discord.
               </p>
             )}
 

@@ -1751,7 +1751,7 @@ async function handleInteraction(interaction) {
     return;
   }
 
-  if (interaction.commandName === "statrolls") {
+  if (interaction.commandName === "rollstats") {
     await interaction.deferReply();
 
     try {
@@ -1782,7 +1782,7 @@ async function handleInteraction(interaction) {
         rolledByDiscordUserId: interaction.user.id,
       });
     } catch (error) {
-      console.error("Failed to process /statrolls:", error);
+      console.error("Failed to process /rollstats:", error);
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply("Something went wrong while rolling stat lines. Please try again.");
       }
