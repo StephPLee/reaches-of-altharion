@@ -803,7 +803,7 @@ app.post(
     try {
       const claimed = await claimStatRollSet({
         id,
-        discordUserId: req.memberUser.discordId,
+        discordUserId: req.memberUser.discordUserId,
       });
       if (!claimed) {
         res.status(409).json({ error: "Stat roll not found or already claimed." });
