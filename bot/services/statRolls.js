@@ -31,18 +31,48 @@ function rollFiveStatLines() {
   return [0, 0, 0, 0, 0].map(() => rollValidStatLine());
 }
 
-async function saveStatRollSets({ statLines, discordMessageUrl, rolledByDiscordUserId }) {
+function mapRow(row) {
+  return {
+    id: Number(row.id),
+    stats: row.stats,
+    total: Number(row.total),
+    discordMessageUrl: row.discord_message_url,
+    claimedByDiscordUserId: row.claimed_by_discord_user_id ?? null,
+    claimedAt: row.claimed_at ? row.claimed_at.toISOString() : null,
+    createdAt: row.created_at.toISOString(),
+  };
+}
+
+async function saveStatRollSets({
+  statLines,
+  discordMessageUrl,
+  rolledByDiscordUserId,
+  claimedIndex = -1,
+  claimedByDiscordUserId = null,
+}) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     const saved = [];
-    for (const stats of statLines) {
+    for (let i = 0; i < statLines.length; i++) {
+      const stats = statLines[i];
       const total = stats.reduce((a, b) => a + b, 0);
+      const isClaimed = i === claimedIndex;
       const result = await client.query(
-        `INSERT INTO stat_roll_sets (stats, total, discord_message_url, rolled_by_discord_user_id)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, stats, total, discord_message_url, created_at`,
-        [stats, total, discordMessageUrl, rolledByDiscordUserId],
+        `INSERT INTO stat_roll_sets
+           (stats, total, discord_message_url, rolled_by_discord_user_id,
+            claimed_by_discord_user_id, claimed_at)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, stats, total, discord_message_url,
+                   claimed_by_discord_user_id, claimed_at, created_at`,
+        [
+          stats,
+          total,
+          discordMessageUrl,
+          rolledByDiscordUserId,
+          isClaimed ? claimedByDiscordUserId : null,
+          isClaimed ? new Date() : null,
+        ],
       );
       saved.push(mapRow(result.rows[0]));
     }
@@ -56,19 +86,17 @@ async function saveStatRollSets({ statLines, discordMessageUrl, rolledByDiscordU
   }
 }
 
-function mapRow(row) {
-  return {
-    id: Number(row.id),
-    stats: row.stats,
-    total: Number(row.total),
-    discordMessageUrl: row.discord_message_url,
-    claimedByDiscordUserId: row.claimed_by_discord_user_id ?? null,
-    claimedAt: row.claimed_at ? row.claimed_at.toISOString() : null,
-    createdAt: row.created_at.toISOString(),
-  };
+async function deleteStatRollsByRoller(rolledByDiscordUserId) {
+  await pool.query(
+    `DELETE FROM stat_roll_sets
+     WHERE rolled_by_discord_user_id = $1
+       AND claimed_by_discord_user_id IS NULL`,
+    [rolledByDiscordUserId],
+  );
 }
 
 module.exports = {
+  deleteStatRollsByRoller,
   rollFiveStatLines,
   saveStatRollSets,
   mapRow,

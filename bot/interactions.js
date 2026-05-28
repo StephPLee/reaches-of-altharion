@@ -1,4 +1,5 @@
-﻿const config = require("./config");
+﻿const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const config = require("./config");
 const { buildHelpMessage } = require("./commands");
 const { hasDmOrRequiredRole, hasRequiredRole } = require("./permissions");
 const { getDisplayName } = require("./utils");
@@ -73,7 +74,13 @@ const {
   resumeRpSession,
   startRpSession,
 } = require("./services/rpSessions");
-const { rollFiveStatLines, saveStatRollSets } = require("./services/statRolls");
+const {
+  deleteStatRollsByRoller,
+  rollFiveStatLines,
+  saveStatRollSets,
+} = require("./services/statRolls");
+
+const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
 
 function getBossDamageQuestMultiplier(questLevel) {
   if (questLevel >= 18 && questLevel <= 20) {
@@ -125,6 +132,69 @@ function buildRpStatusText(session) {
 
 async function handleInteraction(interaction) {
   if (interaction.isStringSelectMenu()) {
+    if (interaction.customId.startsWith("rollstats-pick:")) {
+      const ownerId = interaction.customId.slice("rollstats-pick:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "This stat roll selection belongs to someone else.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const pending = pendingStatRolls.get(interaction.user.id);
+      if (!pending) {
+        await interaction.reply({
+          content: "Your stat roll session has expired. Please run `/rollstats` again.",
+          ephemeral: true,
+        });
+        return;
+      }
+      pendingStatRolls.delete(interaction.user.id);
+
+      await interaction.deferUpdate();
+
+      const choiceValue = interaction.values[0];
+      const claimedIndex = choiceValue === "none" ? -1 : parseInt(choiceValue, 10);
+      const displayName =
+        interaction.member?.displayName ||
+        interaction.user.globalName ||
+        interaction.user.username;
+
+      const lines = pending.statLines.map((stats, i) => {
+        const total = stats.reduce((a, b) => a + b, 0);
+        const base = `**Set ${i + 1}** — ${stats.join(", ")} *(total: ${total})*`;
+        return i === claimedIndex ? `${base} — Claimed by ${displayName}` : base;
+      });
+
+      const content = [
+        "## Stat Rolls",
+        "",
+        ...lines,
+        "",
+        `Rolled by ${interaction.user}`,
+      ].join("\n");
+
+      const publicMessage = await interaction.channel.send(content);
+      const discordMessageUrl = `https://discord.com/channels/${interaction.guildId}/${publicMessage.channelId}/${publicMessage.id}`;
+
+      await saveStatRollSets({
+        statLines: pending.statLines,
+        discordMessageUrl,
+        rolledByDiscordUserId: interaction.user.id,
+        claimedIndex,
+        claimedByDiscordUserId: claimedIndex >= 0 ? interaction.user.id : null,
+      });
+
+      const confirmation =
+        claimedIndex >= 0
+          ? `Set ${claimedIndex + 1} has been reserved for you. The remaining sets have been posted and added to the repository.`
+          : "All sets have been posted and added to the repository.";
+
+      await interaction.editReply({ content: confirmation, components: [] });
+      return;
+    }
+
     if (interaction.customId.startsWith("approve-category:")) {
       const ownerId = interaction.customId.slice("approve-category:".length);
       if (ownerId !== interaction.user.id) {
@@ -1708,6 +1778,9 @@ async function handleInteraction(interaction) {
 
       const character = result.character;
       const approved = await approveWestMarchesCharacter(character.id);
+      await deleteStatRollsByRoller(targetUser.id).catch((err) =>
+        console.error("Failed to delete stat rolls for approved user:", err),
+      );
       const approverCharacters =
         await listHighestLevelActiveCharactersForDiscordUsers([
           interaction.user.id,
@@ -1767,40 +1840,42 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.commandName === "rollstats") {
-    await interaction.deferReply();
-
     try {
       const statLines = rollFiveStatLines();
+      pendingStatRolls.set(interaction.user.id, { statLines, timestamp: Date.now() });
 
-      const lines = statLines.map((stats, i) => {
+      const preview = statLines.map((stats, i) => {
         const total = stats.reduce((a, b) => a + b, 0);
         return `**Set ${i + 1}** — ${stats.join(", ")} *(total: ${total})*`;
-      });
+      }).join("\n");
 
-      const content = [
-        "## Stat Rolls",
-        "",
-        ...lines,
-        "",
-        `Rolled by ${interaction.user}`,
-      ].join("\n");
+      const menu = new StringSelectMenuBuilder()
+        .setCustomId(`rollstats-pick:${interaction.user.id}`)
+        .setPlaceholder("Choose a set to keep for yourself, or keep none")
+        .addOptions([
+          {
+            label: "Keep none",
+            description: "Post all sets as available for others",
+            value: "none",
+          },
+          ...statLines.map((stats, i) => ({
+            label: `Set ${i + 1} — Total: ${stats.reduce((a, b) => a + b, 0)}`,
+            description: stats.join(", "),
+            value: String(i),
+          })),
+        ]);
 
-      await interaction.editReply({ content });
-
-      const message = await interaction.fetchReply();
-      const discordMessageUrl = `https://discord.com/channels/${interaction.guildId}/${message.channelId}/${message.id}`;
-
-      await saveStatRollSets({
-        statLines,
-        discordMessageUrl,
-        rolledByDiscordUserId: interaction.user.id,
+      await interaction.reply({
+        content: `Your stat rolls:\n\n${preview}\n\nWould you like to keep one for yourself?`,
+        components: [new ActionRowBuilder().addComponents(menu)],
+        ephemeral: true,
       });
     } catch (error) {
       console.error("Failed to process /rollstats:", error);
       if (interaction.deferred || interaction.replied) {
-        await interaction.editReply(
-          "Something went wrong while rolling stat lines. Please try again.",
-        );
+        await interaction.editReply("Something went wrong while rolling stat lines. Please try again.");
+      } else {
+        await interaction.reply({ content: "Something went wrong while rolling stat lines. Please try again.", ephemeral: true });
       }
     }
     return;

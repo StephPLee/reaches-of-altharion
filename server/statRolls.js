@@ -1,3 +1,4 @@
+const { editChannelMessage } = require("./discord");
 const { pool } = require("./db");
 
 function mapRow(row) {
@@ -42,7 +43,48 @@ async function claimStatRollSet({ id, discordUserId }) {
   return mapRow(result.rows[0]);
 }
 
+async function updateDiscordStatMessage(discordMessageUrl) {
+  const parts = discordMessageUrl.split("/");
+  const messageId = parts[parts.length - 1];
+  const channelId = parts[parts.length - 2];
+
+  const result = await pool.query(
+    `SELECT s.id, s.stats, s.total, s.rolled_by_discord_user_id,
+            s.claimed_by_discord_user_id,
+            COALESCE(claimer.global_name, claimer.username) AS claimed_by_username
+     FROM stat_roll_sets s
+     LEFT JOIN users claimer ON claimer.discord_user_id = s.claimed_by_discord_user_id
+     WHERE s.discord_message_url = $1
+     ORDER BY s.id ASC`,
+    [discordMessageUrl],
+  );
+
+  if (result.rows.length === 0) return;
+
+  const rolledByDiscordUserId = result.rows[0].rolled_by_discord_user_id;
+
+  const lines = result.rows.map((row, i) => {
+    const stats = row.stats.join(", ");
+    const total = Number(row.total);
+    const base = `**Set ${i + 1}** — ${stats} *(total: ${total})*`;
+    return row.claimed_by_username
+      ? `${base} — Claimed by ${row.claimed_by_username}`
+      : base;
+  });
+
+  const content = [
+    "## Stat Rolls",
+    "",
+    ...lines,
+    "",
+    `Rolled by <@${rolledByDiscordUserId}>`,
+  ].join("\n");
+
+  await editChannelMessage(channelId, messageId, { content });
+}
+
 module.exports = {
   claimStatRollSet,
   listStatRollSets,
+  updateDiscordStatMessage,
 };
