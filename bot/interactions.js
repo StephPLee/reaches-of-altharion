@@ -83,11 +83,16 @@ const {
 const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
 const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
 
-function parseSubmissionContent(content) {
-  const name = content.match(/\*\*Name of Homebrew:\*\*\s*(.+)/i)?.[1]?.trim() ?? "";
+function parseSubmissionContent(content, embeds = []) {
+  const searchText = [
+    content,
+    ...embeds.map((e) => [e.description ?? "", ...e.fields.map((f) => `${f.name}: ${f.value}`)].join("\n")),
+  ].join("\n");
+
+  const name = searchText.match(/\*\*Name of Homebrew:\*\*\s*(.+)/i)?.[1]?.trim() ?? "";
 
   function extractUrl(fieldPattern) {
-    const line = content.match(fieldPattern)?.[1] ?? "";
+    const line = searchText.match(fieldPattern)?.[1] ?? "";
     return (
       line.match(/\(<?(https?:\/\/[^>)\s]+)>?\)/)?.[1] ??
       line.match(/(https?:\/\/\S+)/)?.[1] ??
@@ -2069,7 +2074,8 @@ async function handleInteraction(interaction) {
           : null;
         if (message) {
           console.log("[approve prefill] content:", JSON.stringify(message.content.slice(0, 800)));
-          const parsed = parseSubmissionContent(message.content);
+          console.log("[approve prefill] embeds:", JSON.stringify(message.embeds.map((e) => ({ description: e.description?.slice(0, 500), fields: e.fields }))));
+          const parsed = parseSubmissionContent(message.content, message.embeds);
           console.log("[approve prefill] parsed:", parsed);
           pendingApprovals.set(interaction.user.id, { ...parsed, submissionUrl });
         }
