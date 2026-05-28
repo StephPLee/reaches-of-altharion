@@ -42,8 +42,15 @@ const COMMAND_DEFINITIONS = [
   {
     name: "approve",
     description: "Approve a homebrew link for the site.",
-    help: "Staff-only. Approve a homebrew link into the site-backed homebrew lists.",
+    help: "Staff-only. Approve a homebrew link into the site-backed homebrew lists. Pass the submission post link to auto-fill the modal.",
     requiresRole: true,
+    buildCommand: (command) =>
+      command.addStringOption((option) =>
+        option
+          .setName("submission")
+          .setDescription("Discord link to the submission post — auto-fills name, homebrew URL, and thread.")
+          .setMaxLength(500),
+      ),
   },
   {
     name: "approve-character",

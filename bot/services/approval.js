@@ -374,7 +374,7 @@ function formatApprovedLabel(name, labelSuffix) {
   return `${trimmedName} - ${labelSuffix}`;
 }
 
-function buildApproveModal(discordUserId, category, detailValue = "none") {
+function buildApproveModal(discordUserId, category, detailValue = "none", prefill = {}) {
   const target = getApproveTarget(category, detailValue === "none" ? "" : detailValue);
   const title = target?.detailLabel
     ? `Approve ${target.detailLabel} ${target.categoryLabel}`
@@ -391,6 +391,7 @@ function buildApproveModal(discordUserId, category, detailValue = "none") {
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
     .setMaxLength(200);
+  if (prefill.name) nameInput.setValue(prefill.name.slice(0, 200));
 
   const contentInput = new TextInputBuilder()
     .setCustomId(usesMarkdown ? "homebrew-markdown" : "homebrew-url")
@@ -398,6 +399,7 @@ function buildApproveModal(discordUserId, category, detailValue = "none") {
     .setStyle(usesMarkdown ? TextInputStyle.Paragraph : TextInputStyle.Short)
     .setRequired(true)
     .setMaxLength(usesMarkdown ? 4000 : 500);
+  if (!usesMarkdown && prefill.url) contentInput.setValue(prefill.url.slice(0, 500));
 
   const threadInput = new TextInputBuilder()
     .setCustomId("discussion-thread")
@@ -405,6 +407,7 @@ function buildApproveModal(discordUserId, category, detailValue = "none") {
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
     .setMaxLength(500);
+  if (prefill.threadUrl) threadInput.setValue(prefill.threadUrl.slice(0, 500));
 
   const submissionInput = new TextInputBuilder()
     .setCustomId("discussion-message")
@@ -412,6 +415,7 @@ function buildApproveModal(discordUserId, category, detailValue = "none") {
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
     .setMaxLength(500);
+  if (prefill.submissionUrl) submissionInput.setValue(prefill.submissionUrl.slice(0, 500));
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(nameInput),

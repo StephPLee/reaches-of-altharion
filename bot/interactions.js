@@ -81,6 +81,25 @@ const {
 } = require("./services/statRolls");
 
 const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
+const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
+
+function parseSubmissionContent(content) {
+  const name = content.match(/\*\*Name of Homebrew:\*\*\s*(.+)/i)?.[1]?.trim() ?? "";
+
+  function extractUrl(fieldPattern) {
+    const line = content.match(fieldPattern)?.[1] ?? "";
+    return (
+      line.match(/\(<?(https?:\/\/[^>)\s]+)>?\)/)?.[1] ??
+      line.match(/(https?:\/\/\S+)/)?.[1] ??
+      ""
+    ).trim();
+  }
+
+  const url = extractUrl(/\*\*Link to Homebrew:\*\*(.+)/i);
+  const threadUrl = extractUrl(/\*\*Link to Workshop Discussion:\*\*(.+)/i);
+
+  return { name, url, threadUrl };
+}
 
 function getBossDamageQuestMultiplier(questLevel) {
   if (questLevel >= 18 && questLevel <= 20) {
@@ -238,8 +257,10 @@ async function handleInteraction(interaction) {
         return;
       }
 
+      const prefill = pendingApprovals.get(interaction.user.id) ?? {};
+      pendingApprovals.delete(interaction.user.id);
       await interaction.showModal(
-        buildApproveModal(interaction.user.id, category),
+        buildApproveModal(interaction.user.id, category, "none", prefill),
       );
       return;
     }
@@ -272,8 +293,10 @@ async function handleInteraction(interaction) {
         return;
       }
 
+      const prefill = pendingApprovals.get(interaction.user.id) ?? {};
+      pendingApprovals.delete(interaction.user.id);
       await interaction.showModal(
-        buildApproveModal(interaction.user.id, category, detailValue),
+        buildApproveModal(interaction.user.id, category, detailValue, prefill),
       );
       return;
     }
@@ -2034,11 +2057,32 @@ async function handleInteraction(interaction) {
       return;
     }
 
-    await interaction.reply({
-      content: "Choose the type of homebrew to approve.",
-      components: [buildApproveCategoryRow(interaction.user.id)],
-      ephemeral: true,
-    });
+    const submissionUrl = interaction.options.getString("submission")?.trim() ?? "";
+
+    if (submissionUrl) {
+      await interaction.deferReply({ ephemeral: true });
+      const idMatch = submissionUrl.match(/channels\/\d+\/(\d+)\/(\d+)/);
+      if (idMatch) {
+        const channel = await interaction.client.channels.fetch(idMatch[1]).catch(() => null);
+        const message = channel?.messages
+          ? await channel.messages.fetch(idMatch[2]).catch(() => null)
+          : null;
+        if (message) {
+          const parsed = parseSubmissionContent(message.content);
+          pendingApprovals.set(interaction.user.id, { ...parsed, submissionUrl });
+        }
+      }
+      await interaction.editReply({
+        content: "Choose the type of homebrew to approve.",
+        components: [buildApproveCategoryRow(interaction.user.id)],
+      });
+    } else {
+      await interaction.reply({
+        content: "Choose the type of homebrew to approve.",
+        components: [buildApproveCategoryRow(interaction.user.id)],
+        ephemeral: true,
+      });
+    }
     return;
   }
 
