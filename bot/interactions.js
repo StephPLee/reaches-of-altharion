@@ -2068,20 +2068,13 @@ async function handleInteraction(interaction) {
       await interaction.deferReply({ ephemeral: true });
       const idMatch = submissionUrl.match(/channels\/\d+\/(\d+)\/(\d+)/);
       if (idMatch) {
-        console.log("[approve prefill] fetching channel:", idMatch[1], "message:", idMatch[2]);
         const channel = await interaction.client.channels.fetch(idMatch[1]).catch(() => null);
         const message = channel?.messages
           ? await channel.messages.fetch(idMatch[2]).catch(() => null)
           : null;
         if (message) {
-          console.log("[approve prefill] message type:", message.type, "system:", message.system);
-          console.log("[approve prefill] content:", JSON.stringify(message.content.slice(0, 800)));
-          console.log("[approve prefill] embeds:", JSON.stringify(message.embeds.map((e) => ({ description: e.description?.slice(0, 500), fields: e.fields }))));
           const parsed = parseSubmissionContent(message.content, message.embeds);
-          console.log("[approve prefill] parsed:", parsed);
           pendingApprovals.set(interaction.user.id, { ...parsed, submissionUrl });
-        } else {
-          console.log("[approve prefill] message not found or channel inaccessible");
         }
       }
       await interaction.editReply({
