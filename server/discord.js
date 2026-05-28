@@ -156,6 +156,29 @@ function memberHasRole(member, requiredRoleId) {
   return Array.isArray(member?.roles) && member.roles.includes(requiredRoleId);
 }
 
+async function deleteChannelMessage(channelId, messageId) {
+  const response = await fetch(
+    `${DISCORD_API_BASE_URL}/channels/${channelId}/messages/${messageId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bot ${discordBotToken}`,
+      },
+    },
+  );
+
+  if (response.status === 404) {
+    return;
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to delete Discord channel message: ${response.status} ${errorText}`,
+    );
+  }
+}
+
 async function fetchDiscordMessage(channelId, messageId) {
   const response = await fetch(
     `${DISCORD_API_BASE_URL}/channels/${channelId}/messages/${messageId}`,
@@ -182,6 +205,7 @@ async function fetchDiscordMessage(channelId, messageId) {
 
 module.exports = {
   buildAuthorizationUrl: buildAuthorizationUrlWithState,
+  deleteChannelMessage,
   editChannelMessage,
   exchangeCodeForToken,
   fetchDiscordMessage,

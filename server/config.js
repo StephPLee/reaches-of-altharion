@@ -68,6 +68,8 @@ module.exports = {
   discordGuildId: process.env.DISCORD_GUILD_ID,
   calendarAnnouncementChannelId:
     process.env.CALENDAR_ANNOUNCEMENT_CHANNEL_ID || "",
+  startingGracesChannelId: process.env.STARTING_GRACES_CHANNEL_ID || "",
+  characterCreationChannelId: process.env.CHARACTER_CREATION_CHANNEL_ID || "",
   marketplaceChannelId: process.env.MARKETPLACE_CHANNEL_ID || "",
   marketplaceMessageId: process.env.MARKETPLACE_MESSAGE_ID || "",
   discordOauthRedirectUri:

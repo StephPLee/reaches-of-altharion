@@ -79,6 +79,10 @@ const {
   rollFiveStatLines,
   saveStatRollSets,
 } = require("./services/statRolls");
+const {
+  postAllStartingGracesToDiscord,
+  postWikiSectionsToDiscord,
+} = require("./services/discordContent");
 
 const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
 const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
@@ -2087,6 +2091,43 @@ async function handleInteraction(interaction) {
         components: [buildApproveCategoryRow(interaction.user.id)],
         ephemeral: true,
       });
+    }
+    return;
+  }
+
+  if (interaction.commandName === "post-discord-content") {
+    if (!hasRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "You do not have the required role to use this command.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const type = interaction.options.getString("type");
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      if (type === "starting-graces") {
+        const channelId = config.startingGracesChannelId;
+        if (!channelId) {
+          await interaction.editReply("Starting graces channel is not configured.");
+          return;
+        }
+        const count = await postAllStartingGracesToDiscord(interaction.client, channelId);
+        await interaction.editReply(`Posted or refreshed ${count} starting grace message${count === 1 ? "" : "s"}.`);
+      } else if (type === "character-creation") {
+        const channelId = config.characterCreationChannelId;
+        if (!channelId) {
+          await interaction.editReply("Character creation channel is not configured.");
+          return;
+        }
+        const count = await postWikiSectionsToDiscord(interaction.client, "getting-set-up", channelId);
+        await interaction.editReply(`Posted or refreshed ${count} character creation section${count === 1 ? "" : "s"}.`);
+      }
+    } catch (error) {
+      console.error("Failed to process /post-discord-content:", error);
+      await interaction.editReply("Something went wrong while posting content. Please try again.");
     }
     return;
   }

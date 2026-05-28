@@ -13,6 +13,8 @@ const {
   authRateLimitMaxRequests,
   authRateLimitWindowMs,
   calendarAnnouncementChannelId,
+  startingGracesChannelId,
+  characterCreationChannelId,
   cookieSecure,
   isProduction,
   marketplaceChannelId,
@@ -126,6 +128,10 @@ const {
   memberHasRole,
   postChannelMessage,
 } = require("./discord");
+const {
+  syncStartingGraceToDiscord,
+  syncWikiPageToDiscord,
+} = require("./discordSync");
 const { fetchDdbCharacter } = require("./ddbCharacters");
 const {
   MARKETPLACE_TIME_ZONE,
@@ -2620,6 +2626,12 @@ app.patch(
       });
 
       res.json({ grace });
+
+      if (grace.isPublished && startingGracesChannelId) {
+        syncStartingGraceToDiscord(grace, startingGracesChannelId).catch((err) =>
+          console.error("Failed to sync starting grace to Discord:", err),
+        );
+      }
     } catch (graceError) {
       console.error("Failed to update starting grace:", graceError);
       res.status(500).json({ error: "Failed to update starting grace." });
@@ -4602,6 +4614,12 @@ app.patch(
       });
 
       res.json({ page });
+
+      if (slug === "getting-set-up" && characterCreationChannelId) {
+        syncWikiPageToDiscord(page, characterCreationChannelId).catch((err) =>
+          console.error("Failed to sync wiki page to Discord:", err),
+        );
+      }
     } catch (wikiPageError) {
       console.error("Failed to update wiki page:", wikiPageError);
       res.status(500).json({ error: "Failed to update wiki page." });
