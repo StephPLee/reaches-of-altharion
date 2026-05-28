@@ -66,32 +66,6 @@ const COMMAND_DEFINITIONS = [
         ),
   },
   {
-    name: "homebrew-discussion",
-    description: "Award SC to users who discussed or voted on homebrew.",
-    help: "Award SC to deduped users who posted in your workshop thread or reacted to a submission message.",
-    buildCommand: (command) =>
-      command
-        .addStringOption((option) =>
-          option
-            .setName("thread")
-            .setDescription("Discord link to the workshop thread.")
-            .setRequired(true)
-            .setMaxLength(500),
-        )
-        .addStringOption((option) =>
-          option
-            .setName("message")
-            .setDescription("Discord link to the submission post.")
-            .setRequired(true)
-            .setMaxLength(500),
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("subclass")
-            .setDescription("Set true for subclass submissions worth 5 SC."),
-        ),
-  },
-  {
     name: "join-guild",
     description: "Join or move one of your characters to a guild.",
     help: "Choose one of your WestMarches.games characters and add or move them to a guild roster.",
