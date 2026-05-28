@@ -5,7 +5,7 @@ const { registerGuildCommands } = require("./commands");
 const { handleInteraction } = require("./interactions");
 
 const bot = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent],
 });
 
 bot.once("clientReady", async () => {
