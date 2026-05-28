@@ -2068,7 +2068,9 @@ async function handleInteraction(interaction) {
           ? await channel.messages.fetch(idMatch[2]).catch(() => null)
           : null;
         if (message) {
+          console.log("[approve prefill] content:", JSON.stringify(message.content.slice(0, 800)));
           const parsed = parseSubmissionContent(message.content);
+          console.log("[approve prefill] parsed:", parsed);
           pendingApprovals.set(interaction.user.id, { ...parsed, submissionUrl });
         }
       }
