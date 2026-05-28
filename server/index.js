@@ -48,6 +48,7 @@ const {
 const {
   claimStatRollSet,
   listStatRollSets,
+  updateDiscordStatMessage,
 } = require("./statRolls");
 const { pool } = require("./db");
 const {
@@ -810,6 +811,11 @@ app.post(
         return;
       }
       res.json({ statRoll: claimed });
+      if (claimed.discordMessageUrl) {
+        updateDiscordStatMessage(claimed.discordMessageUrl).catch((err) =>
+          console.error("Failed to update Discord stat roll message:", err),
+        );
+      }
     } catch (err) {
       console.error("Failed to claim stat roll set:", err);
       res.status(500).json({ error: "Failed to claim stat roll." });
