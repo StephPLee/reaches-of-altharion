@@ -399,9 +399,25 @@ function buildApproveModal(discordUserId, category, detailValue = "none") {
     .setRequired(true)
     .setMaxLength(usesMarkdown ? 4000 : 500);
 
+  const threadInput = new TextInputBuilder()
+    .setCustomId("discussion-thread")
+    .setLabel("Workshop thread link (optional)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(500);
+
+  const submissionInput = new TextInputBuilder()
+    .setCustomId("discussion-message")
+    .setLabel("Submission message link (optional)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(500);
+
   modal.addComponents(
     new ActionRowBuilder().addComponents(nameInput),
     new ActionRowBuilder().addComponents(contentInput),
+    new ActionRowBuilder().addComponents(threadInput),
+    new ActionRowBuilder().addComponents(submissionInput),
   );
 
   return modal;

@@ -764,6 +764,9 @@ async function handleInteraction(interaction) {
       const contentMarkdown = usesMarkdown
         ? interaction.fields.getTextInputValue("homebrew-markdown")
         : null;
+      const threadUrl = interaction.fields.getTextInputValue("discussion-thread").trim();
+      const messageUrl = interaction.fields.getTextInputValue("discussion-message").trim();
+
       const approval = await approveHomebrew({
         category,
         detailValue: detailValue === "none" ? "" : detailValue,
@@ -772,15 +775,13 @@ async function handleInteraction(interaction) {
         contentMarkdown,
       });
 
-      await interaction.editReply(
-        usesMarkdown
-          ? approval.created
-            ? `Approved **${approval.label}** under **${approval.categoryLabel}**.\n${approval.sitePath}`
-            : `Updated existing **${approval.label}** under **${approval.categoryLabel}**.\n${approval.sitePath}`
-          : approval.created
-            ? `Approved **${approval.label}** under **${approval.title}**.\n${approval.href}`
-            : `That homebrew was already listed under **${approval.title}** as **${approval.label}**.\n${approval.href}`,
-      );
+      const approvalText = usesMarkdown
+        ? approval.created
+          ? `Approved **${approval.label}** under **${approval.categoryLabel}**.\n${approval.sitePath}`
+          : `Updated existing **${approval.label}** under **${approval.categoryLabel}**.\n${approval.sitePath}`
+        : approval.created
+          ? `Approved **${approval.label}** under **${approval.title}**.\n${approval.href}`
+          : `That homebrew was already listed under **${approval.title}** as **${approval.label}**.\n${approval.href}`;
 
       if (approval.created && interaction.channel?.send) {
         try {
@@ -795,6 +796,149 @@ async function handleInteraction(interaction) {
             ephemeral: true,
           });
         }
+      }
+
+      if (!threadUrl && !messageUrl) {
+        await interaction.editReply(approvalText);
+        return;
+      }
+
+      if (!threadUrl || !messageUrl) {
+        await interaction.editReply(
+          `${approvalText}\n\nDiscussion rewards were skipped: both a thread link and a submission message link are required.`,
+        );
+        return;
+      }
+
+      if (!isWestMarchesConfigured()) {
+        await interaction.editReply(
+          `${approvalText}\n\nDiscussion rewards were not awarded because West Marches API access is not configured.`,
+        );
+        return;
+      }
+
+      const isSubclass = category === "subclasses";
+      const scReward = isSubclass ? 5 : 2;
+
+      try {
+        const result = await collectHomebrewDiscussionParticipants({
+          client: interaction.client,
+          threadInput: threadUrl,
+          messageInput: messageUrl,
+          fallbackChannel: interaction.channel,
+        });
+
+        let matchedCharacters = [];
+        let missingUserIds = result.participantIds;
+
+        if (result.participantIds.length > 0) {
+          const characterResult = await listHighestLevelActiveCharactersForDiscordUsers(
+            result.participantIds,
+          );
+          matchedCharacters = characterResult.matched;
+          missingUserIds = characterResult.missingUserIds;
+
+          if (matchedCharacters.length > 0) {
+            await awardScToCharacters({
+              awards: matchedCharacters,
+              amount: scReward,
+              reason: `Homebrew discussion reward: ${result.thread.name}`.slice(0, 500),
+            });
+          }
+        }
+
+        await interaction.editReply(
+          `${approvalText}\n\nDiscussion: ${result.participantIds.length} participant(s), **${scReward} SC** awarded to ${matchedCharacters.length} character(s). Posting public receipt now.`,
+        );
+
+        const header = [
+          `Homebrew discussion participants for **${result.thread.name}**:`,
+          `${result.participantIds.length} user${result.participantIds.length === 1 ? "" : "s"} found.`,
+          `Discussion posters: ${result.threadAuthorIds.length}. Submission voters: ${result.reactionUserIds.length}.`,
+          `Reward: **${scReward} SC** each.`,
+          `Awarded automatically: ${matchedCharacters.length}. No active character found: ${missingUserIds.length}.`,
+          result.threadOwnerId
+            ? `Thread creator: <@${result.threadOwnerId}> (excluded from reward).`
+            : "Thread creator could not be identified.",
+        ].join("\n");
+
+        await interaction.channel.send({
+          content: header,
+          allowedMentions: {
+            parse: [],
+            users: result.threadOwnerId ? [result.threadOwnerId] : [],
+          },
+        });
+
+        if (result.participantIds.length === 0) {
+          await interaction.channel.send({
+            content: `No non-bot participants were found for **${result.thread.name}**.`,
+            allowedMentions: { parse: [] },
+          });
+        }
+
+        if (matchedCharacters.length > 0) {
+          const awardedLines = matchedCharacters.map((award) => ({
+            userId: award.discordUserId,
+            text: `<@${award.discordUserId}> -> **${award.characterName}**`,
+          }));
+          const awardedMessages = [];
+          let current = `Awarded **${scReward} SC** to:\n`;
+          let currentUserIds = [];
+
+          for (const line of awardedLines) {
+            const next = `${current}${current.endsWith("\n") ? "" : "\n"}${line.text}`;
+            if (next.length > 1900 || currentUserIds.length >= 100) {
+              awardedMessages.push({ content: current, userIds: currentUserIds });
+              current = `Awarded **${scReward} SC** to:\n${line.text}`;
+              currentUserIds = [line.userId];
+            } else {
+              current = next;
+              currentUserIds.push(line.userId);
+            }
+          }
+          awardedMessages.push({ content: current, userIds: currentUserIds });
+
+          for (const msg of awardedMessages) {
+            await interaction.channel.send({
+              content: msg.content,
+              allowedMentions: { parse: [], users: msg.userIds },
+            });
+          }
+        }
+
+        if (missingUserIds.length > 0) {
+          const missingMessages = chunkMentionLines(missingUserIds, {
+            header: "I could not find an active WestMarches.games character for:",
+            emptyText: "",
+          });
+          for (const msg of missingMessages) {
+            await interaction.channel.send({
+              content: msg.content,
+              allowedMentions: { parse: [], users: msg.userIds },
+            });
+          }
+        }
+      } catch (discussionError) {
+        console.error("Failed to process discussion rewards in /approve:", discussionError);
+        const discussionErrorMsg =
+          discussionError.message === "invalid_thread"
+            ? "I could not find a thread ID in the thread link."
+            : discussionError.message === "not_thread"
+              ? "The thread link did not resolve to a Discord thread."
+              : discussionError.message === "invalid_message"
+                ? "I could not find a message ID in the submission message link."
+                : discussionError.message === "missing_message_channel"
+                  ? "Use a Discord message link, or run the command in the same channel as the submission message."
+                  : discussionError.message === "message_channel_unavailable"
+                    ? "I could not access the submission message channel."
+                    : discussionError.message === "missing_sc_currency_id"
+                      ? "WEST_MARCHES_SC_CURRENCY_ID is not configured."
+                      : "Something went wrong while gathering homebrew discussion participants.";
+
+        await interaction.editReply(
+          `${approvalText}\n\nDiscussion rewards failed: ${discussionErrorMsg}`,
+        );
       }
     } catch (error) {
       console.error("Failed to process /approve modal:", error);
