@@ -250,6 +250,7 @@ const COMMAND_DEFINITIONS = [
     name: "rollstats",
     description: "Roll 5 valid stat lines and post them to the stat roll repository.",
     help: "Roll 5 valid stat lines (80–84 total, ≥2 over 12, ≥1 over 15, ≥1 under 10) and save them to the site.",
+    defaultMemberPermissions: null,
   },
 ];
 
@@ -257,6 +258,10 @@ const commands = COMMAND_DEFINITIONS.map((definition) => {
   const command = new SlashCommandBuilder()
     .setName(definition.name)
     .setDescription(definition.description);
+
+  if (Object.prototype.hasOwnProperty.call(definition, "defaultMemberPermissions")) {
+    command.setDefaultMemberPermissions(definition.defaultMemberPermissions);
+  }
 
   return (definition.buildCommand
     ? definition.buildCommand(command)
