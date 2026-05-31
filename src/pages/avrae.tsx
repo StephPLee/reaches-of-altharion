@@ -270,9 +270,6 @@ export default function AvraeCommandsPage(): ReactNode {
     null,
   );
   const [sheetTab, setSheetTab] = useState<"attacks" | "spells">("attacks");
-  const [editingOverrides, setEditingOverrides] = useState(false);
-  const [overrideHp, setOverrideHp] = useState("");
-  const [overrideAc, setOverrideAc] = useState("");
   const [modifierForm, setModifierForm] = useState({
     name: "",
     appliesTo: ["attack"] as AvraeActionKind[],
@@ -856,38 +853,6 @@ export default function AvraeCommandsPage(): ReactNode {
     setActiveModifierIds((ids) => ids.filter((id) => id !== modifierId));
   }
 
-  async function saveStatOverrides(): Promise<void> {
-    if (!character) return;
-    const hpVal = parseInt(overrideHp, 10);
-    const acVal = parseInt(overrideAc, 10);
-    const hpOverride = !isNaN(hpVal) && hpVal > 0 ? hpVal : undefined;
-    const acOverride = !isNaN(acVal) && acVal > 0 ? acVal : undefined;
-    const updated: SyncedDdbCharacter = { ...character, hpOverride, acOverride };
-
-    if (user) {
-      await fetch(
-        `${authApiBaseUrl}/api/avrae/characters/${encodeURIComponent(character.id)}/overrides`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hpOverride: hpOverride ?? null, acOverride: acOverride ?? null }),
-        },
-      );
-    } else {
-      try {
-        const stored = JSON.parse(
-          window.localStorage.getItem(OVERRIDES_STORAGE_KEY) ?? "{}",
-        );
-        stored[character.id] = { hpOverride, acOverride };
-        window.localStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(stored));
-      } catch {}
-    }
-
-    upsertSavedCharacter(updated);
-    setEditingOverrides(false);
-  }
-
   function upsertSavedCharacter(nextCharacter: SyncedDdbCharacter): void {
     const nextSavedCharacters = [
       nextCharacter,
@@ -1237,63 +1202,6 @@ export default function AvraeCommandsPage(): ReactNode {
                           {character.level ?? "—"}
                         </strong>
                       </div>
-                      {editingOverrides ? (
-                        <div className={styles.csOverrideRow}>
-                          <label className={styles.csOverrideField}>
-                            <span>HP max</span>
-                            <input
-                              type="number"
-                              placeholder={String(character.hp?.max ?? "")}
-                              value={overrideHp}
-                              onChange={(e) => setOverrideHp(e.target.value)}
-                            />
-                          </label>
-                          <label className={styles.csOverrideField}>
-                            <span>AC</span>
-                            <input
-                              type="number"
-                              placeholder={String(character.ac ?? "")}
-                              value={overrideAc}
-                              onChange={(e) => setOverrideAc(e.target.value)}
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            className={styles.primaryButton}
-                            onClick={saveStatOverrides}
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.secondaryButton}
-                            onClick={() => setEditingOverrides(false)}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className={styles.csOverrideBtn}
-                          title="Manually correct HP or AC for homebrew feats"
-                          onClick={() => {
-                            setOverrideHp(
-                              character.hpOverride != null
-                                ? String(character.hpOverride)
-                                : "",
-                            );
-                            setOverrideAc(
-                              character.acOverride != null
-                                ? String(character.acOverride)
-                                : "",
-                            );
-                            setEditingOverrides(true);
-                          }}
-                        >
-                          Fix stats
-                        </button>
-                      )}
                     </div>
 
                     <div className={styles.csCommandBar}>

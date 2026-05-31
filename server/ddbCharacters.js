@@ -105,6 +105,9 @@ function mapAc(character, abilities) {
     return Number(acOverride.value);
   }
 
+  // DDB stores the "Misc Bonus" AC value in characterValues with typeId 3.
+  const acMiscBonus = (character.characterValues || []).find((v) => v.typeId === 3);
+
   const dexMod = abilityMod(abilities.dex || 10);
   let armorBase = null;
   let maxDexBonus = null;
@@ -154,6 +157,7 @@ function mapAc(character, abilities) {
 
   base += shieldBonus;
   base += sumBonusModifiers(character, "armor-class");
+  base += acMiscBonus?.value != null ? Number(acMiscBonus.value) : 0;
   return base;
 }
 
