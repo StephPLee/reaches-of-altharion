@@ -83,7 +83,28 @@ function mapHp(character, abilities, totalLevel) {
   return { max, current: Math.max(0, max - removed), temp };
 }
 
+function sumSetModifiers(character, subType) {
+  // "set" type modifiers specify a fixed AC value rather than a bonus — take the highest.
+  let best = null;
+  for (const modifiers of Object.values(character.modifiers || {})) {
+    if (!Array.isArray(modifiers)) continue;
+    for (const modifier of modifiers) {
+      if (modifier?.type !== "set" || modifier?.subType !== subType) continue;
+      const val = Number(modifier.value ?? modifier.fixedValue ?? null);
+      if (!Number.isFinite(val)) continue;
+      if (best === null || val > best) best = val;
+    }
+  }
+  return best;
+}
+
 function mapAc(character, abilities) {
+  // DDB stores the "Override AC" value in characterValues with typeId 1.
+  const acOverride = (character.characterValues || []).find((v) => v.typeId === 1);
+  if (acOverride?.value != null) {
+    return Number(acOverride.value);
+  }
+
   const dexMod = abilityMod(abilities.dex || 10);
   let armorBase = null;
   let maxDexBonus = null;
@@ -114,8 +135,17 @@ function mapAc(character, abilities) {
     }
   }
 
+  // "set" type modifiers override the base AC to a fixed value (feats, natural armor, etc.).
+  // Only apply when not wearing armor — wearing armor supersedes unarmored formulas.
+  const setAc = armorBase === null ? (
+    sumSetModifiers(character, "armor-class") ??
+    sumSetModifiers(character, "unarmored-armor-class")
+  ) : null;
+
   let base;
-  if (armorBase !== null) {
+  if (setAc !== null) {
+    base = setAc;
+  } else if (armorBase !== null) {
     const dexContrib = maxDexBonus !== null ? Math.min(dexMod, maxDexBonus) : dexMod;
     base = armorBase + dexContrib;
   } else {

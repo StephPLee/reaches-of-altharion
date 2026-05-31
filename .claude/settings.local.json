@@ -28,7 +28,9 @@
       "Bash(cat > *)",
       "WebFetch(domain:localhost)",
       "Bash(curl -s \"http://localhost:3000/avrae\")",
-      "Bash(xargs grep -l \"docItemCol\\\\|col--\")"
+      "Bash(xargs grep -l \"docItemCol\\\\|col--\")",
+      "Bash(git submodule *)",
+      "Bash(grep -v \"^./.git$\")"
     ]
   }
 }
