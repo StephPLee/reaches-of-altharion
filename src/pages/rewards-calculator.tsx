@@ -326,6 +326,7 @@ export default function RewardsCalculatorPage(): ReactNode {
   const [westMarchesStatus, setWestMarchesStatus] =
     useState<WestMarchesStatus | null>(null);
   const [characters, setCharacters] = useState<WestMarchesCharacter[]>([]);
+  const [myCharacters, setMyCharacters] = useState<WestMarchesCharacter[]>([]);
   const [currencies, setCurrencies] = useState<WestMarchesCurrency[]>([]);
   const [adventures, setAdventures] = useState<WestMarchesAdventure[]>([]);
 
@@ -540,6 +541,46 @@ export default function RewardsCalculatorPage(): ReactNode {
     };
   }, [authApiBaseUrl, user?.canSubmitRewards]);
 
+  useEffect(() => {
+    if (!user) {
+      setMyCharacters([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadMyCharacters() {
+      try {
+        const response = await fetch(
+          `${authApiBaseUrl}/api/rewards/westmarches/my-characters`,
+          { credentials: "include" },
+        );
+        if (!response.ok || cancelled) return;
+        const payload = await response.json().catch(() => ({}));
+        if (!cancelled) {
+          setMyCharacters(
+            Array.isArray(payload.characters)
+              ? [...payload.characters].sort((a, b) =>
+                  formatCharacterOption(a).localeCompare(
+                    formatCharacterOption(b),
+                    undefined,
+                    { sensitivity: "base" },
+                  ),
+                )
+              : [],
+          );
+        }
+      } catch {
+        // Non-critical — RP section will just show no characters
+      }
+    }
+
+    loadMyCharacters();
+    return () => {
+      cancelled = true;
+    };
+  }, [authApiBaseUrl, user]);
+
   const safeHours = Math.max(0, parseWholeNumber(hours, 0));
   const safeMinutes = clampNumber(parseWholeNumber(minutes, 0), 0, 59);
   const safeQuestLevel = clampNumber(parseWholeNumber(questLevel, 1), 1, 22);
@@ -597,13 +638,13 @@ export default function RewardsCalculatorPage(): ReactNode {
   const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}${dmScReasonText}${eventReasonText}`;
   const rpDefaultReason = `RP rewards: ${safeRpHours}h ${safeRpMinutes}m, level ${safeRpLevel}`;
 
-  function filterCharacters(query: string) {
+  function filterCharacters(query: string, characterList = characters) {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) {
-      return characters;
+      return characterList;
     }
 
-    return characters.filter((character) =>
+    return characterList.filter((character) =>
       formatCharacterOption(character).toLowerCase().includes(normalizedQuery),
     );
   }
@@ -633,9 +674,10 @@ export default function RewardsCalculatorPage(): ReactNode {
     },
     [characters, dmCharacterQuery, selectedPlayerAdventure],
   );
+  const rpCharacterList = user?.canSubmitRewards ? characters : myCharacters;
   const filteredRpCharacters = useMemo(
-    () => filterCharacters(rpCharacterQuery),
-    [characters, rpCharacterQuery],
+    () => filterCharacters(rpCharacterQuery, rpCharacterList),
+    [rpCharacterList, rpCharacterQuery],
   );
 
   async function submitReward(target: RewardTarget) {
@@ -713,21 +755,37 @@ export default function RewardsCalculatorPage(): ReactNode {
       setSubmissionError("");
       setSubmissionMessage("");
 
+      const isSelfRp = target === "rp" && !user?.canSubmitRewards;
+      const rpBody = isSelfRp
+        ? {
+            characterId: rewards[0].characterId,
+            experience: rewards[0].experience ?? 0,
+            gold: rewards[0].gold ?? 0,
+            reason: rewards[0].reason,
+          }
+        : null;
+
       const response = await fetch(
-        `${authApiBaseUrl}/api/rewards/westmarches/rewards`,
+        isSelfRp
+          ? `${authApiBaseUrl}/api/rewards/rp`
+          : `${authApiBaseUrl}/api/rewards/westmarches/rewards`,
         {
           method: "POST",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            rewards,
-            ...((target === "player" || target === "dm") &&
-            selectedPlayerAdventure?.id
-              ? { adventureId: selectedPlayerAdventure.id }
-              : {}),
-          }),
+          body: JSON.stringify(
+            isSelfRp
+              ? rpBody
+              : {
+                  rewards,
+                  ...((target === "player" || target === "dm") &&
+                  selectedPlayerAdventure?.id
+                    ? { adventureId: selectedPlayerAdventure.id }
+                    : {}),
+                },
+          ),
         },
       );
       const payload = await response.json().catch(() => ({}));
@@ -1179,10 +1237,12 @@ export default function RewardsCalculatorPage(): ReactNode {
                     </span>
                   </div>
                 </div>
-                {user?.canSubmitRewards
+                {user
                   ? renderRewardSubmissionControls(
                       "rp",
-                      "Search and select the single character that should receive the RP reward package.",
+                      user.canSubmitRewards
+                        ? "Search and select the single character that should receive the RP reward package."
+                        : "Select one of your characters to receive the RP reward package.",
                       rpReason,
                       setRpReason,
                       rpDefaultReason,

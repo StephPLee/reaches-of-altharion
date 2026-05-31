@@ -2234,6 +2234,144 @@ app.get(
 );
 
 app.get(
+  "/api/rewards/westmarches/my-characters",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    try {
+      const allCharacters = await listAllCharacters();
+      const myCharacters = allCharacters.filter(
+        (c) => c?.user?.discordId === req.memberUser.discordUserId,
+      );
+      res.json({
+        characters: myCharacters
+          .filter((c) => typeof c?.status !== "string" || c.status.toUpperCase() !== "RETIRED")
+          .map((c) => ({
+            id: c.id,
+            name: typeof c.name === "string" ? c.name.trim() : "",
+            level: c.level,
+            experience: c.experience,
+            status: c.status,
+            image: c.image,
+            user: c.user || null,
+          })),
+      });
+    } catch (westMarchesError) {
+      console.error("Failed to load own West Marches characters:", westMarchesError);
+      res.status(500).json({ error: "Failed to load your characters." });
+    }
+  },
+);
+
+app.post(
+  "/api/rewards/rp",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const { characterId, experience, gold, reason } = req.body ?? {};
+
+    if (typeof characterId !== "string" || !characterId.trim()) {
+      res.status(400).json({ error: "characterId is required." });
+      return;
+    }
+
+    const normalizedExperience = parseOptionalWholeNumber(experience);
+    const normalizedGold = parseOptionalWholeNumber(gold);
+
+    if (normalizedExperience === null || normalizedGold === null) {
+      res.status(400).json({ error: "experience and gold must be whole numbers when provided." });
+      return;
+    }
+
+    if (normalizedExperience < 0 || normalizedGold < 0) {
+      res.status(400).json({ error: "Reward values cannot be negative." });
+      return;
+    }
+
+    if (normalizedExperience === 0 && normalizedGold === 0) {
+      res.status(400).json({ error: "At least one reward value must be greater than zero." });
+      return;
+    }
+
+    let character;
+    try {
+      character = await getCharacter(characterId.trim());
+    } catch {
+      res.status(404).json({ error: "Character not found." });
+      return;
+    }
+
+    if (character?.user?.discordId !== req.memberUser.discordUserId) {
+      res.status(403).json({ error: "You can only submit RP rewards for your own characters." });
+      return;
+    }
+
+    const currencies = {};
+    if (normalizedGold > 0) {
+      if (!westMarchesGoldCurrencyId) {
+        res.status(503).json({ error: "WEST_MARCHES_GOLD_CURRENCY_ID is required to award gold rewards." });
+        return;
+      }
+      currencies[westMarchesGoldCurrencyId] = normalizedGold;
+    }
+
+    const normalizedReason = typeof reason === "string" && reason.trim()
+      ? reason.trim().slice(0, 500)
+      : `RP rewards submission`;
+
+    const rewardPayload = {
+      rewards: [{
+        characterId: characterId.trim(),
+        ...(normalizedExperience > 0 ? { experience: normalizedExperience } : {}),
+        ...(Object.keys(currencies).length > 0 ? { currencies } : {}),
+        reason: normalizedReason,
+      }],
+    };
+
+    try {
+      const rewards = await distributeRewards(rewardPayload);
+      await recordAuditEvent({
+        action: "rp_reward_submit",
+        status: "success",
+        userId: req.memberUser.id,
+        discordUserId: req.memberUser.discordUserId,
+        metadata: { characterId: characterId.trim(), experience: normalizedExperience, gold: normalizedGold },
+        ...getRequestMetadata(req),
+      });
+      res.status(201).json({ reward: rewards[0] });
+    } catch (westMarchesError) {
+      console.error("Failed to submit RP reward:", westMarchesError);
+      await recordAuditEvent({
+        action: "rp_reward_submit",
+        status: "error",
+        userId: req.memberUser.id,
+        discordUserId: req.memberUser.discordUserId,
+        metadata: {
+          characterId: characterId.trim(),
+          error: westMarchesError instanceof Error ? westMarchesError.message : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+      res.status(westMarchesError.status || 500).json({
+        error: westMarchesError instanceof Error ? westMarchesError.message : "Failed to submit RP reward.",
+      });
+    }
+  },
+);
+
+app.get(
   "/api/rewards/westmarches/currencies",
   requireTrustedOrigin,
   requireRewardSubmitSession,
