@@ -252,6 +252,23 @@ const COMMAND_DEFINITIONS = [
     help: "Roll 5 valid stat lines (80–84 total, ≥2 over 12, ≥1 over 15, ≥1 under 10) and save them to the site.",
     defaultMemberPermissions: null,
   },
+  {
+    name: "post-discord-content",
+    description: "Post or refresh mirrored site content to Discord channels.",
+    help: "Staff-only. Post or refresh starting graces or character creation content from the site into their Discord channels.",
+    requiresRole: true,
+    buildCommand: (command) =>
+      command.addStringOption((option) =>
+        option
+          .setName("type")
+          .setDescription("Which content to post or refresh.")
+          .setRequired(true)
+          .addChoices(
+            { name: "Starting Graces", value: "starting-graces" },
+            { name: "Character Creation", value: "character-creation" },
+          ),
+      ),
+  },
 ];
 
 const commands = COMMAND_DEFINITIONS.map((definition) => {
