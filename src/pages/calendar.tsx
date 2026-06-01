@@ -37,6 +37,7 @@ type FormState = {
   category: string;
   summary: string;
   details: string;
+  announce: boolean;
 };
 
 type DatePickerFieldProps = {
@@ -357,6 +358,7 @@ export default function CalendarPage(): ReactNode {
     category: "",
     summary: "",
     details: "",
+    announce: true,
   });
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
@@ -473,6 +475,7 @@ export default function CalendarPage(): ReactNode {
       category: "",
       summary: "",
       details: "",
+      announce: true,
     });
     setEditingEventId(null);
   }
@@ -490,6 +493,7 @@ export default function CalendarPage(): ReactNode {
       category: eventToEdit.category ?? "",
       summary: eventToEdit.summary ?? "",
       details: eventToEdit.details ?? "",
+      announce: false,
     });
     setFormMessage("");
     setFormError("");
@@ -846,6 +850,21 @@ export default function CalendarPage(): ReactNode {
                     ) : null}
                     {formError ? (
                       <p className={styles.errorMessage}>{formError}</p>
+                    ) : null}
+                    {!isEditing ? (
+                      <label className={styles.checkboxRow}>
+                        <input
+                          type="checkbox"
+                          checked={form.announce}
+                          onChange={(e) =>
+                            setForm((current) => ({
+                              ...current,
+                              announce: e.target.checked,
+                            }))
+                          }
+                        />
+                        Post announcement to Discord
+                      </label>
                     ) : null}
                     <div className={styles.formActions}>
                       {isEditing ? (

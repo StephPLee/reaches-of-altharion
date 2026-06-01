@@ -665,6 +665,14 @@
     color: #ffd5df;
 }
 
+.checkboxRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
 .formActions {
     display: flex;
     justify-content: flex-start;

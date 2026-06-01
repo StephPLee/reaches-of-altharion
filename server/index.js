@@ -4596,7 +4596,7 @@ app.post(
   adminRateLimiter,
   requireStaffSession,
   async (req, res) => {
-    const { title, startDate, endDate, category, summary, details } =
+    const { title, startDate, endDate, category, summary, details, announce } =
       req.body ?? {};
 
     if (
@@ -4646,13 +4646,15 @@ app.post(
         ...getRequestMetadata(req),
       });
 
-      try {
-        await notifyCalendarAnnouncement(event);
-      } catch (discordError) {
-        console.error(
-          "Failed to post calendar announcement to Discord:",
-          discordError,
-        );
+      if (announce === true) {
+        try {
+          await notifyCalendarAnnouncement(event);
+        } catch (discordError) {
+          console.error(
+            "Failed to post calendar announcement to Discord:",
+            discordError,
+          );
+        }
       }
 
       res.status(201).json({ event });
