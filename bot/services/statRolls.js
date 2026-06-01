@@ -47,32 +47,21 @@ async function saveStatRollSets({
   statLines,
   discordMessageUrl,
   rolledByDiscordUserId,
-  claimedIndex = -1,
-  claimedByDiscordUserId = null,
+  lockedUntil = null,
 }) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     const saved = [];
-    for (let i = 0; i < statLines.length; i++) {
-      const stats = statLines[i];
+    for (const stats of statLines) {
       const total = stats.reduce((a, b) => a + b, 0);
-      const isClaimed = i === claimedIndex;
       const result = await client.query(
         `INSERT INTO stat_roll_sets
-           (stats, total, discord_message_url, rolled_by_discord_user_id,
-            claimed_by_discord_user_id, claimed_at)
-         VALUES ($1, $2, $3, $4, $5, $6)
+           (stats, total, discord_message_url, rolled_by_discord_user_id, locked_until)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id, stats, total, discord_message_url,
                    claimed_by_discord_user_id, claimed_at, created_at`,
-        [
-          stats,
-          total,
-          discordMessageUrl,
-          rolledByDiscordUserId,
-          isClaimed ? claimedByDiscordUserId : null,
-          isClaimed ? new Date() : null,
-        ],
+        [stats, total, discordMessageUrl, rolledByDiscordUserId, lockedUntil],
       );
       saved.push(mapRow(result.rows[0]));
     }
@@ -86,6 +75,19 @@ async function saveStatRollSets({
   }
 }
 
+async function markStatRollSetClaimed(id, rolledByDiscordUserId, claimedByDiscordUserId) {
+  const result = await pool.query(
+    `UPDATE stat_roll_sets
+     SET claimed_by_discord_user_id = $3, claimed_at = NOW()
+     WHERE id = $1
+       AND rolled_by_discord_user_id = $2
+       AND claimed_by_discord_user_id IS NULL
+     RETURNING id`,
+    [id, rolledByDiscordUserId, claimedByDiscordUserId],
+  );
+  return result.rowCount > 0;
+}
+
 async function deleteStatRollsByRoller(rolledByDiscordUserId) {
   await pool.query(
     `DELETE FROM stat_roll_sets
@@ -97,6 +99,7 @@ async function deleteStatRollsByRoller(rolledByDiscordUserId) {
 
 module.exports = {
   deleteStatRollsByRoller,
+  markStatRollSetClaimed,
   rollFiveStatLines,
   saveStatRollSets,
   mapRow,
