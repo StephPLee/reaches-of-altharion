@@ -1024,26 +1024,24 @@ export default function RewardsCalculatorPage(): ReactNode {
                     />
                   </div>
                 </div>
-                <label className={styles.toggleRow} htmlFor="event-related">
-                  <input
-                    id="event-related"
-                    type="checkbox"
-                    checked={isEventRelated}
-                    onChange={(event) =>
-                      setIsEventRelated(event.target.checked)
-                    }
-                  />
-                  <span>
-                    Event quest
-                    <small>
-                      {hasEventCurrency
-                        ? `${eventCurrencyName} pays ${isEventRelated ? "100%" : "50%"} of SC.`
-                        : isEventRelated
-                          ? "Adds 50% to player and DM XP, gold, and SC."
-                          : "Enable for a 50% player and DM reward bonus."}
-                    </small>
-                  </span>
-                </label>
+                {hasEventCurrency ? (
+                  <label className={styles.toggleRow} htmlFor="event-related">
+                    <input
+                      id="event-related"
+                      type="checkbox"
+                      checked={isEventRelated}
+                      onChange={(event) =>
+                        setIsEventRelated(event.target.checked)
+                      }
+                    />
+                    <span>
+                      Event quest
+                      <small>
+                        {`${eventCurrencyName} pays ${isEventRelated ? "100%" : "50%"} of SC.`}
+                      </small>
+                    </span>
+                  </label>
+                ) : null}
               </section>
 
               {!isAuthLoading &&
