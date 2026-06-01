@@ -1253,7 +1253,9 @@ export default function RewardsCalculatorPage(): ReactNode {
               <section className={styles.panel}>
                 <Heading as="h3">Level Tiers</Heading>
                 <div className={styles.tableWrap}>
-                  <table className={styles.table}>
+                  <table
+                    className={`${styles.table} ${styles.compactTable} ${styles.sideTwoColumnTable}`}
+                  >
                     <thead>
                       <tr>
                         <th>Tier</th>
@@ -1272,10 +1274,12 @@ export default function RewardsCalculatorPage(): ReactNode {
                 </div>
               </section>
 
-              <section className={`${styles.panel} ${styles.growPanel}`}>
+              <section className={styles.panel}>
                 <Heading as="h3">DM Bonus Levels</Heading>
                 <div className={styles.tableWrap}>
-                  <table className={styles.table}>
+                  <table
+                    className={`${styles.table} ${styles.compactTable} ${styles.sideTwoColumnTable}`}
+                  >
                     <thead>
                       <tr>
                         <th>Players</th>
@@ -1303,24 +1307,22 @@ export default function RewardsCalculatorPage(): ReactNode {
                   rewards as if it were a level 5 quest.
                 </p>
               </section>
-            </aside>
-          </div>
 
-          <section className={`${styles.panel} ${styles.rewardTablePanel}`}>
-            <Heading as="h2">Reward Table</Heading>
-            <div className={styles.tableColumnsTriple}>
-              {REWARD_TABLE_GROUPS.map((group, index) => (
-                <div key={index} className={styles.tableWrap}>
-                  <table className={styles.table}>
+              <section className={styles.panel}>
+                <Heading as="h3">Reward Table</Heading>
+                <div className={styles.tableWrap}>
+                  <table
+                    className={`${styles.table} ${styles.compactTable} ${styles.rewardRateTable}`}
+                  >
                     <thead>
                       <tr>
                         <th>Level</th>
-                        <th>XP / Hour</th>
-                        <th>Gold / Hour</th>
+                        <th>XP / h</th>
+                        <th>Gold / h</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {group.map((row) => (
+                      {REWARD_TABLE.map((row) => (
                         <tr key={row.level}>
                           <td className={row.tierClassName}>{row.level}</td>
                           <td>{formatReward(row.xpPerHour)}</td>
@@ -1330,9 +1332,9 @@ export default function RewardsCalculatorPage(): ReactNode {
                     </tbody>
                   </table>
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
+            </aside>
+          </div>
         </div>
       </ToolsSidebarFrame>
       </main>
