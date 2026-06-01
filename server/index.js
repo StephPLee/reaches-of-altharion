@@ -823,6 +823,10 @@ app.post(
         );
       }
     } catch (err) {
+      if (err.locked) {
+        res.status(403).json({ error: err.message });
+        return;
+      }
       console.error("Failed to claim stat roll set:", err);
       res.status(500).json({ error: "Failed to claim stat roll." });
     }

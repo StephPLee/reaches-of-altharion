@@ -76,6 +76,7 @@ const {
 } = require("./services/rpSessions");
 const {
   deleteStatRollsByRoller,
+  markStatRollSetClaimed,
   rollFiveStatLines,
   saveStatRollSets,
 } = require("./services/statRolls");
@@ -173,7 +174,7 @@ async function handleInteraction(interaction) {
       const pending = pendingStatRolls.get(interaction.user.id);
       if (!pending) {
         await interaction.reply({
-          content: "Your stat roll session has expired. Please run `/rollstats` again.",
+          content: "Your stat roll session has expired. You can still claim a set from the site within 12 hours.",
           ephemeral: true,
         });
         return;
@@ -184,42 +185,51 @@ async function handleInteraction(interaction) {
 
       const choiceValue = interaction.values[0];
       const claimedIndex = choiceValue === "none" ? -1 : parseInt(choiceValue, 10);
-      const displayName =
-        interaction.member?.displayName ||
-        interaction.user.globalName ||
-        interaction.user.username;
 
-      const lines = pending.statLines.map((stats, i) => {
-        const total = stats.reduce((a, b) => a + b, 0);
-        const base = `**Set ${i + 1}** — ${stats.join(", ")} *(total: ${total})*`;
-        return i === claimedIndex ? `${base} — Claimed by ${displayName}` : base;
-      });
+      if (claimedIndex >= 0) {
+        const displayName =
+          interaction.member?.displayName ||
+          interaction.user.globalName ||
+          interaction.user.username;
 
-      const content = [
-        "## Stat Rolls",
-        "",
-        ...lines,
-        "",
-        `Rolled by ${interaction.user}`,
-      ].join("\n");
+        await markStatRollSetClaimed(
+          pending.rowIds[claimedIndex],
+          interaction.user.id,
+          interaction.user.id,
+        );
 
-      const publicMessage = await interaction.channel.send(content);
-      const discordMessageUrl = `https://discord.com/channels/${interaction.guildId}/${publicMessage.channelId}/${publicMessage.id}`;
+        const lockTimestamp = Math.floor(pending.lockedUntil.getTime() / 1000);
+        const lines = pending.statLines.map((stats, i) => {
+          const total = stats.reduce((a, b) => a + b, 0);
+          const base = `**Set ${i + 1}** — ${stats.join(", ")} *(total: ${total})*`;
+          return i === claimedIndex ? `${base} — Claimed by ${displayName}` : base;
+        });
+        const updatedContent = [
+          "## Stat Rolls",
+          "",
+          ...lines,
+          "",
+          `Rolled by ${interaction.user} · Open to all <t:${lockTimestamp}:R>`,
+        ].join("\n");
 
-      await saveStatRollSets({
-        statLines: pending.statLines,
-        discordMessageUrl,
-        rolledByDiscordUserId: interaction.user.id,
-        claimedIndex,
-        claimedByDiscordUserId: claimedIndex >= 0 ? interaction.user.id : null,
-      });
+        try {
+          const channel = await interaction.client.channels.fetch(pending.channelId);
+          const msg = await channel.messages.fetch(pending.messageId);
+          await msg.edit(updatedContent);
+        } catch {
+          // best effort
+        }
 
-      const confirmation =
-        claimedIndex >= 0
-          ? `Set ${claimedIndex + 1} has been reserved for you. The remaining sets have been posted and added to the repository.`
-          : "All sets have been posted and added to the repository.";
-
-      await interaction.editReply({ content: confirmation, components: [] });
+        await interaction.editReply({
+          content: `Set ${claimedIndex + 1} has been reserved for you. The remaining sets become available to everyone after 12 hours.`,
+          components: [],
+        });
+      } else {
+        await interaction.editReply({
+          content: "No set reserved. All sets become available to everyone after 12 hours.",
+          components: [],
+        });
+      }
       return;
     }
 
@@ -2018,20 +2028,48 @@ async function handleInteraction(interaction) {
   if (interaction.commandName === "rollstats") {
     try {
       const statLines = rollFiveStatLines();
-      pendingStatRolls.set(interaction.user.id, { statLines, timestamp: Date.now() });
+      const lockedUntil = new Date(Date.now() + 12 * 60 * 60 * 1000);
+      const lockTimestamp = Math.floor(lockedUntil.getTime() / 1000);
 
-      const preview = statLines.map((stats, i) => {
+      const lines = statLines.map((stats, i) => {
         const total = stats.reduce((a, b) => a + b, 0);
         return `**Set ${i + 1}** — ${stats.join(", ")} *(total: ${total})*`;
-      }).join("\n");
+      });
+
+      const publicContent = [
+        "## Stat Rolls",
+        "",
+        ...lines,
+        "",
+        `Rolled by ${interaction.user} · Open to all <t:${lockTimestamp}:R>`,
+      ].join("\n");
+
+      const publicMessage = await interaction.channel.send(publicContent);
+      const discordMessageUrl = `https://discord.com/channels/${interaction.guildId}/${publicMessage.channelId}/${publicMessage.id}`;
+
+      const savedSets = await saveStatRollSets({
+        statLines,
+        discordMessageUrl,
+        rolledByDiscordUserId: interaction.user.id,
+        lockedUntil,
+      });
+
+      pendingStatRolls.set(interaction.user.id, {
+        statLines,
+        rowIds: savedSets.map((s) => s.id),
+        messageId: publicMessage.id,
+        channelId: publicMessage.channelId,
+        lockedUntil,
+        timestamp: Date.now(),
+      });
 
       const menu = new StringSelectMenuBuilder()
         .setCustomId(`rollstats-pick:${interaction.user.id}`)
-        .setPlaceholder("Choose a set to keep for yourself, or keep none")
+        .setPlaceholder("Reserve a set for yourself, or skip")
         .addOptions([
           {
-            label: "Keep none",
-            description: "Post all sets as available for others",
+            label: "Reserve none",
+            description: "All sets open to everyone after 12 hours",
             value: "none",
           },
           ...statLines.map((stats, i) => ({
@@ -2042,7 +2080,7 @@ async function handleInteraction(interaction) {
         ]);
 
       await interaction.reply({
-        content: `Your stat rolls:\n\n${preview}\n\nWould you like to keep one for yourself?`,
+        content: "Your rolls have been posted! Would you like to reserve one for yourself now? You have 12 hours exclusive access on the site before they open to everyone.",
         components: [new ActionRowBuilder().addComponents(menu)],
         ephemeral: true,
       });

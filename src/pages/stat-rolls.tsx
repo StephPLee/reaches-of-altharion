@@ -11,8 +11,10 @@ type StatRollSet = {
   stats: number[];
   total: number;
   discordMessageUrl: string | null;
+  rolledByDiscordUserId: string | null;
   claimedByDiscordUserId: string | null;
   claimedByUsername: string | null;
+  lockedUntil: string | null;
   createdAt: string;
 };
 
@@ -20,6 +22,7 @@ type SessionUser = {
   username: string;
   globalName: string | null;
   isStaff: boolean;
+  discordUserId: string;
 };
 
 function getAuthApiBaseUrl(siteConfig): string {
@@ -31,11 +34,23 @@ function StatCard({
   roll,
   onClaim,
   claiming,
+  currentUserDiscordId,
 }: {
   roll: StatRollSet;
   onClaim: (id: number) => void;
   claiming: boolean;
+  currentUserDiscordId: string | null;
 }) {
+  const isLocked =
+    roll.lockedUntil !== null &&
+    new Date() < new Date(roll.lockedUntil) &&
+    roll.rolledByDiscordUserId !== currentUserDiscordId;
+
+  const lockedUntilDate = roll.lockedUntil ? new Date(roll.lockedUntil) : null;
+  const lockedLabel = lockedUntilDate
+    ? `Reserved for roller until ${lockedUntilDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — available to claim after that`
+    : "";
+
   return (
     <div className={styles.card}>
       <div className={styles.statsRow}>
@@ -77,9 +92,10 @@ function StatCard({
             type="button"
             className={styles.claimButton}
             onClick={() => onClaim(roll.id)}
-            disabled={claiming}
+            disabled={claiming || isLocked}
+            title={isLocked ? lockedLabel : undefined}
           >
-            {claiming ? "Claiming…" : "Claim"}
+            {claiming ? "Claiming…" : isLocked ? "Locked" : "Claim"}
           </button>
         )}
       </div>
@@ -204,6 +220,7 @@ export default function StatRollsPage(): ReactNode {
                     roll={roll}
                     onClaim={user ? handleClaim : handleLogin}
                     claiming={claimingId === roll.id}
+                    currentUserDiscordId={user?.discordUserId ?? null}
                   />
                 ))}
               </div>

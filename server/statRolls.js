@@ -7,9 +7,11 @@ function mapRow(row) {
     stats: row.stats,
     total: Number(row.total),
     discordMessageUrl: row.discord_message_url,
+    rolledByDiscordUserId: row.rolled_by_discord_user_id ?? null,
     claimedByDiscordUserId: row.claimed_by_discord_user_id ?? null,
     claimedByUsername: row.claimed_by_username ?? null,
     claimedAt: row.claimed_at ? row.claimed_at.toISOString() : null,
+    lockedUntil: row.locked_until ? row.locked_until.toISOString() : null,
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -17,7 +19,8 @@ function mapRow(row) {
 async function listStatRollSets() {
   const result = await pool.query(
     `SELECT s.id, s.stats, s.total, s.discord_message_url,
-            s.claimed_by_discord_user_id, s.claimed_at, s.created_at,
+            s.rolled_by_discord_user_id, s.claimed_by_discord_user_id,
+            s.claimed_at, s.locked_until, s.created_at,
             COALESCE(u.global_name, u.username) AS claimed_by_username
      FROM stat_roll_sets s
      LEFT JOIN users u ON u.discord_user_id = s.claimed_by_discord_user_id
@@ -27,6 +30,28 @@ async function listStatRollSets() {
 }
 
 async function claimStatRollSet({ id, discordUserId }) {
+  const lockCheck = await pool.query(
+    `SELECT rolled_by_discord_user_id, locked_until
+     FROM stat_roll_sets
+     WHERE id = $1 AND claimed_by_discord_user_id IS NULL`,
+    [id],
+  );
+
+  const row = lockCheck.rows[0];
+  if (!row) return null;
+
+  if (
+    row.locked_until &&
+    new Date() < new Date(row.locked_until) &&
+    row.rolled_by_discord_user_id !== discordUserId
+  ) {
+    const error = new Error(
+      "This stat roll set is reserved for the roller for 12 hours after rolling.",
+    );
+    error.locked = true;
+    throw error;
+  }
+
   const result = await pool.query(
     `WITH updated AS (
        UPDATE stat_roll_sets
