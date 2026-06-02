@@ -28,7 +28,9 @@ function rollValidStatLine() {
 }
 
 function rollFiveStatLines() {
-  return [0, 0, 0, 0, 0].map(() => rollValidStatLine());
+  return [0, 0, 0, 0, 0].map(() =>
+    rollValidStatLine().sort((a, b) => b - a),
+  );
 }
 
 function mapRow(row) {
