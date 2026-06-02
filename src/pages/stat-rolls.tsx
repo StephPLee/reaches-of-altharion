@@ -54,7 +54,7 @@ function StatCard({
   return (
     <div className={styles.card}>
       <div className={styles.statsRow}>
-        {roll.stats.map((v, i) => (
+        {[...roll.stats].sort((a, b) => b - a).map((v, i) => (
           <span
             key={i}
             className={`${styles.statBadge} ${
