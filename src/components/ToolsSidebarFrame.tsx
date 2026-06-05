@@ -82,23 +82,31 @@ export default function ToolsSidebarFrame({
   sidebarOffset = "0rem",
 }: ToolsSidebarFrameProps) {
   const location = useLocation();
-  const [isHidden, setIsHidden] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div
       className={`${styles.frame} docs-wrapper`}
       style={{ "--tools-sidebar-offset": sidebarOffset } as CSSProperties}
     >
-      <aside className={styles.sidebarContainer}>
+      <aside
+        className={[
+          styles.sidebarContainer,
+          collapsed ? styles.sidebarCollapsed : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <div className={styles.sidebarViewport}>
           <DocSidebar
             sidebar={SIDEBAR as unknown as DocSidebarItems}
             path={location.pathname}
-            onCollapse={() => setIsHidden((h) => !h)}
-            isHidden={isHidden}
+            onCollapse={() => setCollapsed((h) => !h)}
+            isHidden={collapsed}
           />
         </div>
       </aside>
+
       <div className={styles.content}>{children}</div>
     </div>
   );

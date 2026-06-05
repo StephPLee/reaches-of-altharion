@@ -136,6 +136,11 @@ const config: Config = {
 
   themeConfig: {
     image: "img/altharion-no-frame.png",
+    docs: {
+      sidebar: {
+        hideable: true,
+      },
+    },
     colorMode: {
       defaultMode: "dark",
       disableSwitch: true,

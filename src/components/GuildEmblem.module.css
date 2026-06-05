@@ -5,14 +5,7 @@
     margin: 0.15rem 0 1rem 1.25rem;
     border: 1px solid rgba(181, 194, 230, 0.28);
     border-radius: 1rem;
-    background: linear-gradient(
-        180deg,
-        rgba(17, 22, 39, 0.9) 0%,
-        rgba(10, 14, 28, 0.82) 100%
-    );
-    box-shadow:
-        0 14px 28px rgba(3, 6, 20, 0.28),
-        inset 0 0 0 1px rgba(235, 240, 255, 0.04);
+    background: rgba(13, 15, 29, 0.82);
     overflow: hidden;
 }
 

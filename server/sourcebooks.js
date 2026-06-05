@@ -46,7 +46,8 @@ async function listSourcebooks({ includeUnpublished = false } = {}) {
         WHEN 'not_allowed' THEN 0
         ELSE 1
       END ASC,
-      sort_order ASC,
+      CASE WHEN LOWER(publisher) = 'wizards of the coast' THEN 0 ELSE 1 END ASC,
+      LOWER(publisher) ASC,
       LOWER(title) ASC,
       id ASC
     `,
