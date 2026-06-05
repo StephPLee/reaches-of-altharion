@@ -1,5 +1,4 @@
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
-import { useState } from "react";
 import { useLocation } from "@docusaurus/router";
 import DocSidebar from "@theme/DocSidebar";
 
@@ -82,27 +81,19 @@ export default function ToolsSidebarFrame({
   sidebarOffset = "0rem",
 }: ToolsSidebarFrameProps) {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div
       className={`${styles.frame} docs-wrapper`}
       style={{ "--tools-sidebar-offset": sidebarOffset } as CSSProperties}
     >
-      <aside
-        className={[
-          styles.sidebarContainer,
-          collapsed ? styles.sidebarCollapsed : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
+      <aside className={styles.sidebarContainer}>
         <div className={styles.sidebarViewport}>
           <DocSidebar
             sidebar={SIDEBAR as unknown as DocSidebarItems}
             path={location.pathname}
-            onCollapse={() => setCollapsed((h) => !h)}
-            isHidden={collapsed}
+            onCollapse={() => {}}
+            isHidden={false}
           />
         </div>
       </aside>

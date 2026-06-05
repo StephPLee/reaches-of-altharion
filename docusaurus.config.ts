@@ -138,7 +138,7 @@ const config: Config = {
     image: "img/altharion-no-frame.png",
     docs: {
       sidebar: {
-        hideable: true,
+        hideable: false,
       },
     },
     colorMode: {

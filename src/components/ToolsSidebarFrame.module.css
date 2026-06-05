@@ -36,12 +36,5 @@
         flex-shrink: 0;
         margin-top: calc(-1 * var(--tools-sidebar-offset));
         border-right: 1px solid var(--ifm-toc-border-color);
-        transition: width 200ms ease;
-        will-change: width;
-        clip-path: inset(0);
-    }
-
-    .sidebarCollapsed {
-        width: var(--doc-sidebar-width-hidden, 2rem);
     }
 }
