@@ -1277,7 +1277,6 @@ function normalizeSourcebookPayload(body) {
     publisher,
     type,
     edition,
-    sortOrder,
     isPublished,
   } = body ?? {};
 
@@ -1291,18 +1290,13 @@ function normalizeSourcebookPayload(body) {
     };
   }
 
-  const parsedSortOrder =
-    typeof sortOrder === "number" && Number.isFinite(sortOrder)
-      ? Math.trunc(sortOrder)
-      : 0;
-
   return {
     listType,
     title: title.trim(),
     publisher: typeof publisher === "string" ? publisher.trim() : "",
     type: typeof type === "string" ? type.trim() : "",
     edition: typeof edition === "string" ? edition.trim() : "",
-    sortOrder: parsedSortOrder,
+    sortOrder: 0,
     isPublished: isPublished !== false,
   };
 }

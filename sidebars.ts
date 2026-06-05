@@ -57,6 +57,11 @@ const sidebars: SidebarsConfig = {
           label: "Stellar Coin Conversion",
           href: "/stellar-coin-conversion",
         },
+        {
+          type: "link",
+          label: "Stat Rolls",
+          href: "/stat-rolls",
+        },
       ],
     },
   ],
