@@ -2026,6 +2026,7 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.commandName === "rollstats") {
+    await interaction.deferReply({ ephemeral: true });
     try {
       const statLines = rollFiveStatLines();
       const lockedUntil = new Date(Date.now() + 12 * 60 * 60 * 1000);
@@ -2079,18 +2080,13 @@ async function handleInteraction(interaction) {
           })),
         ]);
 
-      await interaction.reply({
+      await interaction.editReply({
         content: "Your rolls have been posted! Would you like to reserve one for yourself now? You have 12 hours exclusive access on the site before they open to everyone.",
         components: [new ActionRowBuilder().addComponents(menu)],
-        ephemeral: true,
       });
     } catch (error) {
       console.error("Failed to process /rollstats:", error);
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply("Something went wrong while rolling stat lines. Please try again.");
-      } else {
-        await interaction.reply({ content: "Something went wrong while rolling stat lines. Please try again.", ephemeral: true });
-      }
+      await interaction.editReply("Something went wrong while rolling stat lines. Please try again.");
     }
     return;
   }
