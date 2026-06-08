@@ -121,7 +121,7 @@
     min-height: 2.6rem;
     padding: 0.7rem 1rem;
     border: 1px solid rgba(202, 168, 255, 0.28);
-    border-radius: 999px;
+    border-radius: 0.55rem;
     background: rgba(24, 21, 52, 0.7);
     color: #f0e5ff;
     font-weight: 600;
@@ -273,7 +273,7 @@
     gap: 0.35rem;
     padding: 0.5rem 0.8rem;
     border: 1px solid rgba(202, 168, 255, 0.28);
-    border-radius: 999px;
+    border-radius: 0.4rem;
     background: rgba(24, 21, 52, 0.68);
     color: #f0e5ff;
     cursor: pointer;

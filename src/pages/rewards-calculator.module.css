@@ -66,13 +66,13 @@
     margin-bottom: 1.2rem;
     padding: 0.35rem;
     border: 1px solid rgba(190, 176, 138, 0.16);
-    border-radius: 999px;
+    border-radius: 0.55rem;
     background: rgba(10, 12, 22, 0.92);
 }
 
 .tabButton {
     border: 0;
-    border-radius: 999px;
+    border-radius: 0.35rem;
     padding: 0.75rem 1.45rem;
     background: transparent;
     color: #d4dbed;
@@ -394,7 +394,7 @@
     gap: 0.35rem;
     padding: 0.5rem 0.8rem;
     border: 1px solid rgba(202, 168, 255, 0.28);
-    border-radius: 999px;
+    border-radius: 0.4rem;
     background: rgba(24, 21, 52, 0.68);
     color: #f0e5ff;
     cursor: pointer;
@@ -419,7 +419,7 @@
     min-height: 2.1rem;
     padding: 0.4rem 0.85rem;
     border: 1px solid rgba(190, 176, 138, 0.18);
-    border-radius: 999px;
+    border-radius: 0.4rem;
     background: rgba(20, 23, 40, 0.86);
     color: #e7e0f5;
     font-size: 0.92rem;

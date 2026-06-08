@@ -8,6 +8,7 @@ function mapRow(row) {
     total: Number(row.total),
     discordMessageUrl: row.discord_message_url,
     rolledByDiscordUserId: row.rolled_by_discord_user_id ?? null,
+    rolledByUsername: row.rolled_by_username ?? null,
     claimedByDiscordUserId: row.claimed_by_discord_user_id ?? null,
     claimedByUsername: row.claimed_by_username ?? null,
     claimedAt: row.claimed_at ? row.claimed_at.toISOString() : null,
@@ -21,10 +22,12 @@ async function listStatRollSets() {
     `SELECT s.id, s.stats, s.total, s.discord_message_url,
             s.rolled_by_discord_user_id, s.claimed_by_discord_user_id,
             s.claimed_at, s.locked_until, s.created_at,
-            COALESCE(u.global_name, u.username) AS claimed_by_username
+            COALESCE(claimer.global_name, claimer.username) AS claimed_by_username,
+            COALESCE(roller.global_name, roller.username) AS rolled_by_username
      FROM stat_roll_sets s
-     LEFT JOIN users u ON u.discord_user_id = s.claimed_by_discord_user_id
-     ORDER BY s.claimed_at ASC NULLS FIRST, s.created_at ASC`,
+     LEFT JOIN users claimer ON claimer.discord_user_id = s.claimed_by_discord_user_id
+     LEFT JOIN users roller ON roller.discord_user_id = s.rolled_by_discord_user_id
+     ORDER BY s.created_at DESC`,
   );
   return result.rows.map(mapRow);
 }

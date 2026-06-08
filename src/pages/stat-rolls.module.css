@@ -38,61 +38,118 @@
     max-width: 62ch;
 }
 
-/* Login banner */
-.loginBanner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    padding: 0.9rem 1rem;
-    border: 1px solid rgba(202, 168, 255, 0.18);
-    border-radius: 1rem;
-    background: rgba(6, 8, 18, 0.52);
-}
-
-.loginBanner p {
-    margin: 0;
-    color: rgba(232, 225, 241, 0.72);
-    font-size: 0.88rem;
-}
-
 /* Buttons */
-.loginButton,
 .claimButton {
-    border: 1px solid rgba(202, 168, 255, 0.18);
-    border-radius: 0.65rem;
-    background: rgba(20, 23, 42, 0.76);
-    color: #f0e8fb;
+    border: 1px solid rgba(202, 168, 255, 0.22);
+    border-radius: 0.4rem;
+    background: transparent;
+    color: rgba(202, 168, 255, 0.75);
     cursor: pointer;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0.45rem 0.9rem;
-    transition: background 140ms ease, border-color 140ms ease;
+    padding: 0.35rem 0.85rem;
+    transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
 }
 
-.loginButton {
-    min-height: 2.7rem;
-    padding-inline: 1.2rem;
-}
-
-.claimButton {
-    min-height: 2.35rem;
-}
-
-.loginButton:hover,
 .claimButton:hover {
-    border-color: rgba(202, 168, 255, 0.48);
-    background: rgba(72, 54, 126, 0.72);
+    border-color: rgba(202, 168, 255, 0.5);
+    color: #d6b8ff;
+    background: rgba(202, 168, 255, 0.06);
 }
 
-.loginButton:disabled,
 .claimButton:disabled {
     cursor: not-allowed;
     opacity: 0.55;
+}
+
+/* Controls bar (tabs + search) */
+.controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+.tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.65rem;
+    overflow: hidden;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    background: rgba(8, 9, 19, 0.48);
+    border: none;
+    border-right: 1px solid rgba(190, 176, 138, 0.14);
+    color: rgba(232, 225, 241, 0.5);
+    cursor: pointer;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: background 140ms ease, color 140ms ease;
+}
+
+.tab:last-child {
+    border-right: none;
+}
+
+.tab:hover {
+    background: rgba(72, 54, 126, 0.4);
+    color: rgba(232, 225, 241, 0.8);
+}
+
+.tabActive {
+    background: rgba(72, 54, 126, 0.56);
+    color: #f0e8fb;
+}
+
+.tabCount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.2rem;
+    background: rgba(202, 168, 255, 0.14);
+    border: 1px solid rgba(202, 168, 255, 0.2);
+    color: rgba(214, 184, 255, 0.8);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.searchInput {
+    padding: 0.4rem 0.85rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.65rem;
+    background: rgba(8, 9, 19, 0.6);
+    color: #e8e1f1;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 0.9rem;
+    width: 14rem;
+    transition: border-color 140ms ease;
+}
+
+.searchInput::placeholder {
+    color: rgba(232, 225, 241, 0.3);
+    font-style: italic;
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: rgba(202, 168, 255, 0.42);
 }
 
 /* Stat roll cards */
@@ -149,10 +206,37 @@
     border: 1px solid rgba(190, 176, 138, 0.14);
     border-radius: 0.55rem;
     background: rgba(8, 9, 19, 0.48);
-    padding: 0.5rem 1rem;
+    padding: 0.45rem 1rem;
     display: flex;
     align-items: center;
     gap: 1rem;
+}
+
+.cardActions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.rollerText,
+.dateText {
+    font-size: 0.92rem;
+    color: rgba(232, 225, 241, 0.42);
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+.rollerText {
+    flex: 0 0 9rem;
+}
+
+.dateText {
+    flex: 0 0 6.5rem;
 }
 
 .statsRow {
@@ -167,32 +251,30 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.4rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 0.4rem;
+    min-width: 2.2rem;
+    padding: 0.18rem 0.38rem;
+    border-radius: 0.2rem;
     font-family: "Cinzel", serif;
     font-size: 0.86rem;
     font-weight: 800;
     letter-spacing: 0.04em;
     border: 1px solid transparent;
+    background: transparent;
 }
 
 .statHigh {
-    background: rgba(82, 57, 132, 0.38);
-    border-color: rgba(202, 168, 255, 0.35);
-    color: #d6b8ff;
+    color: #c9a8f8;
+    border-color: rgba(202, 168, 255, 0.22);
 }
 
 .statMid {
-    background: rgba(15, 16, 36, 0.5);
-    border-color: rgba(190, 176, 138, 0.18);
-    color: #e8e1f1;
+    color: rgba(232, 225, 241, 0.7);
+    border-color: rgba(190, 176, 138, 0.12);
 }
 
 .statLow {
-    background: rgba(100, 30, 30, 0.32);
-    border-color: rgba(255, 180, 193, 0.28);
-    color: #ffb4c1;
+    color: #f0909f;
+    border-color: rgba(255, 180, 193, 0.2);
 }
 
 .total {
@@ -202,13 +284,6 @@
     font-weight: 700;
     color: rgba(232, 225, 241, 0.5);
     letter-spacing: 0.04em;
-}
-
-.cardFooter {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-shrink: 0;
 }
 
 .discordLink {

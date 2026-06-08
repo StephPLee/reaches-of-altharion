@@ -143,9 +143,9 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
   },
   {
     id: "tenebryn",
-    label: "RP Rules",
+    label: "Tools",
     hoverSummary:
-      "Roleplay standards, etiquette, and core community guidelines.",
+      "Rewards calculators, stat rollers, Avrae commands, and other server utilities.",
     worldHoverSummary:
       "A barren, mountainous island with little visible life and few permanent residents. Those who come to Tenebryn usually do so for a specific purpose.",
     islandName: "Tenebryn",
@@ -153,7 +153,7 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     description:
       "Unlike the other islands, people tend not to live in Tenebryn unless they have a specific reason to do so. It's extremely mountainous and barren, with little to no signs of life.",
     landmarks: [],
-    to: "/docs/rp-rules",
+    to: "/rewards-calculator",
     image: "/img/Tenebryn.png",
     x: 40.5,
     y: 62,
