@@ -12,6 +12,7 @@ type StatRollSet = {
   total: number;
   discordMessageUrl: string | null;
   rolledByDiscordUserId: string | null;
+  rolledByUsername: string | null;
   claimedByDiscordUserId: string | null;
   claimedByUsername: string | null;
   lockedUntil: string | null;
@@ -30,16 +31,26 @@ function getAuthApiBaseUrl(siteConfig): string {
   return typeof configured === "string" ? configured.replace(/\/$/, "") : "";
 }
 
+function formatDate(isoString: string): string {
+  return new Date(isoString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function StatCard({
   roll,
   onClaim,
   claiming,
   currentUserDiscordId,
+  isLoggedIn,
 }: {
   roll: StatRollSet;
   onClaim: (id: number) => void;
   claiming: boolean;
   currentUserDiscordId: string | null;
+  isLoggedIn: boolean;
 }) {
   const isLocked =
     roll.lockedUntil !== null &&
@@ -47,41 +58,50 @@ function StatCard({
     roll.rolledByDiscordUserId !== currentUserDiscordId;
 
   const lockedUntilDate = roll.lockedUntil ? new Date(roll.lockedUntil) : null;
-  const lockedLabel = lockedUntilDate
-    ? `Reserved for roller until ${lockedUntilDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — available to claim after that`
-    : "";
+
+  const buttonTitle = !isLoggedIn
+    ? "Log in with Discord to claim"
+    : isLocked
+      ? `Reserved for roller until ${lockedUntilDate?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — available to claim after that`
+      : undefined;
+
+  const buttonLabel = claiming ? "Claiming…" : isLocked ? "Locked" : "Claim";
 
   return (
     <div className={styles.card}>
       <div className={styles.statsRow}>
-        {[...roll.stats].sort((a, b) => b - a).map((v, i) => (
-          <span
-            key={i}
-            className={`${styles.statBadge} ${
-              v > 15
-                ? styles.statHigh
-                : v < 10
-                  ? styles.statLow
-                  : styles.statMid
-            }`}
-          >
-            {v}
-          </span>
-        ))}
+        {[...roll.stats]
+          .sort((a, b) => b - a)
+          .map((v, i) => (
+            <span
+              key={i}
+              className={`${styles.statBadge} ${
+                v > 15
+                  ? styles.statHigh
+                  : v < 10
+                    ? styles.statLow
+                    : styles.statMid
+              }`}
+            >
+              {v}
+            </span>
+          ))}
         <span className={styles.total}>= {roll.total}</span>
       </div>
-      <div className={styles.cardFooter}>
-        {roll.discordMessageUrl ? (
+      <span className={styles.rollerText}>
+        {roll.rolledByUsername ? `@${roll.rolledByUsername}` : "Unknown roller"}
+      </span>
+      <span className={styles.dateText}>{formatDate(roll.createdAt)}</span>
+      <div className={styles.cardActions}>
+        {isLoggedIn && roll.discordMessageUrl && (
           <a
             href={roll.discordMessageUrl}
             target="_blank"
             rel="noreferrer"
             className={styles.discordLink}
           >
-            View in Discord ↗
+            Discord ↗
           </a>
-        ) : (
-          <span />
         )}
         {roll.claimedByDiscordUserId ? (
           <span className={styles.claimedLabel}>
@@ -92,10 +112,10 @@ function StatCard({
             type="button"
             className={styles.claimButton}
             onClick={() => onClaim(roll.id)}
-            disabled={claiming || isLocked}
-            title={isLocked ? lockedLabel : undefined}
+            disabled={claiming || isLocked || !isLoggedIn}
+            title={buttonTitle}
           >
-            {claiming ? "Claiming…" : isLocked ? "Locked" : "Claim"}
+            {buttonLabel}
           </button>
         )}
       </div>
@@ -114,6 +134,10 @@ export default function StatRollsPage(): ReactNode {
   const [rollsError, setRollsError] = useState("");
   const [claimingId, setClaimingId] = useState<number | null>(null);
   const [claimError, setClaimError] = useState("");
+  const [activeTab, setActiveTab] = useState<
+    "available" | "locked" | "claimed"
+  >("available");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function loadUser() {
@@ -121,7 +145,10 @@ export default function StatRollsPage(): ReactNode {
         const res = await fetch(`${authApiBaseUrl}/api/me`, {
           credentials: "include",
         });
-        if (!res.ok) { setAuthLoading(false); return; }
+        if (!res.ok) {
+          setAuthLoading(false);
+          return;
+        }
         const payload = await res.json();
         setUser(payload.authenticated ? payload.user : null);
       } catch {
@@ -165,7 +192,7 @@ export default function StatRollsPage(): ReactNode {
         return;
       }
       const claimed = payload.statRoll as StatRollSet;
-      setRolls((prev) => prev.map((r) => r.id === id ? claimed : r));
+      setRolls((prev) => prev.map((r) => (r.id === id ? claimed : r)));
     } catch {
       setClaimError("Something went wrong. Please try again.");
     } finally {
@@ -173,9 +200,34 @@ export default function StatRollsPage(): ReactNode {
     }
   }
 
-  function handleLogin() {
-    window.location.href = `${authApiBaseUrl}/auth/discord/login?returnTo=/stat-rolls`;
-  }
+  const isWithinLockPeriod = (r: StatRollSet) =>
+    r.lockedUntil !== null &&
+    new Date() < new Date(r.lockedUntil) &&
+    !r.claimedByDiscordUserId;
+
+  const filteredRolls = rolls.filter((roll) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (roll.rolledByUsername ?? "").toLowerCase().includes(q);
+  });
+
+  const availableRolls = filteredRolls.filter(
+    (r) => !r.claimedByDiscordUserId && !isWithinLockPeriod(r),
+  );
+  const lockedRolls = filteredRolls.filter(isWithinLockPeriod);
+  const claimedRolls = filteredRolls.filter((r) => r.claimedByDiscordUserId);
+  const displayRolls =
+    activeTab === "available"
+      ? availableRolls
+      : activeTab === "locked"
+        ? lockedRolls
+        : claimedRolls;
+
+  const totalAvailable = rolls.filter(
+    (r) => !r.claimedByDiscordUserId && !isWithinLockPeriod(r),
+  ).length;
+  const totalLocked = rolls.filter(isWithinLockPeriod).length;
+  const totalClaimed = rolls.filter((r) => r.claimedByDiscordUserId).length;
 
   return (
     <Layout title="Stat Rolls" description="Available stat roll sets to claim.">
@@ -183,44 +235,76 @@ export default function StatRollsPage(): ReactNode {
         <div className={styles.page}>
           <div className={styles.shell}>
             <h1 className={styles.heading}>Stat Roll Repository</h1>
-            <p className={styles.intro}>
-              Available stat lines
-            </p>
-
-            {!authLoading && !user && (
-              <div className={styles.loginBanner}>
-                <p>You need to be logged in to claim a stat roll set.</p>
-                <button
-                  type="button"
-                  className={styles.loginButton}
-                  onClick={handleLogin}
-                >
-                  Log in with Discord
-                </button>
-              </div>
-            )}
 
             {claimError && <p className={styles.error}>{claimError}</p>}
+
+            <div className={styles.controls}>
+              <div className={styles.tabs}>
+                <button
+                  type="button"
+                  className={`${styles.tab} ${activeTab === "available" ? styles.tabActive : ""}`}
+                  onClick={() => setActiveTab("available")}
+                >
+                  Available
+                  {!rollsLoading && (
+                    <span className={styles.tabCount}>{totalAvailable}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.tab} ${activeTab === "locked" ? styles.tabActive : ""}`}
+                  onClick={() => setActiveTab("locked")}
+                >
+                  Locked
+                  {!rollsLoading && (
+                    <span className={styles.tabCount}>{totalLocked}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.tab} ${activeTab === "claimed" ? styles.tabActive : ""}`}
+                  onClick={() => setActiveTab("claimed")}
+                >
+                  Claimed
+                  {!rollsLoading && (
+                    <span className={styles.tabCount}>{totalClaimed}</span>
+                  )}
+                </button>
+              </div>
+              <input
+                type="search"
+                className={styles.searchInput}
+                placeholder="Search by roller…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
             {rollsLoading && <p className={styles.hint}>Loading stat rolls…</p>}
             {rollsError && <p className={styles.error}>{rollsError}</p>}
 
-            {!rollsLoading && !rollsError && rolls.length === 0 && (
+            {!rollsLoading && !rollsError && displayRolls.length === 0 && (
               <p className={styles.hint}>
-                No stat roll sets are currently available. Check back after a
-                server member runs <code>/rollstats</code> in Discord.
+                {searchQuery.trim()
+                  ? "No rolls found matching that roller."
+                  : activeTab === "available"
+                    ? "No available stat roll sets right now. Check back after a server member runs /rollstats in Discord."
+                    : activeTab === "locked"
+                      ? "No locked stat rolls right now."
+                      : "No claimed stat rolls yet."}
               </p>
             )}
 
-            {!rollsLoading && rolls.length > 0 && (
+            {!rollsLoading && displayRolls.length > 0 && (
               <div className={styles.grid}>
-                {rolls.map((roll) => (
+                {displayRolls.map((roll) => (
                   <StatCard
                     key={roll.id}
                     roll={roll}
-                    onClaim={user ? handleClaim : handleLogin}
+                    onClaim={handleClaim}
                     claiming={claimingId === roll.id}
                     currentUserDiscordId={user?.discordUserId ?? null}
+                    isLoggedIn={!!user}
                   />
                 ))}
               </div>

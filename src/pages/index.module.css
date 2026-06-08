@@ -172,14 +172,15 @@
     opacity: 1;
     white-space: nowrap;
     min-width: 9.5rem;
-    padding: 0.28rem 1rem;
+    min-width: 6.5rem;
+    padding: 0.2rem 0.75rem;
     border-radius: 999px;
     border: 1px solid rgba(224, 232, 255, 0.35);
     background: rgba(10, 14, 45, 0.8);
     color: #eff2ff;
     text-align: center;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    font-size: 0.84rem;
+    font-size: 0.7rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     font-weight: 700;
@@ -196,9 +197,9 @@
 
 @media screen and (min-width: 1800px) {
     .islandLabel {
-        min-width: 12rem;
-        padding: 0.38rem 1.2rem;
-        font-size: 1rem;
+        min-width: 9rem;
+        padding: 0.28rem 1rem;
+        font-size: 0.86rem;
         letter-spacing: 0.085em;
     }
 }
@@ -207,8 +208,8 @@
     .islandLabel {
         min-width: 0;
         max-width: min(24vw, 18rem);
-        padding: 0.24rem 0.85rem;
-        font-size: clamp(0.72rem, 0.9vw, 0.82rem);
+        padding: 0.18rem 0.72rem;
+        font-size: clamp(0.62rem, 0.82vw, 0.7rem);
         letter-spacing: 0.06em;
     }
 }
@@ -220,8 +221,8 @@
     transform: translate(-50%, -0.45rem);
     width: min(15rem, 32vw);
     padding: 0.75rem 0.9rem;
-    border: 1px solid rgba(214, 226, 255, 0.24);
-    border-radius: 0.9rem;
+    border: 1px solid rgba(214, 226, 255, 0.22);
+    border-radius: 0.5rem;
     background: rgba(8, 12, 38, 0.92);
     color: rgba(240, 244, 255, 0.92);
     font-size: 0.74rem;
@@ -822,8 +823,8 @@
         justify-content: center;
         min-height: 2.8rem;
         padding: 0.55rem 1rem;
-        border: 1px solid rgba(224, 232, 255, 0.3);
-        border-radius: 999px;
+        border: 1px solid rgba(224, 232, 255, 0.28);
+        border-radius: 0.45rem;
         background: rgba(10, 14, 45, 0.82);
         color: #eff2ff;
         text-align: center;

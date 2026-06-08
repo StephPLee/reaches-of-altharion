@@ -54,7 +54,7 @@
 
 .staffToggle {
     border: 1px solid rgba(202, 168, 255, 0.28);
-    border-radius: 999px;
+    border-radius: 0.55rem;
     background: rgba(24, 21, 52, 0.7);
     color: #f0e5ff;
     cursor: pointer;
@@ -134,7 +134,7 @@
     margin-bottom: 1rem;
     padding: 0.65rem 0.9rem;
     border: 1px solid rgba(196, 215, 255, 0.14);
-    border-radius: 999px;
+    border-radius: 0.5rem;
     background: rgba(11, 15, 33, 0.52);
 }
 
