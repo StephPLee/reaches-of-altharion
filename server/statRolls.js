@@ -20,13 +20,11 @@ function mapRow(row) {
 async function listStatRollSets() {
   const result = await pool.query(
     `SELECT s.id, s.stats, s.total, s.discord_message_url,
-            s.rolled_by_discord_user_id, s.claimed_by_discord_user_id,
-            s.claimed_at, s.locked_until, s.created_at,
-            COALESCE(claimer.global_name, claimer.username) AS claimed_by_username,
-            COALESCE(roller.global_name, roller.username) AS rolled_by_username
+            s.rolled_by_discord_user_id, s.rolled_by_username,
+            s.claimed_by_discord_user_id, s.claimed_at, s.locked_until, s.created_at,
+            COALESCE(claimer.global_name, claimer.username) AS claimed_by_username
      FROM stat_roll_sets s
      LEFT JOIN users claimer ON claimer.discord_user_id = s.claimed_by_discord_user_id
-     LEFT JOIN users roller ON roller.discord_user_id = s.rolled_by_discord_user_id
      ORDER BY s.created_at DESC`,
   );
   return result.rows.map(mapRow);

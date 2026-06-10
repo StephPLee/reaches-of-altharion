@@ -2052,6 +2052,7 @@ async function handleInteraction(interaction) {
         statLines,
         discordMessageUrl,
         rolledByDiscordUserId: interaction.user.id,
+        rolledByUsername: interaction.user.globalName ?? interaction.user.username,
         lockedUntil,
       });
 
