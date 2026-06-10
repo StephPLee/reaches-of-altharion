@@ -49,6 +49,7 @@ async function saveStatRollSets({
   statLines,
   discordMessageUrl,
   rolledByDiscordUserId,
+  rolledByUsername = null,
   lockedUntil = null,
 }) {
   const client = await pool.connect();
@@ -59,11 +60,11 @@ async function saveStatRollSets({
       const total = stats.reduce((a, b) => a + b, 0);
       const result = await client.query(
         `INSERT INTO stat_roll_sets
-           (stats, total, discord_message_url, rolled_by_discord_user_id, locked_until)
-         VALUES ($1, $2, $3, $4, $5)
+           (stats, total, discord_message_url, rolled_by_discord_user_id, rolled_by_username, locked_until)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, stats, total, discord_message_url,
                    claimed_by_discord_user_id, claimed_at, created_at`,
-        [stats, total, discordMessageUrl, rolledByDiscordUserId, lockedUntil],
+        [stats, total, discordMessageUrl, rolledByDiscordUserId, rolledByUsername, lockedUntil],
       );
       saved.push(mapRow(result.rows[0]));
     }
