@@ -82,6 +82,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
   {
     title: "Tools",
     links: [
+      { label: "Stat Rolls", to: "/stat-rolls" },
       { label: "Avrae Commands", to: "/avrae" },
       { label: "Rewards Calculator", to: "/rewards-calculator" },
       { label: "Stellar Coin Conversion", to: "/stellar-coin-conversion" },
