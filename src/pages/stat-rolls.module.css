@@ -307,6 +307,63 @@
     text-transform: uppercase;
 }
 
+@media (max-width: 640px) {
+    .shell {
+        width: calc(100% - 1rem);
+        padding: 1rem 0.85rem 1rem;
+        height: calc(100vh - var(--ifm-navbar-height) - 2rem);
+        border-radius: 0.75rem;
+    }
+
+    .heading {
+        font-size: 1.15rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+    }
+
+    .tabs {
+        width: 100%;
+    }
+
+    .tab {
+        flex: 1;
+        justify-content: center;
+        padding: 0.38rem 0.5rem;
+        font-size: 0.65rem;
+    }
+
+    .searchInput {
+        width: 100%;
+    }
+
+    .card {
+        flex-wrap: wrap;
+        gap: 0.3rem 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .statsRow {
+        flex: 0 0 100%;
+        flex-wrap: wrap;
+    }
+
+    .rollerText {
+        flex: 1 1 auto;
+        font-size: 0.85rem;
+    }
+
+    .dateText {
+        flex: 0 0 auto;
+        font-size: 0.85rem;
+    }
+}
+
 /* State messages */
 .hint {
     color: rgba(232, 225, 241, 0.5);

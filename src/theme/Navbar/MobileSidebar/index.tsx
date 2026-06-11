@@ -43,6 +43,15 @@ const NAV_GROUPS = [
       { label: "Guilds", to: "/docs/homebrew/guilds" },
     ],
   },
+  {
+    title: "Tools",
+    links: [
+      { label: "Stat Rolls", to: "/stat-rolls" },
+      { label: "Rewards Calculator", to: "/rewards-calculator" },
+      { label: "Stellar Coin Conversion", to: "/stellar-coin-conversion" },
+      { label: "Avrae Commands", to: "/avrae" },
+    ],
+  },
 ];
 
 function getDiscordInviteUrl(siteConfig): string {
