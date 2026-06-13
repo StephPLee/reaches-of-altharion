@@ -8,7 +8,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import styles from "./admin.module.css";
 
 const ANNOUNCEMENT_CHARACTER_LIMIT = 10000;
-const MARKETPLACE_CHARACTER_LIMIT = 2000;
+const MARKETPLACE_CHARACTER_LIMIT = 10000;
 
 type SessionUser = {
   id?: number;
@@ -28,7 +28,7 @@ type DiscordRole = {
 
 type MarketplaceEntry = {
   id: number;
-  source: "generated" | "manual";
+  source: "generated" | "manual" | "consumables";
   content: string;
   scheduledFor: string;
   status: "scheduled" | "published" | "error";
@@ -64,7 +64,7 @@ export default function AdminPage(): ReactNode {
     useState(false);
   const [marketplaceContent, setMarketplaceContent] = useState("");
   const [marketplaceSource, setMarketplaceSource] =
-    useState<"generated" | "manual">("generated");
+    useState<"generated" | "manual" | "consumables">("generated");
   const [marketplaceScheduledForLocal, setMarketplaceScheduledForLocal] =
     useState("");
   const [marketplaceTimeZone, setMarketplaceTimeZone] =
@@ -74,6 +74,7 @@ export default function AdminPage(): ReactNode {
   const [marketplaceError, setMarketplaceError] = useState("");
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(false);
   const [isGeneratingMarketplace, setIsGeneratingMarketplace] = useState(false);
+  const [isGeneratingConsumables, setIsGeneratingConsumables] = useState(false);
   const [isSchedulingMarketplace, setIsSchedulingMarketplace] = useState(false);
 
   useEffect(() => {
@@ -348,6 +349,44 @@ export default function AdminPage(): ReactNode {
     }
   }
 
+  async function handleConsumablesMarketplaceGenerate() {
+    try {
+      setIsGeneratingConsumables(true);
+      setMarketplaceMessage("");
+      setMarketplaceError("");
+
+      const response = await fetch(
+        `${authApiBaseUrl}/api/admin/marketplace/generate-consumables`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error || "Failed to generate consumables marketplace.",
+        );
+      }
+
+      setMarketplaceSource("consumables");
+      setMarketplaceContent(payload.content || "");
+      setMarketplaceMessage(
+        "Consumables marketplace loaded. Review it before scheduling.",
+      );
+    } catch (generateError) {
+      setMarketplaceMessage("");
+      setMarketplaceError(
+        generateError instanceof Error
+          ? generateError.message
+          : "Failed to generate consumables marketplace.",
+      );
+    } finally {
+      setIsGeneratingConsumables(false);
+    }
+  }
+
   async function handleMarketplaceSchedule() {
     if (!marketplaceContent.trim()) {
       setMarketplaceMessage("");
@@ -571,18 +610,29 @@ export default function AdminPage(): ReactNode {
                 <section className={styles.toolSection}>
                   <Heading as="h2">Weekly Marketplace</Heading>
                   <p className={styles.meta}>
-                    Generate 10 common, uncommon, rare, and very rare items from
-                    the database, or paste the player-chosen list manually. The
-                    scheduled time is read as {marketplaceTimeZone}.
+                    Generate 10 common, uncommon, rare, and very rare items,
+                    load the full consumables market, or paste the
+                    player-chosen list manually. The scheduled time is read as{" "}
+                    {marketplaceTimeZone}.
                   </p>
                   <div className={styles.actions}>
                     <button
                       type="button"
                       className={styles.button}
                       onClick={handleMarketplaceGenerate}
-                      disabled={isGeneratingMarketplace}
+                      disabled={isGeneratingMarketplace || isGeneratingConsumables}
                     >
                       {isGeneratingMarketplace ? "Generating..." : "Generate Market"}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.button}
+                      onClick={handleConsumablesMarketplaceGenerate}
+                      disabled={isGeneratingMarketplace || isGeneratingConsumables}
+                    >
+                      {isGeneratingConsumables
+                        ? "Loading..."
+                        : "Consumables Market"}
                     </button>
                     <button
                       type="button"
@@ -629,7 +679,8 @@ export default function AdminPage(): ReactNode {
                     />
                     <p className={styles.meta}>
                       {marketplaceContent.length} / {MARKETPLACE_CHARACTER_LIMIT}
-                      {" "}characters.
+                      {" "}characters. Long posts are split across multiple Discord
+                      messages when published.
                     </p>
                   </div>
                   {marketplaceMessage ? (

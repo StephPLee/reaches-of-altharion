@@ -22,6 +22,7 @@ const {
   oauthReturnToCookieName,
   oauthStateCookieName,
   oauthStateTtlMinutes,
+  playerRoleId,
   port,
   requiredRoleId,
   dmRoleId,
@@ -119,6 +120,7 @@ const {
 } = require("./boons");
 const {
   buildAuthorizationUrl,
+  deleteChannelMessage,
   editChannelMessage,
   exchangeCodeForToken,
   fetchDiscordMessage,
@@ -137,6 +139,7 @@ const {
   MARKETPLACE_TIME_ZONE,
   createMarketplace,
   formatZonedLocalInput,
+  generateConsumablesMarketplaceContent,
   generateMarketplaceContent,
   getDefaultMarketplaceScheduledFor,
   listRecentMarketplaces,
@@ -4522,6 +4525,22 @@ app.post(
 );
 
 app.post(
+  "/api/admin/marketplace/generate-consumables",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    try {
+      const content = await generateConsumablesMarketplaceContent();
+      res.json({ content });
+    } catch (marketplaceError) {
+      console.error("Failed to generate consumables marketplace:", marketplaceError);
+      res.status(500).json({ error: "Failed to generate consumables marketplace." });
+    }
+  },
+);
+
+app.post(
   "/api/admin/marketplace",
   requireTrustedOrigin,
   adminRateLimiter,
@@ -4540,7 +4559,10 @@ app.post(
     try {
       const normalizedContent = validateMarketplaceContent(content);
       const marketplace = await createMarketplace({
-        source: source === "manual" ? "manual" : "generated",
+        source:
+          source === "manual" || source === "consumables"
+            ? source
+            : "generated",
         content: normalizedContent,
         scheduledFor,
         createdByDiscordUserId: req.staffUser.discordUserId,
@@ -4568,7 +4590,10 @@ app.post(
         userId: req.staffUser.id,
         discordUserId: req.staffUser.discordUserId,
         metadata: {
-          source: source === "manual" ? "manual" : "generated",
+          source:
+            source === "manual" || source === "consumables"
+              ? source
+              : "generated",
           scheduledFor: scheduledFor.toISOString(),
           error:
             marketplaceError instanceof Error
@@ -4880,6 +4905,8 @@ deleteExpiredSessions().catch((error) => {
 publishDueMarketplaces({
   defaultChannelId: marketplaceChannelId,
   defaultMessageId: marketplaceMessageId,
+  playerRoleId,
+  deleteChannelMessage,
   editChannelMessage,
   postChannelMessage,
 }).catch((error) => {
@@ -4900,6 +4927,8 @@ setInterval(
     publishDueMarketplaces({
       defaultChannelId: marketplaceChannelId,
       defaultMessageId: marketplaceMessageId,
+      playerRoleId,
+      deleteChannelMessage,
       editChannelMessage,
       postChannelMessage,
     }).catch((error) => {

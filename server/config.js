@@ -72,6 +72,7 @@ module.exports = {
   characterCreationChannelId: process.env.CHARACTER_CREATION_CHANNEL_ID || "",
   marketplaceChannelId: process.env.MARKETPLACE_CHANNEL_ID || "",
   marketplaceMessageId: process.env.MARKETPLACE_MESSAGE_ID || "",
+  playerRoleId: process.env.PLAYER_ROLE_ID || "",
   discordOauthRedirectUri:
     process.env.DISCORD_OAUTH_REDIRECT_URI ||
     "http://localhost:3001/auth/discord/callback",

@@ -1,13 +1,20 @@
 const { pool } = require("./db");
+const { listMarketplaces: listWestMarchesMarketplaces } = require("./westmarches");
 
 const MARKETPLACE_TIME_ZONE = "Europe/London";
-const MARKETPLACE_MESSAGE_LIMIT = 2000;
+const DISCORD_MESSAGE_LIMIT = 2000;
+const MARKETPLACE_MESSAGE_LIMIT = 10000;
+const MARKETPLACE_ITEMS_PER_RARITY = 10;
+const CONSUMABLES_MARKETPLACE_NAME = "Consumables";
 const MARKETPLACE_RARITIES = [
   { value: "common", label: "Common" },
   { value: "uncommon", label: "Uncommon" },
   { value: "rare", label: "Rare" },
   { value: "veryrare", label: "Very Rare" },
 ];
+const MARKETPLACE_RARITY_VALUES = new Set(
+  MARKETPLACE_RARITIES.map((rarity) => rarity.value),
+);
 
 function mapMarketplaceRow(row) {
   return row
@@ -19,6 +26,10 @@ function mapMarketplaceRow(row) {
         status: row.status,
         discordChannelId: row.discord_channel_id,
         discordMessageId: row.discord_message_id,
+        discordPingMessageId: row.discord_ping_message_id,
+        discordExtraMessageIds: Array.isArray(row.discord_extra_message_ids)
+          ? row.discord_extra_message_ids
+          : [],
         publishedAt: row.published_at,
         errorMessage: row.error_message,
         createdByDiscordUserId: row.created_by_discord_user_id,
@@ -162,6 +173,40 @@ function formatMarketplaceContent(itemsByRarity) {
   }).join("\n\n");
 }
 
+function chunkDiscordContent(content) {
+  const chunks = [];
+  let currentChunk = "";
+
+  for (const line of content.split("\n")) {
+    const nextChunk = currentChunk ? `${currentChunk}\n${line}` : line;
+
+    if (nextChunk.length <= DISCORD_MESSAGE_LIMIT) {
+      currentChunk = nextChunk;
+      continue;
+    }
+
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+
+    if (line.length <= DISCORD_MESSAGE_LIMIT) {
+      currentChunk = line;
+      continue;
+    }
+
+    for (let index = 0; index < line.length; index += DISCORD_MESSAGE_LIMIT) {
+      chunks.push(line.slice(index, index + DISCORD_MESSAGE_LIMIT));
+    }
+    currentChunk = "";
+  }
+
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
 function validateMarketplaceContent(content) {
   const normalizedContent = typeof content === "string" ? content.trim() : "";
   if (!normalizedContent) {
@@ -177,35 +222,132 @@ function validateMarketplaceContent(content) {
   return normalizedContent;
 }
 
-async function generateMarketplaceContent() {
-  const result = await pool.query(
-    `
-    WITH ranked_items AS (
-      SELECT
-        rarity,
-        name,
-        ROW_NUMBER() OVER (PARTITION BY rarity ORDER BY RANDOM()) AS rarity_rank
-      FROM magic_items
-      WHERE rarity = ANY($1)
-        AND is_published = TRUE
-    )
-    SELECT rarity, name
-    FROM ranked_items
-    WHERE rarity_rank <= 10
-    ORDER BY ARRAY_POSITION($1, rarity), name ASC
-    `,
-    [MARKETPLACE_RARITIES.map((rarity) => rarity.value)],
-  );
+function normalizeMarketplaceRarity(value) {
+  return typeof value === "string"
+    ? value.trim().toLowerCase().replace(/[^a-z0-9]/g, "")
+    : "";
+}
 
+function getMagicItemMarketplaceRarity(marketplace) {
+  const name = typeof marketplace?.name === "string" ? marketplace.name : "";
+  const match = name.match(/^Magic Items\s*-\s*(.+)$/i);
+  if (!match) {
+    return "";
+  }
+
+  const rarity = normalizeMarketplaceRarity(match[1]);
+  return MARKETPLACE_RARITY_VALUES.has(rarity) ? rarity : "";
+}
+
+function pickRandomItems(items, count) {
+  const shuffled = [...items];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [
+      shuffled[randomIndex],
+      shuffled[index],
+    ];
+  }
+
+  return shuffled
+    .slice(0, count)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+async function generateMarketplaceContent() {
   const itemsByRarity = new Map(
     MARKETPLACE_RARITIES.map((rarity) => [rarity.value, []]),
   );
+  const seenByRarity = new Map(
+    MARKETPLACE_RARITIES.map((rarity) => [rarity.value, new Set()]),
+  );
 
-  for (const row of result.rows) {
-    itemsByRarity.get(row.rarity)?.push(row.name);
+  const marketplaces = await listWestMarchesMarketplaces();
+
+  for (const marketplace of marketplaces) {
+    const rarity = getMagicItemMarketplaceRarity(marketplace);
+    if (!rarity) {
+      continue;
+    }
+
+    const items = Array.isArray(marketplace.items) ? marketplace.items : [];
+
+    for (const item of items) {
+      const name = typeof item?.name === "string" ? item.name.trim() : "";
+      if (!name) {
+        continue;
+      }
+
+      const normalizedName = name.toLowerCase();
+      const seen = seenByRarity.get(rarity);
+
+      if (seen?.has(normalizedName)) {
+        continue;
+      }
+
+      seen?.add(normalizedName);
+      itemsByRarity.get(rarity)?.push(name);
+    }
+  }
+
+  const totalItems = [...itemsByRarity.values()].reduce(
+    (sum, items) => sum + items.length,
+    0,
+  );
+
+  if (totalItems === 0) {
+    throw new Error("No magic item marketplaces were returned by the West Marches API.");
+  }
+
+  for (const [rarity, items] of itemsByRarity.entries()) {
+    itemsByRarity.set(
+      rarity,
+      pickRandomItems(items, MARKETPLACE_ITEMS_PER_RARITY),
+    );
   }
 
   return formatMarketplaceContent(itemsByRarity);
+}
+
+async function generateConsumablesMarketplaceContent() {
+  const marketplaces = await listWestMarchesMarketplaces();
+  const consumablesMarketplace = marketplaces.find(
+    (marketplace) =>
+      typeof marketplace?.name === "string" &&
+      marketplace.name.trim().localeCompare(CONSUMABLES_MARKETPLACE_NAME, undefined, {
+        sensitivity: "accent",
+      }) === 0,
+  );
+
+  if (!consumablesMarketplace) {
+    throw new Error("The Consumables marketplace was not returned by the West Marches API.");
+  }
+
+  const seen = new Set();
+  const itemNames = [];
+  const items = Array.isArray(consumablesMarketplace.items)
+    ? consumablesMarketplace.items
+    : [];
+
+  for (const item of items) {
+    const name = typeof item?.name === "string" ? item.name.trim() : "";
+    const normalizedName = name.toLowerCase();
+
+    if (!name || seen.has(normalizedName)) {
+      continue;
+    }
+
+    seen.add(normalizedName);
+    itemNames.push(name);
+  }
+
+  if (itemNames.length === 0) {
+    throw new Error("The Consumables marketplace did not contain any items.");
+  }
+
+  itemNames.sort((left, right) => left.localeCompare(right));
+  return ["Consumables", ...itemNames].join("\n");
 }
 
 async function listRecentMarketplaces(limit = 8) {
@@ -219,6 +361,8 @@ async function listRecentMarketplaces(limit = 8) {
       status,
       discord_channel_id,
       discord_message_id,
+      discord_ping_message_id,
+      discord_extra_message_ids,
       published_at,
       error_message,
       created_by_discord_user_id,
@@ -241,8 +385,8 @@ async function createMarketplace({
   createdByDiscordUserId,
 }) {
   const normalizedContent = validateMarketplaceContent(content);
-  if (!["generated", "manual"].includes(source)) {
-    throw new Error("Marketplace source must be generated or manual.");
+  if (!["generated", "manual", "consumables"].includes(source)) {
+    throw new Error("Marketplace source must be generated, manual, or consumables.");
   }
 
   const result = await pool.query(
@@ -262,6 +406,8 @@ async function createMarketplace({
       status,
       discord_channel_id,
       discord_message_id,
+      discord_ping_message_id,
+      discord_extra_message_ids,
       published_at,
       error_message,
       created_by_discord_user_id,
@@ -282,7 +428,7 @@ async function createMarketplace({
 async function getLatestPublishedMarketplaceTarget(client) {
   const result = await client.query(
     `
-    SELECT discord_channel_id, discord_message_id
+    SELECT discord_channel_id, discord_message_id, discord_ping_message_id, discord_extra_message_ids
     FROM weekly_marketplaces
     WHERE status = 'published'
       AND discord_channel_id IS NOT NULL
@@ -298,6 +444,8 @@ async function getLatestPublishedMarketplaceTarget(client) {
 async function publishDueMarketplaces({
   defaultChannelId,
   defaultMessageId,
+  playerRoleId,
+  deleteChannelMessage,
   editChannelMessage,
   postChannelMessage,
 }) {
@@ -316,7 +464,8 @@ async function publishDueMarketplaces({
         id,
         content,
         discord_channel_id,
-        discord_message_id
+        discord_message_id,
+        discord_ping_message_id
       FROM weekly_marketplaces
       WHERE status = 'scheduled'
         AND scheduled_for <= NOW()
@@ -336,19 +485,62 @@ async function publishDueMarketplaces({
         latestTarget?.discord_message_id ||
         defaultMessageId ||
         null;
+      const previousPingMessageId =
+        latestTarget?.discord_ping_message_id || null;
+      const previousExtraMessageIds = Array.isArray(
+        latestTarget?.discord_extra_message_ids,
+      )
+        ? latestTarget.discord_extra_message_ids
+        : [];
 
       try {
+        const contentChunks = chunkDiscordContent(marketplace.content);
         let message;
+        const extraMessageIds = [];
+        let pingMessageId = null;
         if (messageId) {
           message = await editChannelMessage(channelId, messageId, {
-            content: marketplace.content,
+            content: contentChunks[0],
             allowed_mentions: { parse: [] },
           });
         } else {
           message = await postChannelMessage(channelId, {
-            content: marketplace.content,
+            content: contentChunks[0],
             allowed_mentions: { parse: [] },
           });
+        }
+
+        if (deleteChannelMessage) {
+          await Promise.all(
+            previousExtraMessageIds.map((extraMessageId) =>
+              deleteChannelMessage(channelId, extraMessageId).catch(() => {}),
+            ),
+          );
+        }
+
+        for (const contentChunk of contentChunks.slice(1)) {
+          const extraMessage = await postChannelMessage(channelId, {
+            content: contentChunk,
+            allowed_mentions: { parse: [] },
+          });
+          extraMessageIds.push(extraMessage.id);
+        }
+
+        if (playerRoleId) {
+          if (previousPingMessageId && deleteChannelMessage) {
+            await deleteChannelMessage(channelId, previousPingMessageId).catch(
+              () => {},
+            );
+          }
+
+          const pingMessage = await postChannelMessage(channelId, {
+            content: `<@&${playerRoleId}> The marketplace has been updated.`,
+            allowed_mentions: {
+              parse: [],
+              roles: [playerRoleId],
+            },
+          });
+          pingMessageId = pingMessage.id;
         }
 
         await client.query(
@@ -358,12 +550,20 @@ async function publishDueMarketplaces({
             status = 'published',
             discord_channel_id = $2,
             discord_message_id = $3,
+            discord_ping_message_id = $4,
+            discord_extra_message_ids = $5,
             published_at = NOW(),
             error_message = NULL,
             updated_at = NOW()
           WHERE id = $1
           `,
-          [marketplace.id, channelId, message.id],
+          [
+            marketplace.id,
+            channelId,
+            message.id,
+            pingMessageId,
+            JSON.stringify(extraMessageIds),
+          ],
         );
         published.push(Number(marketplace.id));
       } catch (error) {
@@ -398,6 +598,7 @@ module.exports = {
   MARKETPLACE_TIME_ZONE,
   createMarketplace,
   formatZonedLocalInput,
+  generateConsumablesMarketplaceContent,
   generateMarketplaceContent,
   getDefaultMarketplaceScheduledFor,
   listRecentMarketplaces,
