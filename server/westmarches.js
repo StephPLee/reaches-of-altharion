@@ -154,6 +154,11 @@ async function listRecentAdventures({ pageSize = 25 } = {}) {
   return Array.isArray(payload.data) ? payload.data : [];
 }
 
+async function listMarketplaces() {
+  const payload = await westMarchesFetch("/marketplaces");
+  return Array.isArray(payload.data) ? payload.data : [];
+}
+
 async function getEventCurrencyMapping() {
   const currencyName =
     typeof westMarchesEventCurrencyName === "string"
@@ -379,6 +384,7 @@ module.exports = {
   listAllCharacters,
   listCharacterAttributeStats,
   listCurrencies,
+  listMarketplaces,
   listRecentAdventures,
   getEventCurrencyMapping,
 };
