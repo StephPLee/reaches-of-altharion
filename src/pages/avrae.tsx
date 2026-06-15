@@ -119,12 +119,15 @@ type AuthUser = {
 
 type SyncedDdbCharacter = {
   id: string;
+  sourceKind?: "ddb" | "bestiary-builder";
   sourceUrl: string;
   syncedAt: string;
   avatarUrl?: string | null;
   name: string;
   ancestry?: string;
   level?: number | null;
+  challengeRating?: number | string | null;
+  sourceBestiaryName?: string | null;
   classes?: Array<{ name: string; subclass?: string; level: number }>;
   abilities?: Record<string, number>;
   hp?: { max: number; current: number; temp: number };
@@ -255,6 +258,8 @@ export default function AvraeCommandsPage(): ReactNode {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [ddbUrl, setDdbUrl] = useState("");
+  const [bestiaryUrl, setBestiaryUrl] = useState("");
+  const [vaultSearch, setVaultSearch] = useState("");
   const [character, setCharacter] = useState<SyncedDdbCharacter | null>(null);
   const [savedCharacters, setSavedCharacters] = useState<SyncedDdbCharacter[]>(
     [],
@@ -282,6 +287,10 @@ export default function AvraeCommandsPage(): ReactNode {
     "idle" | "syncing" | "success" | "error"
   >("idle");
   const [syncError, setSyncError] = useState("");
+  const [creatureSyncStatus, setCreatureSyncStatus] = useState<
+    "idle" | "syncing" | "success" | "error"
+  >("idle");
+  const [creatureSyncError, setCreatureSyncError] = useState("");
   const [attackName, setAttackName] = useState("Longsword");
   const [spellName, setSpellName] = useState("Fire Bolt");
   const [ability, setAbility] = useState("dex");
@@ -432,10 +441,70 @@ export default function AvraeCommandsPage(): ReactNode {
 
   const classSummary = useMemo(
     () =>
-      character?.classes
-        ?.map((entry) => `${entry.subclass || entry.name} ${entry.level}`)
-        .join(" / ") || "",
+      character?.sourceKind === "bestiary-builder"
+        ? [
+            character.sourceBestiaryName,
+            character.challengeRating != null
+              ? `CR ${character.challengeRating}`
+              : "Creature",
+          ]
+            .filter(Boolean)
+            .join(" / ")
+        : character?.classes
+            ?.map((entry) => `${entry.subclass || entry.name} ${entry.level}`)
+            .join(" / ") || "",
     [character],
+  );
+
+  const characterEntries = useMemo(
+    () =>
+      savedCharacters.filter(
+        (entry) => entry.sourceKind !== "bestiary-builder",
+      ),
+    [savedCharacters],
+  );
+
+  const creatureEntries = useMemo(
+    () =>
+      savedCharacters.filter(
+        (entry) => entry.sourceKind === "bestiary-builder",
+      ),
+    [savedCharacters],
+  );
+
+  const normalizedVaultSearch = vaultSearch.trim().toLowerCase();
+
+  const filterVaultEntries = (entries: SyncedDdbCharacter[]) => {
+    if (!normalizedVaultSearch) return entries;
+    return entries.filter((entry) =>
+      [
+        entry.name,
+        entry.ancestry,
+        entry.sourceBestiaryName,
+        entry.challengeRating != null ? `cr ${entry.challengeRating}` : "",
+        entry.level != null ? `level ${entry.level}` : "",
+        ...(entry.classes || []).flatMap((item) => [
+          item.name,
+          item.subclass || "",
+        ]),
+        ...entry.attacks.map((attack) => attack.name),
+        ...entry.spells.map((spell) => spell.name),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedVaultSearch),
+    );
+  };
+
+  const visibleCharacterEntries = useMemo(
+    () => filterVaultEntries(characterEntries),
+    [characterEntries, normalizedVaultSearch],
+  );
+
+  const visibleCreatureEntries = useMemo(
+    () => filterVaultEntries(creatureEntries),
+    [creatureEntries, normalizedVaultSearch],
   );
 
   const selectedSpell = useMemo(
@@ -725,10 +794,10 @@ export default function AvraeCommandsPage(): ReactNode {
     });
   }
 
-  function chooseAttack(name: string): void {
+  function chooseAttack(name: string, attackDamage = ""): void {
     setKind("attack");
     setAttackName(name);
-    setDamage("");
+    setDamage(attackDamage);
   }
 
   function chooseSpell(name: string): void {
@@ -856,11 +925,7 @@ export default function AvraeCommandsPage(): ReactNode {
   function upsertSavedCharacter(nextCharacter: SyncedDdbCharacter): void {
     const nextSavedCharacters = [
       nextCharacter,
-      ...savedCharacters.filter(
-        (entry) =>
-          entry.id !== nextCharacter.id &&
-          entry.sourceUrl !== nextCharacter.sourceUrl,
-      ),
+      ...savedCharacters.filter((entry) => entry.id !== nextCharacter.id),
     ].sort((a, b) => a.name.localeCompare(b.name));
     setSavedCharacters(nextSavedCharacters);
     applyCharacterToBuilder(nextCharacter);
@@ -955,6 +1020,181 @@ export default function AvraeCommandsPage(): ReactNode {
     }
   }
 
+  async function syncBestiaryBuilderCreatures(): Promise<void> {
+    if (!user) {
+      setCreatureSyncStatus("error");
+      setCreatureSyncError("Sign in with Discord before importing creatures.");
+      return;
+    }
+
+    setCreatureSyncStatus("syncing");
+    setCreatureSyncError("");
+    try {
+      const response = await fetch(
+        `${authApiBaseUrl}/api/avrae/bestiary-builder`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ url: bestiaryUrl }),
+        },
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Failed to import Bestiary Builder creatures.",
+        );
+      }
+
+      const imported = Array.isArray(payload.creatures)
+        ? (payload.creatures as SyncedDdbCharacter[])
+        : [];
+      const importedIds = new Set(imported.map((entry) => entry.id));
+      const nextSavedCharacters = [
+        ...imported,
+        ...savedCharacters.filter((entry) => !importedIds.has(entry.id)),
+      ].sort((a, b) => a.name.localeCompare(b.name));
+      setSavedCharacters(nextSavedCharacters);
+      setCreatureSyncStatus("success");
+    } catch (error) {
+      setCreatureSyncStatus("error");
+      setCreatureSyncError(
+        error instanceof Error
+          ? error.message
+          : "Failed to import Bestiary Builder creatures.",
+      );
+    }
+  }
+
+  function renderVaultCard(entry: SyncedDdbCharacter): ReactNode {
+    const isCreature = entry.sourceKind === "bestiary-builder";
+
+    return (
+      <article
+        key={entry.id}
+        className={isCreature ? styles.vaultCreatureCard : styles.vaultCard}
+      >
+        <button
+          type="button"
+          className={
+            isCreature ? styles.vaultCreatureCardMain : styles.vaultCardMain
+          }
+          onClick={() => setActiveCharacter(entry)}
+        >
+          {!isCreature ? (
+            <span className={styles.vaultAvatar}>
+              {entry.avatarUrl ? (
+                <img
+                  src={entry.avatarUrl}
+                  alt={entry.name}
+                  className={styles.vaultAvatarImg}
+                />
+              ) : (
+                entry.name.slice(0, 1)
+              )}
+            </span>
+          ) : null}
+          <span>
+            <strong>{entry.name}</strong>
+            <em>
+              {[
+                entry.ancestry,
+                entry.sourceKind === "bestiary-builder"
+                  ? entry.challengeRating != null
+                    ? `CR ${entry.challengeRating}`
+                    : "Creature"
+                  : entry.classes
+                      ?.map((item) => item.subclass || item.name)
+                      .join(" / "),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </em>
+            <small>
+              {entry.sourceKind === "bestiary-builder"
+                ? `CR ${entry.challengeRating ?? "?"} - ${entry.attacks.length} actions - ${entry.spells.length} spells`
+                : `Level ${entry.level || "?"} - ${entry.attacks.length} attacks - ${entry.spells.length} spells`}
+            </small>
+          </span>
+        </button>
+        <div className={styles.vaultCardActions}>
+          {isCreature ? (
+            <a href={entry.sourceUrl} target="_blank" rel="noreferrer">
+              Source
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => syncDdbCharacter(entry.sourceUrl)}
+              disabled={syncStatus === "syncing"}
+            >
+              Refresh
+            </button>
+          )}
+          <button type="button" onClick={() => removeCharacter(entry.id)}>
+            Remove
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  function renderCharacterImportBar(): ReactNode {
+    return (
+      <div className={styles.vaultImportBar}>
+        <div className={styles.vaultImportHeading}>
+          <strong>+</strong>
+          <span>Add character</span>
+        </div>
+        <div className={styles.vaultImportForm}>
+          <input
+            placeholder="https://www.dndbeyond.com/characters/..."
+            value={ddbUrl}
+            onChange={(event) => setDdbUrl(event.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => syncDdbCharacter()}
+            disabled={syncStatus === "syncing"}
+          >
+            {syncStatus === "syncing"
+              ? "Syncing"
+              : user
+                ? "Add / Sync"
+                : "Preview"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderCreatureImportBar(): ReactNode {
+    return (
+      <div className={styles.vaultImportBar}>
+        <div className={styles.vaultImportHeading}>
+          <strong>+</strong>
+          <span>Add creature stats</span>
+        </div>
+        <div className={styles.vaultImportForm}>
+          <input
+            placeholder="https://bestiarybuilder.com/bestiary-viewer/..."
+            value={bestiaryUrl}
+            onChange={(event) => setBestiaryUrl(event.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => syncBestiaryBuilderCreatures()}
+            disabled={!user || creatureSyncStatus === "syncing"}
+          >
+            {creatureSyncStatus === "syncing" ? "Importing" : "Import"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const displayName = user?.globalName || user?.username || "not signed in";
 
   return (
@@ -991,8 +1231,8 @@ export default function AvraeCommandsPage(): ReactNode {
               <div className={styles.viewHeading}>
                 <h1>Vault</h1>
                 <p>
-                  Choose a character to play, refresh one, or add a public D&D
-                  Beyond sheet.
+                  Choose a character, companion, wildshape, or creature to use
+                  with Avrae commands.
                 </p>
               </div>
               {!user ? (
@@ -1010,8 +1250,26 @@ export default function AvraeCommandsPage(): ReactNode {
                   </button>
                 </div>
               ) : null}
+              <label className={styles.vaultSearch}>
+                <span>Search vault</span>
+                <input
+                  type="search"
+                  placeholder="Search by name, type, CR, level, attack, or spell"
+                  value={vaultSearch}
+                  onChange={(event) => setVaultSearch(event.target.value)}
+                />
+              </label>
+              <section className={styles.vaultSection}>
+                <div className={styles.vaultSectionHeader}>
+                  <h2>Character Stats</h2>
+                  <span>
+                    {visibleCharacterEntries.length} of{" "}
+                    {characterEntries.length} saved
+                  </span>
+                </div>
+                {renderCharacterImportBar()}
               <div className={styles.vaultGrid}>
-                {savedCharacters.map((entry) => (
+                {visibleCharacterEntries.map((entry) => (
                   <article key={entry.id} className={styles.vaultCard}>
                     <button
                       type="button"
@@ -1042,19 +1300,30 @@ export default function AvraeCommandsPage(): ReactNode {
                             .join(" · ")}
                         </em>
                         <small>
-                          Level {entry.level || "?"} · {entry.attacks.length}{" "}
-                          attacks · {entry.spells.length} spells
+                          {entry.sourceKind === "bestiary-builder"
+                            ? `CR ${entry.challengeRating ?? "?"} - ${entry.attacks.length} actions - ${entry.spells.length} spells`
+                            : `Level ${entry.level || "?"} - ${entry.attacks.length} attacks - ${entry.spells.length} spells`}
                         </small>
                       </span>
                     </button>
                     <div className={styles.vaultCardActions}>
-                      <button
-                        type="button"
-                        onClick={() => syncDdbCharacter(entry.sourceUrl)}
-                        disabled={syncStatus === "syncing"}
-                      >
-                        Refresh
-                      </button>
+                      {entry.sourceKind === "bestiary-builder" ? (
+                        <a
+                          href={entry.sourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Source
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => syncDdbCharacter(entry.sourceUrl)}
+                          disabled={syncStatus === "syncing"}
+                        >
+                          Refresh
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => removeCharacter(entry.id)}
@@ -1064,34 +1333,37 @@ export default function AvraeCommandsPage(): ReactNode {
                     </div>
                   </article>
                 ))}
-                <article className={styles.addCharacterCard}>
-                  <div className={styles.addCharacterHeading}>
-                    <strong>+</strong>
-                    <span>Add character</span>
-                  </div>
-                  <div className={styles.addCharacterForm}>
-                    <input
-                      placeholder="https://www.dndbeyond.com/characters/..."
-                      value={ddbUrl}
-                      onChange={(event) => setDdbUrl(event.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className={styles.primaryButton}
-                      onClick={() => syncDdbCharacter()}
-                      disabled={syncStatus === "syncing"}
-                    >
-                      {syncStatus === "syncing"
-                        ? "Syncing"
-                        : user
-                          ? "Add / Sync"
-                          : "Preview"}
-                    </button>
-                  </div>
-                </article>
               </div>
+              </section>
+
+              <section className={styles.vaultSection}>
+                <div className={styles.vaultSectionHeader}>
+                  <h2>Creature Stats</h2>
+                  <span>
+                    {visibleCreatureEntries.length} of {creatureEntries.length}{" "}
+                    saved
+                  </span>
+                </div>
+                {renderCreatureImportBar()}
+                {visibleCreatureEntries.length > 0 ? (
+                  <div className={styles.vaultGrid}>
+                    {visibleCreatureEntries.map(renderVaultCard)}
+                  </div>
+                ) : creatureEntries.length > 0 ? (
+                  <div className={styles.emptyVaultSection}>
+                    <p>No creature stat blocks match that search.</p>
+                  </div>
+                ) : (
+                  <div className={styles.emptyVaultSection}>
+                    <p>Import a Bestiary Builder link to add creature stat blocks here.</p>
+                  </div>
+                )}
+              </section>
               {syncStatus === "error" ? (
                 <p className={styles.errorText}>{syncError}</p>
+              ) : null}
+              {creatureSyncStatus === "error" ? (
+                <p className={styles.errorText}>{creatureSyncError}</p>
               ) : null}
             </section>
           ) : null}
@@ -1353,7 +1625,9 @@ export default function AvraeCommandsPage(): ReactNode {
                                     ? styles.csAttackRowActive
                                     : styles.csAttackRow
                                 }
-                                onClick={() => chooseAttack(attack.name)}
+                                onClick={() =>
+                                  chooseAttack(attack.name, attack.damage || "")
+                                }
                               >
                                 <strong>{attack.name}</strong>
                                 <span>

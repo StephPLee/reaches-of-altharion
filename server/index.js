@@ -135,6 +135,7 @@ const {
   syncWikiPageToDiscord,
 } = require("./discordSync");
 const { fetchDdbCharacter } = require("./ddbCharacters");
+const { fetchBestiaryBuilderBestiary } = require("./bestiaryBuilder");
 const {
   MARKETPLACE_TIME_ZONE,
   createMarketplace,
@@ -556,6 +557,74 @@ app.post(
           ddbError instanceof Error
             ? ddbError.message
             : "Failed to sync D&D Beyond character.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/avrae/bestiary-builder/preview",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "Bestiary Builder share link is required." });
+      return;
+    }
+
+    try {
+      const bestiary = await fetchBestiaryBuilderBestiary(url);
+      res.json(bestiary);
+    } catch (bestiaryError) {
+      const statusCode = Number(bestiaryError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to preview Bestiary Builder bestiary:", bestiaryError);
+      }
+      res.status(statusCode).json({
+        error:
+          bestiaryError instanceof Error
+            ? bestiaryError.message
+            : "Failed to preview Bestiary Builder bestiary.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/avrae/bestiary-builder",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "Bestiary Builder share link is required." });
+      return;
+    }
+
+    try {
+      const bestiary = await fetchBestiaryBuilderBestiary(url);
+      const creatures = [];
+      for (const creature of bestiary.creatures) {
+        creatures.push(
+          await upsertSavedAvraeCharacter({
+            userId: req.memberUser.id,
+            character: creature,
+          }),
+        );
+      }
+      res.json({ bestiary: bestiary.bestiary, creatures });
+    } catch (bestiaryError) {
+      const statusCode = Number(bestiaryError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to import Bestiary Builder bestiary:", bestiaryError);
+      }
+      res.status(statusCode).json({
+        error:
+          bestiaryError instanceof Error
+            ? bestiaryError.message
+            : "Failed to import Bestiary Builder bestiary.",
       });
     }
   },
