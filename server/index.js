@@ -656,12 +656,41 @@ app.patch(
       res.status(400).json({ error: "Invalid character id." });
       return;
     }
-    const { hpOverride, acOverride } = req.body ?? {};
+    const {
+      hpOverride,
+      acOverride,
+      companionCreatureIds,
+      wildShapeCreatureIds,
+    } = req.body ?? {};
     const hpVal = hpOverride != null ? parseInt(hpOverride, 10) : null;
     const acVal = acOverride != null ? parseInt(acOverride, 10) : null;
     const patch = {};
     if (hpOverride !== undefined) patch.hpOverride = !isNaN(hpVal) && hpVal > 0 ? hpVal : null;
     if (acOverride !== undefined) patch.acOverride = !isNaN(acVal) && acVal > 0 ? acVal : null;
+    const normalizeCreatureIds = (value) => {
+      if (value === undefined) return undefined;
+      if (!Array.isArray(value)) return null;
+      return [
+        ...new Set(
+          value
+            .filter((entry) => typeof entry === "string")
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        ),
+      ];
+    };
+    const normalizedCompanions = normalizeCreatureIds(companionCreatureIds);
+    const normalizedWildShapes = normalizeCreatureIds(wildShapeCreatureIds);
+    if (normalizedCompanions === null || normalizedWildShapes === null) {
+      res.status(400).json({ error: "Creature links must be an array of ids." });
+      return;
+    }
+    if (normalizedCompanions !== undefined) {
+      patch.companionCreatureIds = normalizedCompanions;
+    }
+    if (normalizedWildShapes !== undefined) {
+      patch.wildShapeCreatureIds = normalizedWildShapes;
+    }
     try {
       const updated = await updateAvraeCharacterOverrides({
         userId: req.memberUser.id,

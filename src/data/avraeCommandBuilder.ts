@@ -5,6 +5,7 @@ export type AvraeRollMode = "normal" | "adv" | "dis";
 export type AvraeAction = {
   kind: AvraeActionKind;
   id: string;
+  actorKind?: "character" | "creature";
   initContext?: boolean;
   outOfTurn?: boolean;
   combatantName?: string;
@@ -52,12 +53,25 @@ export function composeAvraeCommand({
   phrase = "",
   rawFlags = "",
 }: AvraeCommandOptions): string {
+  const creature = action.actorKind === "creature";
   const init = Boolean(action.initContext);
-  const offturn = init && Boolean(action.outOfTurn) && Boolean(action.combatantName?.trim());
+  const offturn = (creature || init) && Boolean(action.outOfTurn) && Boolean(action.combatantName?.trim());
   const combatantName = action.combatantName?.trim() ?? "";
 
   let command: string;
-  if (action.kind === "attack") {
+  if (creature && action.kind === "attack") {
+    command = offturn
+      ? `!i aoo ${quote(combatantName)} ${quote(action.id)}`
+      : `!i a ${quote(action.id)}`;
+  } else if (creature && action.kind === "spell") {
+    command = offturn
+      ? `!i rc ${quote(combatantName)} ${quote(action.id)}`
+      : `!i cast ${quote(action.id)}`;
+  } else if (creature && action.kind === "save") {
+    command = offturn
+      ? `!i os ${quote(combatantName)} ${action.id}`
+      : `!i s ${action.id}`;
+  } else if (action.kind === "attack") {
     command = offturn
       ? `!i offturnattack ${quote(combatantName)} ${quote(action.id)}`
       : init

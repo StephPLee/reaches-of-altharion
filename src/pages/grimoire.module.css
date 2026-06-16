@@ -1027,6 +1027,28 @@ a.appTabActive {
     font-style: italic;
 }
 
+.csReturnButton {
+    margin-left: auto;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 999px;
+    background: rgba(6, 8, 18, 0.52);
+    color: rgba(232, 225, 241, 0.78);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 0.42rem 0.8rem;
+    text-transform: uppercase;
+}
+
+.csReturnButton:hover {
+    border-color: rgba(202, 168, 255, 0.4);
+    background: rgba(72, 54, 126, 0.26);
+    color: #f4ecff;
+}
+
 .csStatBar {
     display: flex;
     flex-wrap: wrap;
@@ -1496,6 +1518,206 @@ a.appTabActive {
     border-radius: 50%;
     background: rgba(185, 145, 255, 0.72);
     flex-shrink: 0;
+}
+
+.csCreatureLinksPanel {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.csCreatureLinksHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.csCreatureLinksHeader h3 {
+    margin: 0;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csCreatureLinksHeader span {
+    color: rgba(232, 225, 241, 0.46);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csCreatureLinksPanel p,
+.csCreatureLinksEmpty {
+    margin: 0;
+    color: rgba(232, 225, 241, 0.58);
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.csCreaturePicker {
+    position: relative;
+}
+
+.csCreaturePickerButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 2.35rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.58);
+    color: #ece2ff;
+    font: inherit;
+    padding: 0.45rem 0.65rem;
+    outline: none;
+    text-align: left;
+    cursor: pointer;
+}
+
+.csCreaturePickerButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.csCreaturePickerButton:hover:not(:disabled),
+.csCreaturePickerButton:focus-visible,
+.csCreaturePickerButton[aria-expanded="true"] {
+    border-color: rgba(202, 168, 255, 0.45);
+    background: rgba(18, 17, 36, 0.82);
+}
+
+.csCreaturePickerMenu {
+    position: absolute;
+    z-index: 12;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    display: grid;
+    max-height: 15rem;
+    overflow-y: auto;
+    border: 1px solid rgba(202, 168, 255, 0.28);
+    border-radius: 0.75rem;
+    background: rgba(8, 9, 19, 0.98);
+    box-shadow: 0 1.2rem 2.4rem rgba(0, 0, 0, 0.42);
+    padding: 0.35rem;
+}
+
+.csCreaturePickerMenu::-webkit-scrollbar {
+    width: 0.55rem;
+}
+
+.csCreaturePickerMenu::-webkit-scrollbar-track {
+    background: rgba(6, 8, 18, 0.9);
+    border-radius: 999px;
+}
+
+.csCreaturePickerMenu::-webkit-scrollbar-thumb {
+    background: rgba(202, 168, 255, 0.38);
+    border-radius: 999px;
+}
+
+.csCreaturePickerOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: rgba(232, 225, 241, 0.82);
+    cursor: pointer;
+    padding: 0.45rem 0.55rem;
+    text-align: left;
+}
+
+.csCreaturePickerOption:hover,
+.csCreaturePickerOption:focus-visible {
+    background: rgba(72, 54, 126, 0.34);
+    color: #f4ecff;
+}
+
+.csCreaturePickerOption strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.csCreaturePickerOption span {
+    color: rgba(232, 225, 241, 0.56);
+    flex-shrink: 0;
+    font-size: 0.72rem;
+}
+
+.csLinkedCreatureList {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.csLinkedCreatureRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: stretch;
+}
+
+.csLinkedCreatureMain {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.38);
+    color: inherit;
+    cursor: pointer;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+}
+
+.csLinkedCreatureMain:hover {
+    border-color: rgba(202, 168, 255, 0.46);
+    background: rgba(72, 54, 126, 0.32);
+}
+
+.csLinkedCreatureMain strong {
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.csLinkedCreatureMain span {
+    color: rgba(232, 225, 241, 0.62);
+    font-size: 0.78rem;
+}
+
+.csLinkedCreatureRemove {
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.38);
+    color: rgba(232, 225, 241, 0.68);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    padding: 0 0.75rem;
+}
+
+.csLinkedCreatureRemove:hover {
+    border-color: rgba(255, 100, 100, 0.35);
+    background: rgba(70, 15, 15, 0.45);
+    color: #ffaaaa;
 }
 
 .sheetPanel,
