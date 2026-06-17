@@ -703,13 +703,13 @@ a.appTabActive {
 
 .csCommandBar code {
     color: #f4ecff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: pre-wrap;
+    overflow: auto;
     border-radius: 0.45rem;
     background: rgba(232, 225, 241, 0.06);
     padding: 0.22rem 0.5rem;
     font-size: 0.9em;
+    line-height: 1.45;
 }
 
 .csCommandBar button {
@@ -1065,6 +1065,27 @@ a.appTabActive {
     background: rgba(15, 16, 32, 0.76);
     gap: 0.1rem;
     text-align: center;
+}
+
+.csStatButton,
+.csStatButtonActive {
+    display: grid;
+    place-items: center;
+    min-width: 5rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid rgba(190, 176, 138, 0.2);
+    border-radius: 0.85rem;
+    background: rgba(15, 16, 32, 0.76);
+    color: inherit;
+    cursor: pointer;
+    gap: 0.1rem;
+    text-align: center;
+}
+
+.csStatButton:hover,
+.csStatButtonActive {
+    border-color: rgba(202, 168, 255, 0.46);
+    background: rgba(72, 54, 126, 0.32);
 }
 
 .csStatLabel {

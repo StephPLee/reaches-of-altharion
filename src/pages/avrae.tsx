@@ -106,6 +106,7 @@ const KIND_LABELS: Record<AvraeActionKind, string> = {
   spell: "Spells",
   save: "Saves",
   check: "Skills",
+  initiative: "Initiative",
 };
 
 type AppView = "vault" | "character" | "modifiers";
@@ -310,6 +311,11 @@ export default function AvraeCommandsPage(): ReactNode {
   const [initContext, setInitContext] = useState(false);
   const [outOfTurn, setOutOfTurn] = useState(false);
   const [combatantName, setCombatantName] = useState("");
+  const [useGroupInitiative, setUseGroupInitiative] = useState(false);
+  const [initiativeGroupName, setInitiativeGroupName] = useState("");
+  const [initiativeCompanionId, setInitiativeCompanionId] = useState("");
+  const [initiativeCompanionNickname, setInitiativeCompanionNickname] =
+    useState("");
   const [copied, setCopied] = useState(false);
   const [openDrawer, setOpenDrawer] = useState<"modifiers" | "targets" | null>(
     null,
@@ -325,7 +331,7 @@ export default function AvraeCommandsPage(): ReactNode {
   >("idle");
   const [combatantFetchError, setCombatantFetchError] = useState("");
   const [openCreaturePicker, setOpenCreaturePicker] = useState<
-    "companions" | "wildshapes" | null
+    "companions" | "wildshapes" | "initiative-companion" | null
   >(null);
 
   useEffect(() => {
@@ -542,6 +548,23 @@ export default function AvraeCommandsPage(): ReactNode {
     return creatureEntries.filter((entry) => linkedIds.has(entry.id));
   }, [character?.companionCreatureIds, creatureEntries]);
 
+  const selectedInitiativeCompanion = useMemo(
+    () =>
+      linkedCompanions.find((entry) => entry.id === initiativeCompanionId) ||
+      null,
+    [initiativeCompanionId, linkedCompanions],
+  );
+
+  useEffect(() => {
+    if (
+      initiativeCompanionId &&
+      !linkedCompanions.some((entry) => entry.id === initiativeCompanionId)
+    ) {
+      setInitiativeCompanionId("");
+      setInitiativeCompanionNickname("");
+    }
+  }, [initiativeCompanionId, linkedCompanions]);
+
   const linkedWildShapes = useMemo(() => {
     const linkedIds = new Set(character?.wildShapeCreatureIds || []);
     return creatureEntries.filter((entry) => linkedIds.has(entry.id));
@@ -638,12 +661,21 @@ export default function AvraeCommandsPage(): ReactNode {
           ? spellName.trim() || "Spell"
           : kind === "save"
             ? ability
-            : skill;
+            : kind === "check"
+              ? skill
+              : "initiative";
     return composeAvraeCommand({
       action: {
         kind,
         id,
         actorKind: isCreatureSheet ? "creature" : "character",
+        groupName: useGroupInitiative ? initiativeGroupName : "",
+        companionName: useGroupInitiative
+          ? selectedInitiativeCompanion?.name
+          : "",
+        companionNickname: useGroupInitiative
+          ? initiativeCompanionNickname
+          : "",
         level:
           kind === "spell" && selectedSpell ? selectedSpell.level : undefined,
         upcastTo:
@@ -685,16 +717,20 @@ export default function AvraeCommandsPage(): ReactNode {
     combatantName,
     damage,
     initContext,
+    initiativeCompanionNickname,
+    initiativeGroupName,
     isCreatureSheet,
     kind,
     modifierParams,
     outOfTurn,
     phrase,
+    selectedInitiativeCompanion,
     selectedSpell,
     skill,
     spellName,
     targets,
     upcastLevel,
+    useGroupInitiative,
   ]);
 
   async function copyCommand(): Promise<void> {
@@ -713,7 +749,6 @@ export default function AvraeCommandsPage(): ReactNode {
   function applyCharacterToBuilder(nextCharacter: SyncedDdbCharacter): void {
     setCharacter(nextCharacter);
     setSelectedCharacterId(nextCharacter.id);
-    setDdbUrl(nextCharacter.sourceUrl || "");
     if (nextCharacter.attacks?.[0]?.name) {
       setAttackName(nextCharacter.attacks[0].name);
       setDamage("");
@@ -907,6 +942,18 @@ export default function AvraeCommandsPage(): ReactNode {
     setSkill(skillId);
     setDamage("");
     setUpcastLevel("base");
+  }
+
+  function chooseInitiative(): void {
+    setKind("initiative");
+    setDamage("");
+    setBonus("");
+    setPhrase("");
+    setUpcastLevel("base");
+    if (!initiativeGroupName.trim() && character?.name) {
+      setInitiativeGroupName(character.name);
+    }
+    setOpenDrawer("modifiers");
   }
 
   function toggleModifier(modifierId: string): void {
@@ -1130,7 +1177,8 @@ export default function AvraeCommandsPage(): ReactNode {
     } catch {}
   }
 
-  async function syncDdbCharacter(sourceUrl = ddbUrl): Promise<void> {
+  async function syncDdbCharacter(sourceUrl?: string): Promise<void> {
+    const requestedUrl = sourceUrl ?? ddbUrl;
     setSyncStatus("syncing");
     setSyncError("");
     try {
@@ -1140,7 +1188,7 @@ export default function AvraeCommandsPage(): ReactNode {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ url: sourceUrl }),
+          body: JSON.stringify({ url: requestedUrl }),
         },
       );
       const payload = await response.json();
@@ -1164,6 +1212,7 @@ export default function AvraeCommandsPage(): ReactNode {
         upsertSavedCharacter(nextCharacter);
       }
       setView("character");
+      if (sourceUrl === undefined) setDdbUrl("");
       setSyncStatus("success");
     } catch (error) {
       setSyncStatus("error");
@@ -1719,14 +1768,22 @@ export default function AvraeCommandsPage(): ReactNode {
                           {character.acOverride ?? character.ac ?? "—"}
                         </strong>
                       </div>
-                      <div className={styles.csStat}>
+                      <button
+                        type="button"
+                        className={
+                          kind === "initiative"
+                            ? styles.csStatButtonActive
+                            : styles.csStatButton
+                        }
+                        onClick={chooseInitiative}
+                      >
                         <span className={styles.csStatLabel}>Initiative</span>
                         <strong className={styles.csStatValue}>
                           {character.initiative != null
                             ? signedNum(character.initiative)
                             : "—"}
                         </strong>
-                      </div>
+                      </button>
                       <div className={styles.csStat}>
                         <span className={styles.csStatLabel}>Speed</span>
                         <strong className={styles.csStatValue}>
@@ -2108,9 +2165,12 @@ export default function AvraeCommandsPage(): ReactNode {
                                   ? spellName
                                   : kind === "save"
                                     ? ability.toUpperCase()
-                                    : skillLabel(skill)}
+                                    : kind === "check"
+                                      ? skillLabel(skill)
+                                      : "Join initiative"}
                             </strong>
                           </div>
+                          {kind !== "initiative" ? (
                           <div className={styles.sideModifierGrid}>
                             {availableModifiers.map((modifier) => {
                               const isActive = activeModifierIds.includes(
@@ -2159,7 +2219,133 @@ export default function AvraeCommandsPage(): ReactNode {
                               );
                             })}
                           </div>
+                          ) : null}
                           <section className={styles.rollFields}>
+                            {kind === "initiative" ? (
+                              <>
+                                <div className={styles.toggleRow}>
+                                  <label>
+                                    <input
+                                      type="checkbox"
+                                      checked={useGroupInitiative}
+                                      onChange={(event) =>
+                                        setUseGroupInitiative(
+                                          event.target.checked,
+                                        )
+                                      }
+                                    />
+                                    <span>Group initiative</span>
+                                  </label>
+                                </div>
+                                {useGroupInitiative ? (
+                                  <>
+                                <label>
+                                  <span>Group name</span>
+                                  <input
+                                    placeholder={character.name}
+                                    value={initiativeGroupName}
+                                    onChange={(event) =>
+                                      setInitiativeGroupName(event.target.value)
+                                    }
+                                  />
+                                </label>
+                                {!isCreatureSheet ? (
+                                  <label>
+                                    <span>Companion</span>
+                                    <div className={styles.csCreaturePicker}>
+                                      <button
+                                        type="button"
+                                        className={styles.csCreaturePickerButton}
+                                        disabled={!linkedCompanions.length}
+                                        aria-expanded={
+                                          openCreaturePicker ===
+                                          "initiative-companion"
+                                        }
+                                        onClick={() =>
+                                          setOpenCreaturePicker((current) =>
+                                            current === "initiative-companion"
+                                              ? null
+                                              : "initiative-companion",
+                                          )
+                                        }
+                                      >
+                                        <span>
+                                          {selectedInitiativeCompanion?.name ||
+                                            (linkedCompanions.length
+                                              ? "No companion"
+                                              : "No linked companions")}
+                                        </span>
+                                        <span aria-hidden="true">⌄</span>
+                                      </button>
+                                      {openCreaturePicker ===
+                                      "initiative-companion" ? (
+                                        <div
+                                          className={
+                                            styles.csCreaturePickerMenu
+                                          }
+                                        >
+                                          <button
+                                            type="button"
+                                            className={
+                                              styles.csCreaturePickerOption
+                                            }
+                                            onClick={() => {
+                                              setInitiativeCompanionId("");
+                                              setInitiativeCompanionNickname("");
+                                              setOpenCreaturePicker(null);
+                                            }}
+                                          >
+                                            <strong>No companion</strong>
+                                            <span>Only join character</span>
+                                          </button>
+                                          {linkedCompanions.map((entry) => (
+                                            <button
+                                              key={entry.id}
+                                              type="button"
+                                              className={
+                                                styles.csCreaturePickerOption
+                                              }
+                                              onClick={() => {
+                                                setInitiativeCompanionId(
+                                                  entry.id,
+                                                );
+                                                setInitiativeCompanionNickname(
+                                                  entry.name,
+                                                );
+                                                setOpenCreaturePicker(null);
+                                              }}
+                                            >
+                                              <strong>{entry.name}</strong>
+                                              <span>
+                                                {entry.challengeRating != null
+                                                  ? `CR ${entry.challengeRating}`
+                                                  : "Companion"}
+                                              </span>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </label>
+                                ) : null}
+                                {selectedInitiativeCompanion ? (
+                                  <label>
+                                    <span>Companion nickname</span>
+                                    <input
+                                      value={initiativeCompanionNickname}
+                                      onChange={(event) =>
+                                        setInitiativeCompanionNickname(
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </label>
+                                ) : null}
+                                  </>
+                                ) : null}
+                              </>
+                            ) : (
+                              <>
                             {kind === "spell" &&
                             selectedSpell &&
                             selectedSpell.level > 0 ? (
@@ -2264,6 +2450,8 @@ export default function AvraeCommandsPage(): ReactNode {
                                 />
                               </label>
                             ) : null}
+                              </>
+                            )}
                           </section>
                         </div>
                       </div>
