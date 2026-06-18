@@ -121,7 +121,7 @@ type AuthUser = {
 
 type SyncedDdbCharacter = {
   id: string;
-  sourceKind?: "ddb" | "bestiary-builder";
+  sourceKind?: "ddb" | "dicecloud" | "bestiary-builder";
   sourceUrl: string;
   syncedAt: string;
   avatarUrl?: string | null;
@@ -158,6 +158,10 @@ type SyncedDdbCharacter = {
     sub?: string;
   }>;
 };
+
+function isDicecloudCharacterLink(value: string): boolean {
+  return /(?:^|\/\/)(?:v1\.)?dicecloud\.com\/character\//i.test(value.trim());
+}
 
 type AvraeModifier = {
   id: string;
@@ -1179,11 +1183,14 @@ export default function AvraeCommandsPage(): ReactNode {
 
   async function syncDdbCharacter(sourceUrl?: string): Promise<void> {
     const requestedUrl = sourceUrl ?? ddbUrl;
+    const isDicecloud = isDicecloudCharacterLink(requestedUrl);
+    const endpoint = isDicecloud ? "dicecloud-character" : "ddb-character";
+    const sourceLabel = isDicecloud ? "Dicecloud" : "D&D Beyond";
     setSyncStatus("syncing");
     setSyncError("");
     try {
       const response = await fetch(
-        `${authApiBaseUrl}/api/avrae/ddb-character${user ? "" : "/preview"}`,
+        `${authApiBaseUrl}/api/avrae/${endpoint}${user ? "" : "/preview"}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1194,7 +1201,7 @@ export default function AvraeCommandsPage(): ReactNode {
       const payload = await response.json();
       if (!response.ok)
         throw new Error(
-          payload?.error || "Failed to sync D&D Beyond character.",
+          payload?.error || `Failed to sync ${sourceLabel} character.`,
         );
       let nextCharacter = payload.character as SyncedDdbCharacter;
       if (user) {
@@ -1219,7 +1226,7 @@ export default function AvraeCommandsPage(): ReactNode {
       setSyncError(
         error instanceof Error
           ? error.message
-          : "Failed to sync D&D Beyond character.",
+          : `Failed to sync ${sourceLabel} character.`,
       );
     }
   }
@@ -1352,7 +1359,7 @@ export default function AvraeCommandsPage(): ReactNode {
         </div>
         <div className={styles.vaultImportForm}>
           <input
-            placeholder="https://www.dndbeyond.com/characters/..."
+            placeholder="D&D Beyond or Dicecloud character link"
             value={ddbUrl}
             onChange={(event) => setDdbUrl(event.target.value)}
           />
@@ -1553,7 +1560,7 @@ export default function AvraeCommandsPage(): ReactNode {
               {!user ? (
                 <div className={styles.loginPrompt}>
                   <p>
-                    Sign in with Discord to save D&D Beyond imports to your
+                    Sign in with Discord to save character imports to your
                     account.
                   </p>
                   <button

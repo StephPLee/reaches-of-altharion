@@ -135,6 +135,7 @@ const {
   syncWikiPageToDiscord,
 } = require("./discordSync");
 const { fetchDdbCharacter } = require("./ddbCharacters");
+const { fetchDicecloudCharacter } = require("./dicecloudCharacters");
 const { fetchBestiaryBuilderBestiary } = require("./bestiaryBuilder");
 const {
   MARKETPLACE_TIME_ZONE,
@@ -557,6 +558,69 @@ app.post(
           ddbError instanceof Error
             ? ddbError.message
             : "Failed to sync D&D Beyond character.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/avrae/dicecloud-character/preview",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "Dicecloud character link is required." });
+      return;
+    }
+
+    try {
+      const character = await fetchDicecloudCharacter(url);
+      res.json({ character });
+    } catch (dicecloudError) {
+      const statusCode = Number(dicecloudError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to preview Dicecloud character:", dicecloudError);
+      }
+      res.status(statusCode).json({
+        error:
+          dicecloudError instanceof Error
+            ? dicecloudError.message
+            : "Failed to preview Dicecloud character.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/avrae/dicecloud-character",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "Dicecloud character link is required." });
+      return;
+    }
+
+    try {
+      const character = await fetchDicecloudCharacter(url);
+      const savedCharacter = await upsertSavedAvraeCharacter({
+        userId: req.memberUser.id,
+        character,
+      });
+      res.json({ character: savedCharacter });
+    } catch (dicecloudError) {
+      const statusCode = Number(dicecloudError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to sync Dicecloud character:", dicecloudError);
+      }
+      res.status(statusCode).json({
+        error:
+          dicecloudError instanceof Error
+            ? dicecloudError.message
+            : "Failed to sync Dicecloud character.",
       });
     }
   },
