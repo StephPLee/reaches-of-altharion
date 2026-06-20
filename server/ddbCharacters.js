@@ -227,6 +227,8 @@ function mapAc(character, abilities) {
 }
 
 function mapSpeed(character) {
+  const customWalk = (character.customSpeeds || []).find((speed) => Number(speed?.movementId) === 1);
+  if (customWalk?.distance != null) return Number(customWalk.distance);
   return Number(character.race?.weightSpeeds?.normal?.walk || 30);
 }
 
