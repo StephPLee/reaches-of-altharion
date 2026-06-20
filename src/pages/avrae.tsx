@@ -931,10 +931,10 @@ export default function AvraeCommandsPage(): ReactNode {
     });
   }
 
-  function chooseAttack(name: string, attackDamage = ""): void {
+  function chooseAttack(name: string): void {
     setKind("attack");
     setAttackName(name);
-    setDamage(attackDamage);
+    setDamage("");
   }
 
   function chooseSpell(name: string): void {
@@ -1987,9 +1987,7 @@ export default function AvraeCommandsPage(): ReactNode {
                                     ? styles.csAttackRowActive
                                     : styles.csAttackRow
                                 }
-                                onClick={() =>
-                                  chooseAttack(attack.name, attack.damage || "")
-                                }
+                                onClick={() => chooseAttack(attack.name)}
                               >
                                 <strong>{attack.name}</strong>
                                 <span>

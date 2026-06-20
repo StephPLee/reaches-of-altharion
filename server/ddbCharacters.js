@@ -275,6 +275,32 @@ function mapCustomSkillBonuses(character) {
   return result;
 }
 
+function mapCustomSkillOverrides(character) {
+  const result = {};
+  for (const entry of character.characterValues || []) {
+    if (entry?.valueTypeId !== "1958004211") continue;
+    if (Number(entry.typeId) !== 23) continue;
+    const key = SKILL_ENTITY_IDS[Number(entry.valueId)];
+    const value = Number(entry.value);
+    if (!key || !Number.isFinite(value)) continue;
+    result[key] = value;
+  }
+  return result;
+}
+
+function mapCustomSavingThrowOverrides(character) {
+  const result = {};
+  for (const entry of character.characterValues || []) {
+    if (entry?.valueTypeId !== "1472902489") continue;
+    if (Number(entry.typeId) !== 38) continue;
+    const key = ABILITY_IDS[Number(entry.valueId)];
+    const value = Number(entry.value);
+    if (!key || !Number.isFinite(value)) continue;
+    result[key] = value;
+  }
+  return result;
+}
+
 function mapNumericalBonuses(character, keyToSubType, abilities, broadSubType = null) {
   const result = Object.fromEntries(Object.keys(keyToSubType).map((k) => [k, 0]));
   for (const [group, modifiers] of Object.entries(character.modifiers || {})) {
@@ -298,10 +324,11 @@ function mapNumericalBonuses(character, keyToSubType, abilities, broadSubType = 
 
 function mapSavingThrowTotals(character, abilities, proficiencyBonus, savingThrows) {
   const bonuses = mapNumericalBonuses(character, SAVE_SUBTYPES, abilities, "saving-throws");
+  const overrides = mapCustomSavingThrowOverrides(character);
   return Object.fromEntries(Object.keys(SAVE_SUBTYPES).map((key) => {
     const base = abilityMod(abilities[key] || 10);
     const prof = proficiencyValue(savingThrows[key], proficiencyBonus);
-    return [key, base + prof + (bonuses[key] || 0)];
+    return [key, overrides[key] ?? (base + prof + (bonuses[key] || 0))];
   }));
 }
 
@@ -329,12 +356,13 @@ function mapSkillTotals(character, abilities, proficiencyBonus, skills) {
   const subtypes = Object.fromEntries(SKILL_KEYS.map((key) => [key, key]));
   const bonuses = mapNumericalBonuses(character, subtypes, abilities, "ability-checks");
   const customBonuses = mapCustomSkillBonuses(character);
+  const overrides = mapCustomSkillOverrides(character);
 
   return Object.fromEntries(SKILL_KEYS.map((key) => {
     const ability = skillAbilities[key];
     const base = abilityMod(abilities[ability] || 10);
     const prof = proficiencyValue(skills[key], proficiencyBonus);
-    return [key, base + prof + (bonuses[key] || 0) + (customBonuses[key] || 0)];
+    return [key, overrides[key] ?? (base + prof + (bonuses[key] || 0) + (customBonuses[key] || 0))];
   }));
 }
 
