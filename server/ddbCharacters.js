@@ -29,24 +29,33 @@ const SAVE_SUBTYPES = {
 };
 
 const SKILL_ENTITY_IDS = {
-  2: "acrobatics",
-  3: "athletics",
-  4: "animal-handling",
+  2: "athletics",
+  3: "acrobatics",
+  4: "sleight-of-hand",
   5: "stealth",
   6: "arcana",
   7: "history",
   8: "investigation",
   9: "nature",
   10: "religion",
-  11: "insight",
-  12: "medicine",
-  13: "survival",
+  11: "animal-handling",
+  12: "insight",
+  13: "medicine",
   14: "perception",
-  15: "performance",
+  15: "survival",
   16: "deception",
   17: "intimidation",
-  18: "sleight-of-hand",
+  18: "performance",
   19: "persuasion",
+};
+
+const CUSTOM_SAVE_VALUE_IDS = {
+  0: "str",
+  1: "dex",
+  2: "con",
+  3: "int",
+  4: "wis",
+  5: "cha",
 };
 
 const SKILL_KEYS = [
@@ -267,10 +276,30 @@ function mapCustomSkillBonuses(character) {
   const result = {};
   for (const entry of character.characterValues || []) {
     if (entry?.valueTypeId !== "1958004211") continue;
-    if (![25, 26].includes(Number(entry.typeId))) continue;
+    if (Number(entry.typeId) !== 25) continue;
     const key = SKILL_ENTITY_IDS[Number(entry.valueId)];
     if (!key) continue;
     result[key] = (result[key] || 0) + (Number(entry.value) || 0);
+  }
+  return result;
+}
+
+function mapCustomSkillProficiencyOverrides(character) {
+  const result = {};
+  const proficiencyByValue = {
+    1: "none",
+    2: "half",
+    3: "proficient",
+    4: "expertise",
+  };
+
+  for (const entry of character.characterValues || []) {
+    if (entry?.valueTypeId !== "1958004211") continue;
+    if (Number(entry.typeId) !== 26) continue;
+    const key = SKILL_ENTITY_IDS[Number(entry.valueId)];
+    const proficiency = proficiencyByValue[Number(entry.value)];
+    if (!key || !proficiency) continue;
+    result[key] = proficiency;
   }
   return result;
 }
@@ -293,7 +322,7 @@ function mapCustomSavingThrowOverrides(character) {
   for (const entry of character.characterValues || []) {
     if (entry?.valueTypeId !== "1472902489") continue;
     if (Number(entry.typeId) !== 38) continue;
-    const key = ABILITY_IDS[Number(entry.valueId)];
+    const key = CUSTOM_SAVE_VALUE_IDS[Number(entry.valueId)];
     const value = Number(entry.value);
     if (!key || !Number.isFinite(value)) continue;
     result[key] = value;
@@ -580,7 +609,10 @@ function normalizeDdbCharacter(rawCharacter, sourceUrl) {
   const proficiencyBonus = mapProfBonus(rawCharacter, totalLevel || 1);
   const skillProfKeys = Object.fromEntries(SKILL_KEYS.map((k) => [k, k]));
   const savingThrows = mapProficiency(rawCharacter, SAVE_SUBTYPES);
-  const skills = mapProficiency(rawCharacter, skillProfKeys, "ability-checks");
+  const skills = {
+    ...mapProficiency(rawCharacter, skillProfKeys, "ability-checks"),
+    ...mapCustomSkillProficiencyOverrides(rawCharacter),
+  };
 
   return {
     id: String(rawCharacter.id || ""),
