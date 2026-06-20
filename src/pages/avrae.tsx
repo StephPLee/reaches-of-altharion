@@ -142,7 +142,9 @@ type SyncedDdbCharacter = {
   initiative?: number;
   proficiencyBonus?: number;
   savingThrows?: Record<string, string>;
+  savingThrowTotals?: Record<string, number>;
   skills?: Record<string, string>;
+  skillTotals?: Record<string, number>;
   attacks: Array<{
     id: string;
     name: string;
@@ -256,6 +258,13 @@ function abilityMod(score: number): number {
 
 function signedNum(n: number): string {
   return n >= 0 ? `+${n}` : String(n);
+}
+
+function proficiencyValue(proficiency: string | undefined, proficiencyBonus: number): number {
+  if (proficiency === "expertise") return proficiencyBonus * 2;
+  if (proficiency === "proficient") return proficiencyBonus;
+  if (proficiency === "half") return Math.floor(proficiencyBonus / 2);
+  return 0;
 }
 
 export default function AvraeCommandsPage(): ReactNode {
@@ -1835,14 +1844,8 @@ export default function AvraeCommandsPage(): ReactNode {
                             const score = character.abilities?.[id];
                             const base = score != null ? abilityMod(score) : 0;
                             const pb = character.proficiencyBonus || 2;
-                            const bonus =
-                              prof === "expertise"
-                                ? pb * 2
-                                : prof === "proficient"
-                                  ? pb
-                                  : prof === "half"
-                                    ? Math.floor(pb / 2)
-                                    : 0;
+                            const fallbackTotal = base + proficiencyValue(prof, pb);
+                            const total = character.savingThrowTotals?.[id] ?? fallbackTotal;
                             return (
                               <button
                                 key={id}
@@ -1865,7 +1868,7 @@ export default function AvraeCommandsPage(): ReactNode {
                                   {label}
                                 </span>
                                 <span className={styles.csSaveBonus}>
-                                  {signedNum(base + bonus)}
+                                  {signedNum(total)}
                                 </span>
                               </button>
                             );
@@ -1881,14 +1884,8 @@ export default function AvraeCommandsPage(): ReactNode {
                             const score = character.abilities?.[ability];
                             const base = score != null ? abilityMod(score) : 0;
                             const pb = character.proficiencyBonus || 2;
-                            const bonus =
-                              prof === "expertise"
-                                ? pb * 2
-                                : prof === "proficient"
-                                  ? pb
-                                  : prof === "half"
-                                    ? Math.floor(pb / 2)
-                                    : 0;
+                            const fallbackTotal = base + proficiencyValue(prof, pb);
+                            const total = character.skillTotals?.[id] ?? fallbackTotal;
                             return (
                               <button
                                 key={id}
@@ -1914,7 +1911,7 @@ export default function AvraeCommandsPage(): ReactNode {
                                   {label}
                                 </span>
                                 <span className={styles.csSaveBonus}>
-                                  {signedNum(base + bonus)}
+                                  {signedNum(total)}
                                 </span>
                               </button>
                             );

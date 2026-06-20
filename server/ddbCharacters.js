@@ -28,6 +28,27 @@ const SAVE_SUBTYPES = {
   cha: "charisma-saving-throws",
 };
 
+const SKILL_ENTITY_IDS = {
+  2: "acrobatics",
+  3: "athletics",
+  4: "animal-handling",
+  5: "stealth",
+  6: "arcana",
+  7: "history",
+  8: "investigation",
+  9: "nature",
+  10: "religion",
+  11: "insight",
+  12: "medicine",
+  13: "survival",
+  14: "perception",
+  15: "performance",
+  16: "deception",
+  17: "intimidation",
+  18: "sleight-of-hand",
+  19: "persuasion",
+};
+
 const SKILL_KEYS = [
   "acrobatics", "animal-handling", "arcana", "athletics", "deception",
   "history", "insight", "intimidation", "investigation", "medicine",
@@ -55,13 +76,47 @@ function abilityMod(score) {
   return Math.floor((score - 10) / 2);
 }
 
-function sumBonusModifiers(character, subType) {
+function findInventoryItemForModifier(character, modifier) {
+  const componentId = Number(modifier?.componentId);
+  if (!Number.isFinite(componentId)) return null;
+  return (character.inventory || []).find((item) => Number(item.definition?.id) === componentId) || null;
+}
+
+function modifierIsActive(character, group, modifier) {
+  if (group !== "item") return true;
+
+  const item = findInventoryItemForModifier(character, modifier);
+  if (!item) return false;
+  if (item.equipped === false) return false;
+  if ((modifier?.requiresAttunement || item.definition?.requiresAttunement) && !item.isAttuned) {
+    return false;
+  }
+  return true;
+}
+
+function modifierNumericValue(modifier, abilities = null) {
+  const rawDirect = modifier?.value ?? modifier?.fixedValue;
+  if (rawDirect != null) {
+    const direct = Number(rawDirect);
+    if (Number.isFinite(direct)) return direct;
+  }
+
+  const statKey = ABILITY_IDS[modifier?.statId];
+  if (statKey && abilities?.[statKey] != null) {
+    return abilityMod(abilities[statKey]);
+  }
+
+  return 0;
+}
+
+function sumBonusModifiers(character, subType, abilities = null) {
   let total = 0;
-  for (const modifiers of Object.values(character.modifiers || {})) {
+  for (const [group, modifiers] of Object.entries(character.modifiers || {})) {
     if (!Array.isArray(modifiers)) continue;
     for (const modifier of modifiers) {
       if (modifier?.type !== "bonus" || modifier?.subType !== subType) continue;
-      total += Number(modifier.value ?? modifier.fixedValue ?? 0) || 0;
+      if (!modifierIsActive(character, group, modifier)) continue;
+      total += modifierNumericValue(modifier, abilities);
     }
   }
   return total;
@@ -86,10 +141,11 @@ function mapHp(character, abilities, totalLevel) {
 function sumSetModifiers(character, subType) {
   // "set" type modifiers specify a fixed AC value rather than a bonus — take the highest.
   let best = null;
-  for (const modifiers of Object.values(character.modifiers || {})) {
+  for (const [group, modifiers] of Object.entries(character.modifiers || {})) {
     if (!Array.isArray(modifiers)) continue;
     for (const modifier of modifiers) {
       if (modifier?.type !== "set" || modifier?.subType !== subType) continue;
+      if (!modifierIsActive(character, group, modifier)) continue;
       const val = Number(modifier.value ?? modifier.fixedValue ?? null);
       if (!Number.isFinite(val)) continue;
       if (best === null || val > best) best = val;
@@ -166,18 +222,24 @@ function mapSpeed(character) {
 }
 
 function mapInitiative(character, abilities) {
-  return abilityMod(abilities.dex || 10) + sumBonusModifiers(character, "initiative");
+  return abilityMod(abilities.dex || 10) + sumBonusModifiers(character, "initiative", abilities);
 }
 
-function mapProfBonus(totalLevel) {
-  return Math.floor((Math.max(totalLevel, 1) - 1) / 4) + 2;
+function mapProfBonus(character, totalLevel) {
+  return Math.floor((Math.max(totalLevel, 1) - 1) / 4) + 2 + sumBonusModifiers(character, "proficiency-bonus");
 }
 
-function mapProficiency(character, keyToSubType) {
+function mapProficiency(character, keyToSubType, broadSubType = null) {
   const result = Object.fromEntries(Object.keys(keyToSubType).map((k) => [k, "none"]));
-  for (const modifiers of Object.values(character.modifiers || {})) {
+  for (const [group, modifiers] of Object.entries(character.modifiers || {})) {
     if (!Array.isArray(modifiers)) continue;
     for (const modifier of modifiers) {
+      if (!modifierIsActive(character, group, modifier)) continue;
+      if (broadSubType && modifier?.type === "half-proficiency" && modifier?.subType === broadSubType) {
+        for (const key of Object.keys(result)) {
+          if (result[key] === "none") result[key] = "half";
+        }
+      }
       for (const [key, subType] of Object.entries(keyToSubType)) {
         if (modifier?.subType !== subType) continue;
         if (modifier.type === "expertise") {
@@ -192,6 +254,88 @@ function mapProficiency(character, keyToSubType) {
     }
   }
   return result;
+}
+
+function proficiencyValue(proficiency, proficiencyBonus) {
+  if (proficiency === "expertise") return proficiencyBonus * 2;
+  if (proficiency === "proficient") return proficiencyBonus;
+  if (proficiency === "half") return Math.floor(proficiencyBonus / 2);
+  return 0;
+}
+
+function mapCustomSkillBonuses(character) {
+  const result = {};
+  for (const entry of character.characterValues || []) {
+    if (entry?.valueTypeId !== "1958004211") continue;
+    if (![25, 26].includes(Number(entry.typeId))) continue;
+    const key = SKILL_ENTITY_IDS[Number(entry.valueId)];
+    if (!key) continue;
+    result[key] = (result[key] || 0) + (Number(entry.value) || 0);
+  }
+  return result;
+}
+
+function mapNumericalBonuses(character, keyToSubType, abilities, broadSubType = null) {
+  const result = Object.fromEntries(Object.keys(keyToSubType).map((k) => [k, 0]));
+  for (const [group, modifiers] of Object.entries(character.modifiers || {})) {
+    if (!Array.isArray(modifiers)) continue;
+    for (const modifier of modifiers) {
+      if (modifier?.type !== "bonus") continue;
+      if (!modifierIsActive(character, group, modifier)) continue;
+
+      if (broadSubType && modifier.subType === broadSubType) {
+        const value = modifierNumericValue(modifier, abilities);
+        for (const key of Object.keys(result)) result[key] += value;
+      }
+
+      for (const [key, subType] of Object.entries(keyToSubType)) {
+        if (modifier.subType === subType) result[key] += modifierNumericValue(modifier, abilities);
+      }
+    }
+  }
+  return result;
+}
+
+function mapSavingThrowTotals(character, abilities, proficiencyBonus, savingThrows) {
+  const bonuses = mapNumericalBonuses(character, SAVE_SUBTYPES, abilities, "saving-throws");
+  return Object.fromEntries(Object.keys(SAVE_SUBTYPES).map((key) => {
+    const base = abilityMod(abilities[key] || 10);
+    const prof = proficiencyValue(savingThrows[key], proficiencyBonus);
+    return [key, base + prof + (bonuses[key] || 0)];
+  }));
+}
+
+function mapSkillTotals(character, abilities, proficiencyBonus, skills) {
+  const skillAbilities = {
+    acrobatics: "dex",
+    "animal-handling": "wis",
+    arcana: "int",
+    athletics: "str",
+    deception: "cha",
+    history: "int",
+    insight: "wis",
+    intimidation: "cha",
+    investigation: "int",
+    medicine: "wis",
+    nature: "int",
+    perception: "wis",
+    performance: "cha",
+    persuasion: "cha",
+    religion: "int",
+    "sleight-of-hand": "dex",
+    stealth: "dex",
+    survival: "wis",
+  };
+  const subtypes = Object.fromEntries(SKILL_KEYS.map((key) => [key, key]));
+  const bonuses = mapNumericalBonuses(character, subtypes, abilities, "ability-checks");
+  const customBonuses = mapCustomSkillBonuses(character);
+
+  return Object.fromEntries(SKILL_KEYS.map((key) => {
+    const ability = skillAbilities[key];
+    const base = abilityMod(abilities[ability] || 10);
+    const prof = proficiencyValue(skills[key], proficiencyBonus);
+    return [key, base + prof + (bonuses[key] || 0) + (customBonuses[key] || 0)];
+  }));
 }
 
 function normalizeName(value) {
@@ -281,11 +425,12 @@ function sumAbilityScoreModifiers(character, abilityKey) {
   if (!subtype) return 0;
 
   let total = 0;
-  for (const modifiers of Object.values(character.modifiers || {})) {
+  for (const [group, modifiers] of Object.entries(character.modifiers || {})) {
     if (!Array.isArray(modifiers)) continue;
     for (const modifier of modifiers) {
       if (modifier?.type !== "bonus" || modifier?.subType !== subtype) continue;
-      total += Number(modifier.value ?? modifier.fixedValue ?? 0) || 0;
+      if (!modifierIsActive(character, group, modifier)) continue;
+      total += modifierNumericValue(modifier);
     }
   }
   return total;
@@ -404,8 +549,10 @@ function normalizeDdbCharacter(rawCharacter, sourceUrl) {
     ...mapActionAttacks(rawCharacter),
   ]);
   const abilities = mapAbilities(rawCharacter);
-  const proficiencyBonus = mapProfBonus(totalLevel || 1);
+  const proficiencyBonus = mapProfBonus(rawCharacter, totalLevel || 1);
   const skillProfKeys = Object.fromEntries(SKILL_KEYS.map((k) => [k, k]));
+  const savingThrows = mapProficiency(rawCharacter, SAVE_SUBTYPES);
+  const skills = mapProficiency(rawCharacter, skillProfKeys, "ability-checks");
 
   return {
     id: String(rawCharacter.id || ""),
@@ -426,8 +573,10 @@ function normalizeDdbCharacter(rawCharacter, sourceUrl) {
     speed: mapSpeed(rawCharacter),
     initiative: mapInitiative(rawCharacter, abilities),
     proficiencyBonus,
-    savingThrows: mapProficiency(rawCharacter, SAVE_SUBTYPES),
-    skills: mapProficiency(rawCharacter, skillProfKeys),
+    savingThrows,
+    savingThrowTotals: mapSavingThrowTotals(rawCharacter, abilities, proficiencyBonus, savingThrows),
+    skills,
+    skillTotals: mapSkillTotals(rawCharacter, abilities, proficiencyBonus, skills),
     attacks,
     spells: mapSpells(rawCharacter),
   };
