@@ -26,6 +26,8 @@ type SessionUser = {
   discordUserId: string;
 };
 
+type StatRollPredicate = (roll: StatRollSet) => boolean;
+
 function getAuthApiBaseUrl(siteConfig): string {
   const configured = siteConfig.customFields?.authApiBaseUrl;
   return typeof configured === "string" ? configured.replace(/\/$/, "") : "";
@@ -37,6 +39,91 @@ function formatDate(isoString: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function countStats(roll: StatRollSet, predicate: (value: number) => boolean) {
+  return roll.stats.filter(predicate).length;
+}
+
+function parseStatSearchClause(clause: string): StatRollPredicate | null {
+  const q = clause.trim().toLowerCase();
+  if (!q) return null;
+
+  const totalMatch =
+    q.match(/^total\s*[:=]?\s*(\d{2,3})$/) ||
+    q.match(/^sum\s*[:=]?\s*(\d{2,3})$/) ||
+    q.match(/^=\s*(\d{2,3})$/) ||
+    q.match(/^(\d{2,3})$/);
+  if (totalMatch) {
+    const expectedTotal = Number(totalMatch[1]);
+    return (roll) => roll.total === expectedTotal;
+  }
+
+  const exactCountMatch =
+    q.match(/^(\d+)\s*(?:x|\*)\s*(\d{1,2})s?$/) ||
+    q.match(/^(\d{1,2})s?\s*(?:x|\*)\s*(\d+)$/);
+  if (exactCountMatch) {
+    const first = Number(exactCountMatch[1]);
+    const second = Number(exactCountMatch[2]);
+    const expectedCount = first <= 6 && second > 6 ? first : second;
+    const statValue = first <= 6 && second > 6 ? second : first;
+    return (roll) => countStats(roll, (value) => value === statValue) >= expectedCount;
+  }
+
+  const naturalExactMatch = q.match(/^(\d+)\s+(\d{1,2})s?$/);
+  if (naturalExactMatch) {
+    const expectedCount = Number(naturalExactMatch[1]);
+    const statValue = Number(naturalExactMatch[2]);
+    if (expectedCount <= 6) {
+      return (roll) => countStats(roll, (value) => value === statValue) >= expectedCount;
+    }
+  }
+
+  const atLeastMatch =
+    q.match(/^(\d{1,2})\+\s*(?:x|\*)?\s*(\d+)$/) ||
+    q.match(/^(\d+)\s*(?:at\s+least|>=)\s*(\d{1,2})$/);
+  if (atLeastMatch) {
+    const first = Number(atLeastMatch[1]);
+    const second = Number(atLeastMatch[2]);
+    const threshold = first > 6 ? first : second;
+    const expectedCount = first > 6 ? second : first;
+    return (roll) => countStats(roll, (value) => value >= threshold) >= expectedCount;
+  }
+
+  const overMatch = q.match(/^(\d+)\s*(?:over|above|>)\s*(\d{1,2})$/);
+  if (overMatch) {
+    const expectedCount = Number(overMatch[1]);
+    const threshold = Number(overMatch[2]);
+    return (roll) => countStats(roll, (value) => value > threshold) >= expectedCount;
+  }
+
+  const statMatch = q.match(/^stat\s*[:=]\s*(\d{1,2})$/);
+  if (statMatch) {
+    const statValue = Number(statMatch[1]);
+    return (roll) => roll.stats.includes(statValue);
+  }
+
+  return null;
+}
+
+function parseStatSearchQuery(query: string) {
+  const clauses = query
+    .split(/[,\n]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const statPredicates: StatRollPredicate[] = [];
+  const textClauses: string[] = [];
+
+  for (const clause of clauses) {
+    const predicate = parseStatSearchClause(clause);
+    if (predicate) {
+      statPredicates.push(predicate);
+    } else {
+      textClauses.push(clause.toLowerCase());
+    }
+  }
+
+  return { statPredicates, textClauses };
 }
 
 function StatCard({
@@ -205,10 +292,16 @@ export default function StatRollsPage(): ReactNode {
     new Date() < new Date(r.lockedUntil) &&
     !r.claimedByDiscordUserId;
 
+  const parsedSearch = parseStatSearchQuery(searchQuery);
   const filteredRolls = rolls.filter((roll) => {
     if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (roll.rolledByUsername ?? "").toLowerCase().includes(q);
+    const matchesStats = parsedSearch.statPredicates.every((predicate) =>
+      predicate(roll),
+    );
+    const matchesText = parsedSearch.textClauses.every((clause) =>
+      (roll.rolledByUsername ?? "").toLowerCase().includes(clause),
+    );
+    return matchesStats && matchesText;
   });
 
   const availableRolls = filteredRolls.filter(
@@ -274,7 +367,7 @@ export default function StatRollsPage(): ReactNode {
               <input
                 type="search"
                 className={styles.searchInput}
-                placeholder="Search by roller…"
+                placeholder="Search by roller, total:84, 84, 18x2, 2 18s, 15+ x3, 3 over 15, stat:18"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -286,7 +379,7 @@ export default function StatRollsPage(): ReactNode {
             {!rollsLoading && !rollsError && displayRolls.length === 0 && (
               <p className={styles.hint}>
                 {searchQuery.trim()
-                  ? "No rolls found matching that roller."
+                  ? "No stat rolls match that search."
                   : activeTab === "available"
                     ? "No available stat roll sets right now. Check back after a server member runs /rollstats in Discord."
                     : activeTab === "locked"
