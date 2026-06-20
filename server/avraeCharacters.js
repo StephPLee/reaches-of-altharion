@@ -44,7 +44,9 @@ async function upsertSavedAvraeCharacter({ userId, character }) {
       name = EXCLUDED.name,
       payload = EXCLUDED.payload || jsonb_strip_nulls(jsonb_build_object(
         'hpOverride', avrae_saved_characters.payload->'hpOverride',
-        'acOverride', avrae_saved_characters.payload->'acOverride'
+        'acOverride', avrae_saved_characters.payload->'acOverride',
+        'companionCreatureIds', avrae_saved_characters.payload->'companionCreatureIds',
+        'wildShapeCreatureIds', avrae_saved_characters.payload->'wildShapeCreatureIds'
       )),
       synced_at = NOW(),
       updated_at = NOW()
@@ -67,10 +69,18 @@ async function updateAvraeCharacterOverrides({
   characterId,
   hpOverride,
   acOverride,
+  companionCreatureIds,
+  wildShapeCreatureIds,
 }) {
   const overridesPatch = {};
   if (hpOverride != null) overridesPatch.hpOverride = hpOverride;
   if (acOverride != null) overridesPatch.acOverride = acOverride;
+  if (Array.isArray(companionCreatureIds)) {
+    overridesPatch.companionCreatureIds = companionCreatureIds;
+  }
+  if (Array.isArray(wildShapeCreatureIds)) {
+    overridesPatch.wildShapeCreatureIds = wildShapeCreatureIds;
+  }
 
   const result = await pool.query(
     `

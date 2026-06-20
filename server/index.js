@@ -135,6 +135,8 @@ const {
   syncWikiPageToDiscord,
 } = require("./discordSync");
 const { fetchDdbCharacter } = require("./ddbCharacters");
+const { fetchDicecloudCharacter } = require("./dicecloudCharacters");
+const { fetchBestiaryBuilderBestiary } = require("./bestiaryBuilder");
 const {
   MARKETPLACE_TIME_ZONE,
   createMarketplace,
@@ -561,6 +563,137 @@ app.post(
   },
 );
 
+app.post(
+  "/api/avrae/dicecloud-character/preview",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "Dicecloud character link is required." });
+      return;
+    }
+
+    try {
+      const character = await fetchDicecloudCharacter(url);
+      res.json({ character });
+    } catch (dicecloudError) {
+      const statusCode = Number(dicecloudError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to preview Dicecloud character:", dicecloudError);
+      }
+      res.status(statusCode).json({
+        error:
+          dicecloudError instanceof Error
+            ? dicecloudError.message
+            : "Failed to preview Dicecloud character.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/avrae/dicecloud-character",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "Dicecloud character link is required." });
+      return;
+    }
+
+    try {
+      const character = await fetchDicecloudCharacter(url);
+      const savedCharacter = await upsertSavedAvraeCharacter({
+        userId: req.memberUser.id,
+        character,
+      });
+      res.json({ character: savedCharacter });
+    } catch (dicecloudError) {
+      const statusCode = Number(dicecloudError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to sync Dicecloud character:", dicecloudError);
+      }
+      res.status(statusCode).json({
+        error:
+          dicecloudError instanceof Error
+            ? dicecloudError.message
+            : "Failed to sync Dicecloud character.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/avrae/bestiary-builder/preview",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "Bestiary Builder share link is required." });
+      return;
+    }
+
+    try {
+      const bestiary = await fetchBestiaryBuilderBestiary(url);
+      res.json(bestiary);
+    } catch (bestiaryError) {
+      const statusCode = Number(bestiaryError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to preview Bestiary Builder bestiary:", bestiaryError);
+      }
+      res.status(statusCode).json({
+        error:
+          bestiaryError instanceof Error
+            ? bestiaryError.message
+            : "Failed to preview Bestiary Builder bestiary.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/avrae/bestiary-builder",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const { url } = req.body ?? {};
+    if (typeof url !== "string" || !url.trim()) {
+      res.status(400).json({ error: "Bestiary Builder share link is required." });
+      return;
+    }
+
+    try {
+      const bestiary = await fetchBestiaryBuilderBestiary(url);
+      const creatures = [];
+      for (const creature of bestiary.creatures) {
+        creatures.push(
+          await upsertSavedAvraeCharacter({
+            userId: req.memberUser.id,
+            character: creature,
+          }),
+        );
+      }
+      res.json({ bestiary: bestiary.bestiary, creatures });
+    } catch (bestiaryError) {
+      const statusCode = Number(bestiaryError.statusCode) || 500;
+      if (statusCode >= 500) {
+        console.error("Failed to import Bestiary Builder bestiary:", bestiaryError);
+      }
+      res.status(statusCode).json({
+        error:
+          bestiaryError instanceof Error
+            ? bestiaryError.message
+            : "Failed to import Bestiary Builder bestiary.",
+      });
+    }
+  },
+);
+
 app.get(
   "/api/avrae/characters",
   sessionRateLimiter,
@@ -587,12 +720,41 @@ app.patch(
       res.status(400).json({ error: "Invalid character id." });
       return;
     }
-    const { hpOverride, acOverride } = req.body ?? {};
+    const {
+      hpOverride,
+      acOverride,
+      companionCreatureIds,
+      wildShapeCreatureIds,
+    } = req.body ?? {};
     const hpVal = hpOverride != null ? parseInt(hpOverride, 10) : null;
     const acVal = acOverride != null ? parseInt(acOverride, 10) : null;
     const patch = {};
     if (hpOverride !== undefined) patch.hpOverride = !isNaN(hpVal) && hpVal > 0 ? hpVal : null;
     if (acOverride !== undefined) patch.acOverride = !isNaN(acVal) && acVal > 0 ? acVal : null;
+    const normalizeCreatureIds = (value) => {
+      if (value === undefined) return undefined;
+      if (!Array.isArray(value)) return null;
+      return [
+        ...new Set(
+          value
+            .filter((entry) => typeof entry === "string")
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        ),
+      ];
+    };
+    const normalizedCompanions = normalizeCreatureIds(companionCreatureIds);
+    const normalizedWildShapes = normalizeCreatureIds(wildShapeCreatureIds);
+    if (normalizedCompanions === null || normalizedWildShapes === null) {
+      res.status(400).json({ error: "Creature links must be an array of ids." });
+      return;
+    }
+    if (normalizedCompanions !== undefined) {
+      patch.companionCreatureIds = normalizedCompanions;
+    }
+    if (normalizedWildShapes !== undefined) {
+      patch.wildShapeCreatureIds = normalizedWildShapes;
+    }
     try {
       const updated = await updateAvraeCharacterOverrides({
         userId: req.memberUser.id,

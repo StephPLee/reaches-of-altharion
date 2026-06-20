@@ -1,13 +1,17 @@
-export type AvraeActionKind = "attack" | "spell" | "save" | "check";
+export type AvraeActionKind = "attack" | "spell" | "save" | "check" | "initiative";
 
 export type AvraeRollMode = "normal" | "adv" | "dis";
 
 export type AvraeAction = {
   kind: AvraeActionKind;
   id: string;
+  actorKind?: "character" | "creature";
   initContext?: boolean;
   outOfTurn?: boolean;
   combatantName?: string;
+  groupName?: string;
+  companionName?: string;
+  companionNickname?: string;
   level?: number;
   upcastTo?: number;
   targets?: string[];
@@ -52,12 +56,34 @@ export function composeAvraeCommand({
   phrase = "",
   rawFlags = "",
 }: AvraeCommandOptions): string {
+  const creature = action.actorKind === "creature";
   const init = Boolean(action.initContext);
-  const offturn = init && Boolean(action.outOfTurn) && Boolean(action.combatantName?.trim());
+  const offturn = (creature || init) && Boolean(action.outOfTurn) && Boolean(action.combatantName?.trim());
   const combatantName = action.combatantName?.trim() ?? "";
 
   let command: string;
-  if (action.kind === "attack") {
+  if (action.kind === "initiative") {
+    const groupName = action.groupName?.trim() ?? "";
+    const groupFlag = groupName ? ` -group ${quote(groupName)}` : "";
+    command = `!i join${groupFlag}`;
+    if (action.companionName?.trim()) {
+      const companionName = action.companionName.trim();
+      const nickname = action.companionNickname?.trim() || companionName;
+      command = `!multiline\n${command}\n!i madd ${quote(companionName)}${groupFlag} -name ${quote(nickname)} -h`;
+    }
+  } else if (creature && action.kind === "attack") {
+    command = offturn
+      ? `!i aoo ${quote(combatantName)} ${quote(action.id)}`
+      : `!i a ${quote(action.id)}`;
+  } else if (creature && action.kind === "spell") {
+    command = offturn
+      ? `!i rc ${quote(combatantName)} ${quote(action.id)}`
+      : `!i cast ${quote(action.id)}`;
+  } else if (creature && action.kind === "save") {
+    command = offturn
+      ? `!i os ${quote(combatantName)} ${action.id}`
+      : `!i s ${action.id}`;
+  } else if (action.kind === "attack") {
     command = offturn
       ? `!i offturnattack ${quote(combatantName)} ${quote(action.id)}`
       : init

@@ -106,9 +106,11 @@ const KIND_LABELS: Record<AvraeActionKind, string> = {
   spell: "Spells",
   save: "Saves",
   check: "Skills",
+  initiative: "Initiative",
 };
 
 type AppView = "vault" | "character" | "modifiers";
+type SheetTab = "attacks" | "spells" | "companions" | "wildshapes";
 
 type AuthUser = {
   username: string;
@@ -119,18 +121,23 @@ type AuthUser = {
 
 type SyncedDdbCharacter = {
   id: string;
+  sourceKind?: "ddb" | "dicecloud" | "bestiary-builder";
   sourceUrl: string;
   syncedAt: string;
   avatarUrl?: string | null;
   name: string;
   ancestry?: string;
   level?: number | null;
+  challengeRating?: number | string | null;
+  sourceBestiaryName?: string | null;
   classes?: Array<{ name: string; subclass?: string; level: number }>;
   abilities?: Record<string, number>;
   hp?: { max: number; current: number; temp: number };
   hpOverride?: number;
   ac?: number;
   acOverride?: number;
+  companionCreatureIds?: string[];
+  wildShapeCreatureIds?: string[];
   speed?: number;
   initiative?: number;
   proficiencyBonus?: number;
@@ -151,6 +158,10 @@ type SyncedDdbCharacter = {
     sub?: string;
   }>;
 };
+
+function isDicecloudCharacterLink(value: string): boolean {
+  return /(?:^|\/\/)(?:v1\.)?dicecloud\.com\/character\//i.test(value.trim());
+}
 
 type AvraeModifier = {
   id: string;
@@ -255,7 +266,13 @@ export default function AvraeCommandsPage(): ReactNode {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [ddbUrl, setDdbUrl] = useState("");
+  const [bestiaryUrl, setBestiaryUrl] = useState("");
+  const [vaultSearch, setVaultSearch] = useState("");
   const [character, setCharacter] = useState<SyncedDdbCharacter | null>(null);
+  const [returnLinkSource, setReturnLinkSource] = useState<{
+    characterId: string;
+    tab: "companions" | "wildshapes";
+  } | null>(null);
   const [savedCharacters, setSavedCharacters] = useState<SyncedDdbCharacter[]>(
     [],
   );
@@ -269,7 +286,7 @@ export default function AvraeCommandsPage(): ReactNode {
   const [editingModifierId, setEditingModifierId] = useState<string | null>(
     null,
   );
-  const [sheetTab, setSheetTab] = useState<"attacks" | "spells">("attacks");
+  const [sheetTab, setSheetTab] = useState<SheetTab>("attacks");
   const [modifierForm, setModifierForm] = useState({
     name: "",
     appliesTo: ["attack"] as AvraeActionKind[],
@@ -282,6 +299,10 @@ export default function AvraeCommandsPage(): ReactNode {
     "idle" | "syncing" | "success" | "error"
   >("idle");
   const [syncError, setSyncError] = useState("");
+  const [creatureSyncStatus, setCreatureSyncStatus] = useState<
+    "idle" | "syncing" | "success" | "error"
+  >("idle");
+  const [creatureSyncError, setCreatureSyncError] = useState("");
   const [attackName, setAttackName] = useState("Longsword");
   const [spellName, setSpellName] = useState("Fire Bolt");
   const [ability, setAbility] = useState("dex");
@@ -294,6 +315,11 @@ export default function AvraeCommandsPage(): ReactNode {
   const [initContext, setInitContext] = useState(false);
   const [outOfTurn, setOutOfTurn] = useState(false);
   const [combatantName, setCombatantName] = useState("");
+  const [useGroupInitiative, setUseGroupInitiative] = useState(false);
+  const [initiativeGroupName, setInitiativeGroupName] = useState("");
+  const [initiativeCompanionId, setInitiativeCompanionId] = useState("");
+  const [initiativeCompanionNickname, setInitiativeCompanionNickname] =
+    useState("");
   const [copied, setCopied] = useState(false);
   const [openDrawer, setOpenDrawer] = useState<"modifiers" | "targets" | null>(
     null,
@@ -308,6 +334,9 @@ export default function AvraeCommandsPage(): ReactNode {
     "idle" | "fetching" | "error"
   >("idle");
   const [combatantFetchError, setCombatantFetchError] = useState("");
+  const [openCreaturePicker, setOpenCreaturePicker] = useState<
+    "companions" | "wildshapes" | "initiative-companion" | null
+  >(null);
 
   useEffect(() => {
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
@@ -432,10 +461,137 @@ export default function AvraeCommandsPage(): ReactNode {
 
   const classSummary = useMemo(
     () =>
-      character?.classes
-        ?.map((entry) => `${entry.subclass || entry.name} ${entry.level}`)
-        .join(" / ") || "",
+      character?.sourceKind === "bestiary-builder"
+        ? [
+            character.sourceBestiaryName,
+            character.challengeRating != null
+              ? `CR ${character.challengeRating}`
+              : "Creature",
+          ]
+            .filter(Boolean)
+            .join(" / ")
+        : character?.classes
+            ?.map((entry) => `${entry.subclass || entry.name} ${entry.level}`)
+            .join(" / ") || "",
     [character],
+  );
+
+  const characterEntries = useMemo(
+    () =>
+      savedCharacters.filter(
+        (entry) => entry.sourceKind !== "bestiary-builder",
+      ),
+    [savedCharacters],
+  );
+
+  const creatureEntries = useMemo(
+    () =>
+      savedCharacters.filter(
+        (entry) => entry.sourceKind === "bestiary-builder",
+      ),
+    [savedCharacters],
+  );
+
+  const normalizedVaultSearch = vaultSearch.trim().toLowerCase();
+
+  const filterVaultEntries = (entries: SyncedDdbCharacter[]) => {
+    if (!normalizedVaultSearch) return entries;
+    return entries.filter((entry) =>
+      [
+        entry.name,
+        entry.ancestry,
+        entry.sourceBestiaryName,
+        entry.challengeRating != null ? `cr ${entry.challengeRating}` : "",
+        entry.level != null ? `level ${entry.level}` : "",
+        ...(entry.classes || []).flatMap((item) => [
+          item.name,
+          item.subclass || "",
+        ]),
+        ...entry.attacks.map((attack) => attack.name),
+        ...entry.spells.map((spell) => spell.name),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedVaultSearch),
+    );
+  };
+
+  const visibleCharacterEntries = useMemo(
+    () => filterVaultEntries(characterEntries),
+    [characterEntries, normalizedVaultSearch],
+  );
+
+  const visibleCreatureEntries = useMemo(
+    () => filterVaultEntries(creatureEntries),
+    [creatureEntries, normalizedVaultSearch],
+  );
+
+  const isCreatureSheet = character?.sourceKind === "bestiary-builder";
+
+  useEffect(() => {
+    if (!isCreatureSheet && !initContext) {
+      setOutOfTurn(false);
+    }
+  }, [initContext, isCreatureSheet]);
+
+  const isDruidCharacter = useMemo(() => {
+    if (!character || isCreatureSheet) return false;
+    return (character.classes || []).some((entry) => {
+      const text = `${entry.name} ${entry.subclass || ""}`.toLowerCase();
+      return (
+        text.includes("druid") ||
+        text.includes("circle of ") ||
+        text.startsWith("circle ")
+      );
+    });
+  }, [character, isCreatureSheet]);
+
+  const linkedCompanions = useMemo(() => {
+    const linkedIds = new Set(character?.companionCreatureIds || []);
+    return creatureEntries.filter((entry) => linkedIds.has(entry.id));
+  }, [character?.companionCreatureIds, creatureEntries]);
+
+  const selectedInitiativeCompanion = useMemo(
+    () =>
+      linkedCompanions.find((entry) => entry.id === initiativeCompanionId) ||
+      null,
+    [initiativeCompanionId, linkedCompanions],
+  );
+
+  useEffect(() => {
+    if (
+      initiativeCompanionId &&
+      !linkedCompanions.some((entry) => entry.id === initiativeCompanionId)
+    ) {
+      setInitiativeCompanionId("");
+      setInitiativeCompanionNickname("");
+    }
+  }, [initiativeCompanionId, linkedCompanions]);
+
+  const linkedWildShapes = useMemo(() => {
+    const linkedIds = new Set(character?.wildShapeCreatureIds || []);
+    return creatureEntries.filter((entry) => linkedIds.has(entry.id));
+  }, [character?.wildShapeCreatureIds, creatureEntries]);
+
+  const availableCompanionCreatures = useMemo(() => {
+    const linkedIds = new Set(character?.companionCreatureIds || []);
+    return creatureEntries.filter((entry) => !linkedIds.has(entry.id));
+  }, [character?.companionCreatureIds, creatureEntries]);
+
+  const availableWildShapeCreatures = useMemo(() => {
+    const linkedIds = new Set(character?.wildShapeCreatureIds || []);
+    return creatureEntries.filter((entry) => !linkedIds.has(entry.id));
+  }, [character?.wildShapeCreatureIds, creatureEntries]);
+
+  const returnCharacter = useMemo(
+    () =>
+      returnLinkSource
+        ? savedCharacters.find(
+            (entry) => entry.id === returnLinkSource.characterId,
+          ) || null
+        : null,
+    [returnLinkSource, savedCharacters],
   );
 
   const selectedSpell = useMemo(
@@ -452,11 +608,16 @@ export default function AvraeCommandsPage(): ReactNode {
     return [...groups.entries()].sort(([a], [b]) => a - b);
   }, [character]);
 
-  const effectiveSheetTab: "attacks" | "spells" = useMemo(() => {
+  const effectiveSheetTab: SheetTab = useMemo(() => {
+    if (!character) return "attacks";
+    if (sheetTab === "companions" && !isCreatureSheet) return "companions";
+    if (sheetTab === "wildshapes" && isDruidCharacter) return "wildshapes";
     if (sheetTab === "attacks" && !character?.attacks.length) return "spells";
     if (sheetTab === "spells" && !character?.spells.length) return "attacks";
-    return sheetTab;
-  }, [sheetTab, character]);
+    return sheetTab === "attacks" || sheetTab === "spells"
+      ? sheetTab
+      : "attacks";
+  }, [sheetTab, character, isCreatureSheet, isDruidCharacter]);
 
   const selectedTargetNames = useMemo(
     () =>
@@ -504,11 +665,21 @@ export default function AvraeCommandsPage(): ReactNode {
           ? spellName.trim() || "Spell"
           : kind === "save"
             ? ability
-            : skill;
+            : kind === "check"
+              ? skill
+              : "initiative";
     return composeAvraeCommand({
       action: {
         kind,
         id,
+        actorKind: isCreatureSheet ? "creature" : "character",
+        groupName: useGroupInitiative ? initiativeGroupName : "",
+        companionName: useGroupInitiative
+          ? selectedInitiativeCompanion?.name
+          : "",
+        companionNickname: useGroupInitiative
+          ? initiativeCompanionNickname
+          : "",
         level:
           kind === "spell" && selectedSpell ? selectedSpell.level : undefined,
         upcastTo:
@@ -550,15 +721,20 @@ export default function AvraeCommandsPage(): ReactNode {
     combatantName,
     damage,
     initContext,
+    initiativeCompanionNickname,
+    initiativeGroupName,
+    isCreatureSheet,
     kind,
     modifierParams,
     outOfTurn,
     phrase,
+    selectedInitiativeCompanion,
     selectedSpell,
     skill,
     spellName,
     targets,
     upcastLevel,
+    useGroupInitiative,
   ]);
 
   async function copyCommand(): Promise<void> {
@@ -577,7 +753,6 @@ export default function AvraeCommandsPage(): ReactNode {
   function applyCharacterToBuilder(nextCharacter: SyncedDdbCharacter): void {
     setCharacter(nextCharacter);
     setSelectedCharacterId(nextCharacter.id);
-    setDdbUrl(nextCharacter.sourceUrl || "");
     if (nextCharacter.attacks?.[0]?.name) {
       setAttackName(nextCharacter.attacks[0].name);
       setDamage("");
@@ -591,8 +766,30 @@ export default function AvraeCommandsPage(): ReactNode {
     }
   }
 
-  function setActiveCharacter(nextCharacter: SyncedDdbCharacter): void {
+  function setActiveCharacter(
+    nextCharacter: SyncedDdbCharacter,
+    origin:
+      | { characterId: string; tab: "companions" | "wildshapes" }
+      | null = null,
+  ): void {
+    setReturnLinkSource(origin);
     applyCharacterToBuilder(nextCharacter);
+    setView("character");
+  }
+
+  function returnToLinkedCharacter(): void {
+    if (!returnLinkSource) return;
+    const nextCharacter = savedCharacters.find(
+      (entry) => entry.id === returnLinkSource.characterId,
+    );
+    if (!nextCharacter) {
+      setReturnLinkSource(null);
+      return;
+    }
+    const returnTab = returnLinkSource.tab;
+    setReturnLinkSource(null);
+    applyCharacterToBuilder(nextCharacter);
+    setSheetTab(returnTab);
     setView("character");
   }
 
@@ -725,10 +922,10 @@ export default function AvraeCommandsPage(): ReactNode {
     });
   }
 
-  function chooseAttack(name: string): void {
+  function chooseAttack(name: string, attackDamage = ""): void {
     setKind("attack");
     setAttackName(name);
-    setDamage("");
+    setDamage(attackDamage);
   }
 
   function chooseSpell(name: string): void {
@@ -751,6 +948,18 @@ export default function AvraeCommandsPage(): ReactNode {
     setUpcastLevel("base");
   }
 
+  function chooseInitiative(): void {
+    setKind("initiative");
+    setDamage("");
+    setBonus("");
+    setPhrase("");
+    setUpcastLevel("base");
+    if (!initiativeGroupName.trim() && character?.name) {
+      setInitiativeGroupName(character.name);
+    }
+    setOpenDrawer("modifiers");
+  }
+
   function toggleModifier(modifierId: string): void {
     setActiveModifierIds((ids) => {
       if (ids.includes(modifierId)) {
@@ -761,6 +970,13 @@ export default function AvraeCommandsPage(): ReactNode {
       if (modifierId === "builtin:dis") next = next.filter((id) => id !== "builtin:adv");
       return [...next, modifierId];
     });
+  }
+
+  function toggleOutOfTurn(checked: boolean): void {
+    setOutOfTurn(checked);
+    if (checked && isCreatureSheet && !combatantName.trim() && character?.name) {
+      setCombatantName(character.name);
+    }
   }
 
   function toggleModifierAppliesTo(kindValue: AvraeActionKind): void {
@@ -856,11 +1072,7 @@ export default function AvraeCommandsPage(): ReactNode {
   function upsertSavedCharacter(nextCharacter: SyncedDdbCharacter): void {
     const nextSavedCharacters = [
       nextCharacter,
-      ...savedCharacters.filter(
-        (entry) =>
-          entry.id !== nextCharacter.id &&
-          entry.sourceUrl !== nextCharacter.sourceUrl,
-      ),
+      ...savedCharacters.filter((entry) => entry.id !== nextCharacter.id),
     ].sort((a, b) => a.name.localeCompare(b.name));
     setSavedCharacters(nextSavedCharacters);
     applyCharacterToBuilder(nextCharacter);
@@ -910,23 +1122,86 @@ export default function AvraeCommandsPage(): ReactNode {
     }
   }
 
-  async function syncDdbCharacter(sourceUrl = ddbUrl): Promise<void> {
+  async function updateCharacterCreatureLinks(
+    linkKind: "companions" | "wildshapes",
+    ids: string[],
+  ): Promise<void> {
+    if (!character) return;
+    const uniqueIds = [...new Set(ids)].filter(Boolean);
+    const payloadKey =
+      linkKind === "companions"
+        ? "companionCreatureIds"
+        : "wildShapeCreatureIds";
+
+    if (user) {
+      const response = await fetch(
+        `${authApiBaseUrl}/api/avrae/characters/${encodeURIComponent(character.id)}/overrides`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ [payloadKey]: uniqueIds }),
+        },
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        setSyncStatus("error");
+        setSyncError(payload?.error || "Failed to save creature links.");
+        return;
+      }
+      const updated = payload.character as SyncedDdbCharacter;
+      setSavedCharacters((entries) =>
+        entries
+          .map((entry) => (entry.id === updated.id ? updated : entry))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      applyCharacterToBuilder(updated);
+      return;
+    }
+
+    const updated = { ...character, [payloadKey]: uniqueIds };
+    setCharacter(updated);
+    setSavedCharacters((entries) =>
+      entries.map((entry) => (entry.id === updated.id ? updated : entry)),
+    );
+    try {
+      const stored = JSON.parse(
+        window.localStorage.getItem(OVERRIDES_STORAGE_KEY) ?? "{}",
+      );
+      window.localStorage.setItem(
+        OVERRIDES_STORAGE_KEY,
+        JSON.stringify({
+          ...stored,
+          [updated.id]: {
+            ...(stored[updated.id] || {}),
+            [payloadKey]: uniqueIds,
+          },
+        }),
+      );
+    } catch {}
+  }
+
+  async function syncDdbCharacter(sourceUrl?: string): Promise<void> {
+    const requestedUrl = sourceUrl ?? ddbUrl;
+    const isDicecloud = isDicecloudCharacterLink(requestedUrl);
+    const endpoint = isDicecloud ? "dicecloud-character" : "ddb-character";
+    const sourceLabel = isDicecloud ? "Dicecloud" : "D&D Beyond";
     setSyncStatus("syncing");
     setSyncError("");
     try {
       const response = await fetch(
-        `${authApiBaseUrl}/api/avrae/ddb-character${user ? "" : "/preview"}`,
+        `${authApiBaseUrl}/api/avrae/${endpoint}${user ? "" : "/preview"}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ url: sourceUrl }),
+          body: JSON.stringify({ url: requestedUrl }),
         },
       );
       const payload = await response.json();
       if (!response.ok)
         throw new Error(
-          payload?.error || "Failed to sync D&D Beyond character.",
+          payload?.error || `Failed to sync ${sourceLabel} character.`,
         );
       let nextCharacter = payload.character as SyncedDdbCharacter;
       if (user) {
@@ -944,15 +1219,302 @@ export default function AvraeCommandsPage(): ReactNode {
         upsertSavedCharacter(nextCharacter);
       }
       setView("character");
+      if (sourceUrl === undefined) setDdbUrl("");
       setSyncStatus("success");
     } catch (error) {
       setSyncStatus("error");
       setSyncError(
         error instanceof Error
           ? error.message
-          : "Failed to sync D&D Beyond character.",
+          : `Failed to sync ${sourceLabel} character.`,
       );
     }
+  }
+
+  async function syncBestiaryBuilderCreatures(): Promise<void> {
+    if (!user) {
+      setCreatureSyncStatus("error");
+      setCreatureSyncError("Sign in with Discord before importing creatures.");
+      return;
+    }
+
+    setCreatureSyncStatus("syncing");
+    setCreatureSyncError("");
+    try {
+      const response = await fetch(
+        `${authApiBaseUrl}/api/avrae/bestiary-builder`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ url: bestiaryUrl }),
+        },
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || "Failed to import Bestiary Builder creatures.",
+        );
+      }
+
+      const imported = Array.isArray(payload.creatures)
+        ? (payload.creatures as SyncedDdbCharacter[])
+        : [];
+      const importedIds = new Set(imported.map((entry) => entry.id));
+      const nextSavedCharacters = [
+        ...imported,
+        ...savedCharacters.filter((entry) => !importedIds.has(entry.id)),
+      ].sort((a, b) => a.name.localeCompare(b.name));
+      setSavedCharacters(nextSavedCharacters);
+      setCreatureSyncStatus("success");
+    } catch (error) {
+      setCreatureSyncStatus("error");
+      setCreatureSyncError(
+        error instanceof Error
+          ? error.message
+          : "Failed to import Bestiary Builder creatures.",
+      );
+    }
+  }
+
+  function renderVaultCard(entry: SyncedDdbCharacter): ReactNode {
+    const isCreature = entry.sourceKind === "bestiary-builder";
+
+    return (
+      <article
+        key={entry.id}
+        className={isCreature ? styles.vaultCreatureCard : styles.vaultCard}
+      >
+        <button
+          type="button"
+          className={
+            isCreature ? styles.vaultCreatureCardMain : styles.vaultCardMain
+          }
+          onClick={() => setActiveCharacter(entry)}
+        >
+          {!isCreature ? (
+            <span className={styles.vaultAvatar}>
+              {entry.avatarUrl ? (
+                <img
+                  src={entry.avatarUrl}
+                  alt={entry.name}
+                  className={styles.vaultAvatarImg}
+                />
+              ) : (
+                entry.name.slice(0, 1)
+              )}
+            </span>
+          ) : null}
+          <span>
+            <strong>{entry.name}</strong>
+            <em>
+              {[
+                entry.ancestry,
+                entry.sourceKind === "bestiary-builder"
+                  ? entry.challengeRating != null
+                    ? `CR ${entry.challengeRating}`
+                    : "Creature"
+                  : entry.classes
+                      ?.map((item) => item.subclass || item.name)
+                      .join(" / "),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </em>
+            <small>
+              {entry.sourceKind === "bestiary-builder"
+                ? `CR ${entry.challengeRating ?? "?"} - ${entry.attacks.length} actions - ${entry.spells.length} spells`
+                : `Level ${entry.level || "?"} - ${entry.attacks.length} attacks - ${entry.spells.length} spells`}
+            </small>
+          </span>
+        </button>
+        <div className={styles.vaultCardActions}>
+          {isCreature ? (
+            <a href={entry.sourceUrl} target="_blank" rel="noreferrer">
+              Source
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => syncDdbCharacter(entry.sourceUrl)}
+              disabled={syncStatus === "syncing"}
+            >
+              Refresh
+            </button>
+          )}
+          <button type="button" onClick={() => removeCharacter(entry.id)}>
+            Remove
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  function renderCharacterImportBar(): ReactNode {
+    return (
+      <div className={styles.vaultImportBar}>
+        <div className={styles.vaultImportHeading}>
+          <strong>+</strong>
+          <span>Add character</span>
+        </div>
+        <div className={styles.vaultImportForm}>
+          <input
+            placeholder="D&D Beyond or Dicecloud character link"
+            value={ddbUrl}
+            onChange={(event) => setDdbUrl(event.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => syncDdbCharacter()}
+            disabled={syncStatus === "syncing"}
+          >
+            {syncStatus === "syncing"
+              ? "Syncing"
+              : user
+                ? "Add / Sync"
+                : "Preview"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderCreatureImportBar(): ReactNode {
+    return (
+      <div className={styles.vaultImportBar}>
+        <div className={styles.vaultImportHeading}>
+          <strong>+</strong>
+          <span>Add creature stats</span>
+        </div>
+        <div className={styles.vaultImportForm}>
+          <input
+            placeholder="https://bestiarybuilder.com/bestiary-viewer/..."
+            value={bestiaryUrl}
+            onChange={(event) => setBestiaryUrl(event.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={() => syncBestiaryBuilderCreatures()}
+            disabled={!user || creatureSyncStatus === "syncing"}
+          >
+            {creatureSyncStatus === "syncing" ? "Importing" : "Import"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderCreatureLinksPanel(
+    title: string,
+    description: string,
+    linkKind: "companions" | "wildshapes",
+    linkedEntries: SyncedDdbCharacter[],
+    availableEntries: SyncedDdbCharacter[],
+  ): ReactNode {
+    const linkedIds =
+      linkKind === "companions"
+        ? character?.companionCreatureIds || []
+        : character?.wildShapeCreatureIds || [];
+    const pickerOpen = openCreaturePicker === linkKind;
+
+    return (
+      <div className={styles.csCreatureLinksPanel}>
+        <div className={styles.csCreatureLinksHeader}>
+          <h3>{title}</h3>
+          <span>{linkedEntries.length} linked</span>
+        </div>
+        <p>{description}</p>
+        <div className={styles.csCreaturePicker}>
+          <button
+            type="button"
+            className={styles.csCreaturePickerButton}
+            disabled={!availableEntries.length}
+            aria-expanded={pickerOpen}
+            onClick={() =>
+              setOpenCreaturePicker((current) =>
+                current === linkKind ? null : linkKind,
+              )
+            }
+          >
+            <span>
+              {availableEntries.length
+                ? "Add imported creature..."
+                : "No imported creatures available"}
+            </span>
+            <span aria-hidden="true">⌄</span>
+          </button>
+          {pickerOpen ? (
+            <div className={styles.csCreaturePickerMenu}>
+            {availableEntries.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                className={styles.csCreaturePickerOption}
+                onClick={() => {
+                  updateCharacterCreatureLinks(linkKind, [
+                    ...linkedIds,
+                    entry.id,
+                  ]);
+                  setOpenCreaturePicker(null);
+                }}
+              >
+                <strong>{entry.name}</strong>
+                <span>
+                  {entry.challengeRating != null
+                    ? `CR ${entry.challengeRating}`
+                    : "Creature"}
+                </span>
+              </button>
+            ))}
+            </div>
+          ) : null}
+        </div>
+        {linkedEntries.length ? (
+          <div className={styles.csLinkedCreatureList}>
+            {linkedEntries.map((entry) => (
+              <div key={entry.id} className={styles.csLinkedCreatureRow}>
+                <button
+                  type="button"
+                  className={styles.csLinkedCreatureMain}
+                  onClick={() =>
+                    character &&
+                    setActiveCharacter(entry, {
+                      characterId: character.id,
+                      tab: linkKind,
+                    })
+                  }
+                >
+                  <strong>{entry.name}</strong>
+                  <span>
+                    {[entry.ancestry, `CR ${entry.challengeRating ?? "?"}`]
+                      .filter(Boolean)
+                      .join(" - ")}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.csLinkedCreatureRemove}
+                  onClick={() =>
+                    updateCharacterCreatureLinks(
+                      linkKind,
+                      linkedIds.filter((id) => id !== entry.id),
+                    )
+                  }
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.csCreatureLinksEmpty}>
+            Import creature stats in the vault, then add them here.
+          </div>
+        )}
+      </div>
+    );
   }
 
   const displayName = user?.globalName || user?.username || "not signed in";
@@ -991,14 +1553,14 @@ export default function AvraeCommandsPage(): ReactNode {
               <div className={styles.viewHeading}>
                 <h1>Vault</h1>
                 <p>
-                  Choose a character to play, refresh one, or add a public D&D
-                  Beyond sheet.
+                  Choose a character, companion, wildshape, or creature to use
+                  with Avrae commands.
                 </p>
               </div>
               {!user ? (
                 <div className={styles.loginPrompt}>
                   <p>
-                    Sign in with Discord to save D&D Beyond imports to your
+                    Sign in with Discord to save character imports to your
                     account.
                   </p>
                   <button
@@ -1010,8 +1572,26 @@ export default function AvraeCommandsPage(): ReactNode {
                   </button>
                 </div>
               ) : null}
+              <label className={styles.vaultSearch}>
+                <span>Search vault</span>
+                <input
+                  type="search"
+                  placeholder="Search by name, type, CR, level, attack, or spell"
+                  value={vaultSearch}
+                  onChange={(event) => setVaultSearch(event.target.value)}
+                />
+              </label>
+              <section className={styles.vaultSection}>
+                <div className={styles.vaultSectionHeader}>
+                  <h2>Character Stats</h2>
+                  <span>
+                    {visibleCharacterEntries.length} of{" "}
+                    {characterEntries.length} saved
+                  </span>
+                </div>
+                {renderCharacterImportBar()}
               <div className={styles.vaultGrid}>
-                {savedCharacters.map((entry) => (
+                {visibleCharacterEntries.map((entry) => (
                   <article key={entry.id} className={styles.vaultCard}>
                     <button
                       type="button"
@@ -1042,19 +1622,30 @@ export default function AvraeCommandsPage(): ReactNode {
                             .join(" · ")}
                         </em>
                         <small>
-                          Level {entry.level || "?"} · {entry.attacks.length}{" "}
-                          attacks · {entry.spells.length} spells
+                          {entry.sourceKind === "bestiary-builder"
+                            ? `CR ${entry.challengeRating ?? "?"} - ${entry.attacks.length} actions - ${entry.spells.length} spells`
+                            : `Level ${entry.level || "?"} - ${entry.attacks.length} attacks - ${entry.spells.length} spells`}
                         </small>
                       </span>
                     </button>
                     <div className={styles.vaultCardActions}>
-                      <button
-                        type="button"
-                        onClick={() => syncDdbCharacter(entry.sourceUrl)}
-                        disabled={syncStatus === "syncing"}
-                      >
-                        Refresh
-                      </button>
+                      {entry.sourceKind === "bestiary-builder" ? (
+                        <a
+                          href={entry.sourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Source
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => syncDdbCharacter(entry.sourceUrl)}
+                          disabled={syncStatus === "syncing"}
+                        >
+                          Refresh
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => removeCharacter(entry.id)}
@@ -1064,34 +1655,37 @@ export default function AvraeCommandsPage(): ReactNode {
                     </div>
                   </article>
                 ))}
-                <article className={styles.addCharacterCard}>
-                  <div className={styles.addCharacterHeading}>
-                    <strong>+</strong>
-                    <span>Add character</span>
-                  </div>
-                  <div className={styles.addCharacterForm}>
-                    <input
-                      placeholder="https://www.dndbeyond.com/characters/..."
-                      value={ddbUrl}
-                      onChange={(event) => setDdbUrl(event.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className={styles.primaryButton}
-                      onClick={() => syncDdbCharacter()}
-                      disabled={syncStatus === "syncing"}
-                    >
-                      {syncStatus === "syncing"
-                        ? "Syncing"
-                        : user
-                          ? "Add / Sync"
-                          : "Preview"}
-                    </button>
-                  </div>
-                </article>
               </div>
+              </section>
+
+              <section className={styles.vaultSection}>
+                <div className={styles.vaultSectionHeader}>
+                  <h2>Creature Stats</h2>
+                  <span>
+                    {visibleCreatureEntries.length} of {creatureEntries.length}{" "}
+                    saved
+                  </span>
+                </div>
+                {renderCreatureImportBar()}
+                {visibleCreatureEntries.length > 0 ? (
+                  <div className={styles.vaultGrid}>
+                    {visibleCreatureEntries.map(renderVaultCard)}
+                  </div>
+                ) : creatureEntries.length > 0 ? (
+                  <div className={styles.emptyVaultSection}>
+                    <p>No creature stat blocks match that search.</p>
+                  </div>
+                ) : (
+                  <div className={styles.emptyVaultSection}>
+                    <p>Import a Bestiary Builder link to add creature stat blocks here.</p>
+                  </div>
+                )}
+              </section>
               {syncStatus === "error" ? (
                 <p className={styles.errorText}>{syncError}</p>
+              ) : null}
+              {creatureSyncStatus === "error" ? (
+                <p className={styles.errorText}>{creatureSyncError}</p>
               ) : null}
             </section>
           ) : null}
@@ -1126,6 +1720,15 @@ export default function AvraeCommandsPage(): ReactNode {
                             .join(" · ")}
                         </p>
                       </div>
+                      {isCreatureSheet && returnCharacter ? (
+                        <button
+                          type="button"
+                          className={styles.csReturnButton}
+                          onClick={returnToLinkedCharacter}
+                        >
+                          Back to {returnCharacter.name}
+                        </button>
+                      ) : null}
                     </div>
 
                     <div className={styles.csAbilityRow}>
@@ -1172,14 +1775,22 @@ export default function AvraeCommandsPage(): ReactNode {
                           {character.acOverride ?? character.ac ?? "—"}
                         </strong>
                       </div>
-                      <div className={styles.csStat}>
+                      <button
+                        type="button"
+                        className={
+                          kind === "initiative"
+                            ? styles.csStatButtonActive
+                            : styles.csStatButton
+                        }
+                        onClick={chooseInitiative}
+                      >
                         <span className={styles.csStatLabel}>Initiative</span>
                         <strong className={styles.csStatValue}>
                           {character.initiative != null
                             ? signedNum(character.initiative)
                             : "—"}
                         </strong>
-                      </div>
+                      </button>
                       <div className={styles.csStat}>
                         <span className={styles.csStatLabel}>Speed</span>
                         <strong className={styles.csStatValue}>
@@ -1339,6 +1950,32 @@ export default function AvraeCommandsPage(): ReactNode {
                               Spells
                             </button>
                           ) : null}
+                          {!isCreatureSheet ? (
+                            <button
+                              type="button"
+                              className={
+                                effectiveSheetTab === "companions"
+                                  ? styles.csTabActive
+                                  : styles.csTab
+                              }
+                              onClick={() => setSheetTab("companions")}
+                            >
+                              Companions
+                            </button>
+                          ) : null}
+                          {isDruidCharacter ? (
+                            <button
+                              type="button"
+                              className={
+                                effectiveSheetTab === "wildshapes"
+                                  ? styles.csTabActive
+                                  : styles.csTab
+                              }
+                              onClick={() => setSheetTab("wildshapes")}
+                            >
+                              Wild Shapes
+                            </button>
+                          ) : null}
                         </div>
 
                         {effectiveSheetTab === "attacks" ? (
@@ -1353,7 +1990,9 @@ export default function AvraeCommandsPage(): ReactNode {
                                     ? styles.csAttackRowActive
                                     : styles.csAttackRow
                                 }
-                                onClick={() => chooseAttack(attack.name)}
+                                onClick={() =>
+                                  chooseAttack(attack.name, attack.damage || "")
+                                }
                               >
                                 <strong>{attack.name}</strong>
                                 <span>
@@ -1449,6 +2088,22 @@ export default function AvraeCommandsPage(): ReactNode {
                               </button>
                             )}
                           </div>
+                        ) : effectiveSheetTab === "companions" ? (
+                          renderCreatureLinksPanel(
+                            "Companions",
+                            "Attach imported creature stats to this character so they are available from the sheet.",
+                            "companions",
+                            linkedCompanions,
+                            availableCompanionCreatures,
+                          )
+                        ) : effectiveSheetTab === "wildshapes" ? (
+                          renderCreatureLinksPanel(
+                            "Wild Shapes",
+                            "Attach imported beast forms to this druid so they can be opened as Avrae sheets.",
+                            "wildshapes",
+                            linkedWildShapes,
+                            availableWildShapeCreatures,
+                          )
                         ) : (
                           <div>
                             {spellsByLevel.map(([level, spells]) => (
@@ -1517,9 +2172,12 @@ export default function AvraeCommandsPage(): ReactNode {
                                   ? spellName
                                   : kind === "save"
                                     ? ability.toUpperCase()
-                                    : skillLabel(skill)}
+                                    : kind === "check"
+                                      ? skillLabel(skill)
+                                      : "Join initiative"}
                             </strong>
                           </div>
+                          {kind !== "initiative" ? (
                           <div className={styles.sideModifierGrid}>
                             {availableModifiers.map((modifier) => {
                               const isActive = activeModifierIds.includes(
@@ -1568,7 +2226,133 @@ export default function AvraeCommandsPage(): ReactNode {
                               );
                             })}
                           </div>
+                          ) : null}
                           <section className={styles.rollFields}>
+                            {kind === "initiative" ? (
+                              <>
+                                <div className={styles.toggleRow}>
+                                  <label>
+                                    <input
+                                      type="checkbox"
+                                      checked={useGroupInitiative}
+                                      onChange={(event) =>
+                                        setUseGroupInitiative(
+                                          event.target.checked,
+                                        )
+                                      }
+                                    />
+                                    <span>Group initiative</span>
+                                  </label>
+                                </div>
+                                {useGroupInitiative ? (
+                                  <>
+                                <label>
+                                  <span>Group name</span>
+                                  <input
+                                    placeholder={character.name}
+                                    value={initiativeGroupName}
+                                    onChange={(event) =>
+                                      setInitiativeGroupName(event.target.value)
+                                    }
+                                  />
+                                </label>
+                                {!isCreatureSheet ? (
+                                  <label>
+                                    <span>Companion</span>
+                                    <div className={styles.csCreaturePicker}>
+                                      <button
+                                        type="button"
+                                        className={styles.csCreaturePickerButton}
+                                        disabled={!linkedCompanions.length}
+                                        aria-expanded={
+                                          openCreaturePicker ===
+                                          "initiative-companion"
+                                        }
+                                        onClick={() =>
+                                          setOpenCreaturePicker((current) =>
+                                            current === "initiative-companion"
+                                              ? null
+                                              : "initiative-companion",
+                                          )
+                                        }
+                                      >
+                                        <span>
+                                          {selectedInitiativeCompanion?.name ||
+                                            (linkedCompanions.length
+                                              ? "No companion"
+                                              : "No linked companions")}
+                                        </span>
+                                        <span aria-hidden="true">⌄</span>
+                                      </button>
+                                      {openCreaturePicker ===
+                                      "initiative-companion" ? (
+                                        <div
+                                          className={
+                                            styles.csCreaturePickerMenu
+                                          }
+                                        >
+                                          <button
+                                            type="button"
+                                            className={
+                                              styles.csCreaturePickerOption
+                                            }
+                                            onClick={() => {
+                                              setInitiativeCompanionId("");
+                                              setInitiativeCompanionNickname("");
+                                              setOpenCreaturePicker(null);
+                                            }}
+                                          >
+                                            <strong>No companion</strong>
+                                            <span>Only join character</span>
+                                          </button>
+                                          {linkedCompanions.map((entry) => (
+                                            <button
+                                              key={entry.id}
+                                              type="button"
+                                              className={
+                                                styles.csCreaturePickerOption
+                                              }
+                                              onClick={() => {
+                                                setInitiativeCompanionId(
+                                                  entry.id,
+                                                );
+                                                setInitiativeCompanionNickname(
+                                                  entry.name,
+                                                );
+                                                setOpenCreaturePicker(null);
+                                              }}
+                                            >
+                                              <strong>{entry.name}</strong>
+                                              <span>
+                                                {entry.challengeRating != null
+                                                  ? `CR ${entry.challengeRating}`
+                                                  : "Companion"}
+                                              </span>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </label>
+                                ) : null}
+                                {selectedInitiativeCompanion ? (
+                                  <label>
+                                    <span>Companion nickname</span>
+                                    <input
+                                      value={initiativeCompanionNickname}
+                                      onChange={(event) =>
+                                        setInitiativeCompanionNickname(
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </label>
+                                ) : null}
+                                  </>
+                                ) : null}
+                              </>
+                            ) : (
+                              <>
                             {kind === "spell" &&
                             selectedSpell &&
                             selectedSpell.level > 0 ? (
@@ -1642,7 +2426,8 @@ export default function AvraeCommandsPage(): ReactNode {
                               <label>
                                 <input
                                   type="checkbox"
-                                  checked={initContext}
+                                  checked={isCreatureSheet || initContext}
+                                  disabled={isCreatureSheet}
                                   onChange={(event) =>
                                     setInitContext(event.target.checked)
                                   }
@@ -1653,15 +2438,15 @@ export default function AvraeCommandsPage(): ReactNode {
                                 <input
                                   type="checkbox"
                                   checked={outOfTurn}
-                                  disabled={!initContext}
+                                  disabled={!isCreatureSheet && !initContext}
                                   onChange={(event) =>
-                                    setOutOfTurn(event.target.checked)
+                                    toggleOutOfTurn(event.target.checked)
                                   }
                                 />
                                 <span>Out of turn</span>
                               </label>
                             </div>
-                            {initContext && outOfTurn ? (
+                            {(isCreatureSheet || initContext) && outOfTurn ? (
                               <label>
                                 <span>Combatant name</span>
                                 <input
@@ -1672,6 +2457,8 @@ export default function AvraeCommandsPage(): ReactNode {
                                 />
                               </label>
                             ) : null}
+                              </>
+                            )}
                           </section>
                         </div>
                       </div>

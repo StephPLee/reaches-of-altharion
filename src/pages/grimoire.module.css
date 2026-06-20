@@ -90,6 +90,13 @@
     color: #fff7e6;
 }
 
+a.appTab,
+a.appTabActive {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
 .appUser {
     justify-self: end;
     color: rgba(232, 225, 241, 0.7);
@@ -150,6 +157,133 @@
     gap: 1rem;
 }
 
+.vaultSection {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 1.25rem;
+}
+
+.vaultSearch {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0 0 1.15rem;
+}
+
+.vaultSearch span {
+    color: rgba(232, 225, 241, 0.68);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.vaultImportBar {
+    display: grid;
+    grid-template-columns: auto minmax(16rem, 1fr);
+    gap: 1rem;
+    align-items: center;
+    padding: 0.65rem 0.8rem;
+    border: 1px dashed rgba(190, 176, 138, 0.18);
+    border-radius: 0.85rem;
+    background: rgba(15, 16, 32, 0.46);
+}
+
+.vaultImportHeading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 11rem;
+}
+
+.vaultImportHeading strong {
+    color: #f4ecff;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.vaultImportHeading span {
+    color: rgba(232, 225, 241, 0.78);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.vaultImportForm {
+    display: flex;
+    gap: 0.55rem;
+    align-items: center;
+    min-width: 0;
+}
+
+.vaultImportForm input {
+    flex: 1;
+    min-width: 0;
+}
+
+.vaultImportForm .primaryButton {
+    min-height: 2.35rem;
+}
+
+.vaultSection:first-of-type {
+    margin-top: 0;
+}
+
+.vaultSectionHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.12);
+}
+
+.vaultSectionHeader h2 {
+    margin: 0;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.vaultSectionHeader span {
+    color: rgba(232, 225, 241, 0.56);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.emptyVaultSection {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px dashed rgba(190, 176, 138, 0.18);
+    border-radius: 1rem;
+    background: rgba(15, 16, 32, 0.42);
+}
+
+.emptyVaultSection p {
+    margin: 0;
+    color: rgba(232, 225, 241, 0.72);
+}
+
+.emptyVaultSection a {
+    flex-shrink: 0;
+    border: 1px solid rgba(202, 168, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(7, 8, 18, 0.56);
+    color: #e8e1f1;
+    font-weight: 700;
+    padding: 0.38rem 0.8rem;
+    text-decoration: none;
+}
+
 .vaultCard,
 .addCharacterCard,
 .sheetPanel,
@@ -167,11 +301,34 @@
     align-content: start;
 }
 
+.vaultCreatureCard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+    min-height: 5.1rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid rgba(190, 176, 138, 0.2);
+    border-radius: 0.85rem;
+    background: rgba(15, 16, 32, 0.76);
+}
+
 .vaultCardMain {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 0.85rem;
     width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+}
+
+.vaultCreatureCardMain {
+    display: block;
+    min-width: 0;
     border: 0;
     background: transparent;
     color: inherit;
@@ -205,6 +362,7 @@
 }
 
 .vaultCard strong,
+.vaultCreatureCard strong,
 .characterStrip strong,
 .actionCard strong,
 .actionCardActive strong,
@@ -217,6 +375,7 @@
 }
 
 .vaultCard em,
+.vaultCreatureCard em,
 .characterStrip em {
     display: block;
     color: rgba(232, 225, 241, 0.72);
@@ -224,6 +383,7 @@
 }
 
 .vaultCard small,
+.vaultCreatureCard small,
 .actionCard span,
 .actionCardActive span,
 .modLibraryItem span {
@@ -238,6 +398,7 @@
 }
 
 .vaultCardActions button,
+.vaultCardActions a,
 .csCommandBar button,
 .sideHeader button {
     border: 1px solid rgba(190, 176, 138, 0.18);
@@ -249,6 +410,7 @@
     font-size: 0.8rem;
     line-height: 1;
     padding: 0.28rem 0.7rem;
+    text-decoration: none;
 }
 
 .commandBar button {
@@ -541,13 +703,13 @@
 
 .csCommandBar code {
     color: #f4ecff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: pre-wrap;
+    overflow: auto;
     border-radius: 0.45rem;
     background: rgba(232, 225, 241, 0.06);
     padding: 0.22rem 0.5rem;
     font-size: 0.9em;
+    line-height: 1.45;
 }
 
 .csCommandBar button {
@@ -865,6 +1027,28 @@
     font-style: italic;
 }
 
+.csReturnButton {
+    margin-left: auto;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 999px;
+    background: rgba(6, 8, 18, 0.52);
+    color: rgba(232, 225, 241, 0.78);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 0.42rem 0.8rem;
+    text-transform: uppercase;
+}
+
+.csReturnButton:hover {
+    border-color: rgba(202, 168, 255, 0.4);
+    background: rgba(72, 54, 126, 0.26);
+    color: #f4ecff;
+}
+
 .csStatBar {
     display: flex;
     flex-wrap: wrap;
@@ -881,6 +1065,27 @@
     background: rgba(15, 16, 32, 0.76);
     gap: 0.1rem;
     text-align: center;
+}
+
+.csStatButton,
+.csStatButtonActive {
+    display: grid;
+    place-items: center;
+    min-width: 5rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid rgba(190, 176, 138, 0.2);
+    border-radius: 0.85rem;
+    background: rgba(15, 16, 32, 0.76);
+    color: inherit;
+    cursor: pointer;
+    gap: 0.1rem;
+    text-align: center;
+}
+
+.csStatButton:hover,
+.csStatButtonActive {
+    border-color: rgba(202, 168, 255, 0.46);
+    background: rgba(72, 54, 126, 0.32);
 }
 
 .csStatLabel {
@@ -1334,6 +1539,206 @@
     border-radius: 50%;
     background: rgba(185, 145, 255, 0.72);
     flex-shrink: 0;
+}
+
+.csCreatureLinksPanel {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.csCreatureLinksHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.csCreatureLinksHeader h3 {
+    margin: 0;
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csCreatureLinksHeader span {
+    color: rgba(232, 225, 241, 0.46);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.csCreatureLinksPanel p,
+.csCreatureLinksEmpty {
+    margin: 0;
+    color: rgba(232, 225, 241, 0.58);
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.csCreaturePicker {
+    position: relative;
+}
+
+.csCreaturePickerButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 2.35rem;
+    border: 1px solid rgba(190, 176, 138, 0.18);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.58);
+    color: #ece2ff;
+    font: inherit;
+    padding: 0.45rem 0.65rem;
+    outline: none;
+    text-align: left;
+    cursor: pointer;
+}
+
+.csCreaturePickerButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.csCreaturePickerButton:hover:not(:disabled),
+.csCreaturePickerButton:focus-visible,
+.csCreaturePickerButton[aria-expanded="true"] {
+    border-color: rgba(202, 168, 255, 0.45);
+    background: rgba(18, 17, 36, 0.82);
+}
+
+.csCreaturePickerMenu {
+    position: absolute;
+    z-index: 12;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    display: grid;
+    max-height: 15rem;
+    overflow-y: auto;
+    border: 1px solid rgba(202, 168, 255, 0.28);
+    border-radius: 0.75rem;
+    background: rgba(8, 9, 19, 0.98);
+    box-shadow: 0 1.2rem 2.4rem rgba(0, 0, 0, 0.42);
+    padding: 0.35rem;
+}
+
+.csCreaturePickerMenu::-webkit-scrollbar {
+    width: 0.55rem;
+}
+
+.csCreaturePickerMenu::-webkit-scrollbar-track {
+    background: rgba(6, 8, 18, 0.9);
+    border-radius: 999px;
+}
+
+.csCreaturePickerMenu::-webkit-scrollbar-thumb {
+    background: rgba(202, 168, 255, 0.38);
+    border-radius: 999px;
+}
+
+.csCreaturePickerOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: rgba(232, 225, 241, 0.82);
+    cursor: pointer;
+    padding: 0.45rem 0.55rem;
+    text-align: left;
+}
+
+.csCreaturePickerOption:hover,
+.csCreaturePickerOption:focus-visible {
+    background: rgba(72, 54, 126, 0.34);
+    color: #f4ecff;
+}
+
+.csCreaturePickerOption strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.csCreaturePickerOption span {
+    color: rgba(232, 225, 241, 0.56);
+    flex-shrink: 0;
+    font-size: 0.72rem;
+}
+
+.csLinkedCreatureList {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.csLinkedCreatureRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: stretch;
+}
+
+.csLinkedCreatureMain {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.38);
+    color: inherit;
+    cursor: pointer;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+}
+
+.csLinkedCreatureMain:hover {
+    border-color: rgba(202, 168, 255, 0.46);
+    background: rgba(72, 54, 126, 0.32);
+}
+
+.csLinkedCreatureMain strong {
+    color: #f4ecff;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.csLinkedCreatureMain span {
+    color: rgba(232, 225, 241, 0.62);
+    font-size: 0.78rem;
+}
+
+.csLinkedCreatureRemove {
+    border: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.38);
+    color: rgba(232, 225, 241, 0.68);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    padding: 0 0.75rem;
+}
+
+.csLinkedCreatureRemove:hover {
+    border-color: rgba(255, 100, 100, 0.35);
+    background: rgba(70, 15, 15, 0.45);
+    color: #ffaaaa;
 }
 
 .sheetPanel,
@@ -2119,6 +2524,16 @@
     .loginPrompt {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .vaultImportBar {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+    }
+
+    .vaultImportForm {
+        display: grid;
+        grid-template-columns: 1fr;
     }
 
     .savedActions {
