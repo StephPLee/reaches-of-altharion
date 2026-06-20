@@ -1,5 +1,7 @@
 const DICECLOUD_WEBSOCKET_URL = "wss://v1.dicecloud.com/websocket";
 const DICECLOUD_CHARACTER_BASE_URL = "https://v1.dicecloud.com/character";
+const WebSocketClient =
+  typeof WebSocket === "function" ? WebSocket : require("ws");
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
 const DICECLOUD_ABILITY_STATS = {
@@ -78,16 +80,10 @@ function createSourceUrl(characterId, character) {
 }
 
 function subscribeDicecloudCharacter(characterId) {
-  if (typeof WebSocket !== "function") {
-    const error = new Error("Dicecloud import requires Node's built-in WebSocket support.");
-    error.statusCode = 500;
-    throw error;
-  }
-
   return new Promise((resolve, reject) => {
     const collections = {};
     let settled = false;
-    const ws = new WebSocket(DICECLOUD_WEBSOCKET_URL);
+    const ws = new WebSocketClient(DICECLOUD_WEBSOCKET_URL);
     const timeout = setTimeout(() => {
       finish(new Error("Dicecloud did not return the character before the request timed out."));
     }, 15000);
@@ -103,7 +99,7 @@ function subscribeDicecloudCharacter(characterId) {
       else resolve(result);
     }
 
-    ws.onopen = () => {
+    const handleOpen = () => {
       ws.send(JSON.stringify({
         msg: "connect",
         version: "1",
@@ -111,8 +107,9 @@ function subscribeDicecloudCharacter(characterId) {
       }));
     };
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
+    const handleMessage = (eventOrData) => {
+      const rawData = eventOrData?.data ?? eventOrData;
+      const message = JSON.parse(rawData.toString());
       if (message.msg === "connected") {
         ws.send(JSON.stringify({
           msg: "sub",
@@ -143,11 +140,21 @@ function subscribeDicecloudCharacter(characterId) {
       }
     };
 
-    ws.onerror = () => {
+    const handleError = () => {
       const error = new Error("Dicecloud is not returning character data right now.");
       error.statusCode = 502;
       finish(error);
     };
+
+    if (typeof ws.on === "function") {
+      ws.on("open", handleOpen);
+      ws.on("message", handleMessage);
+      ws.on("error", handleError);
+    } else {
+      ws.onopen = handleOpen;
+      ws.onmessage = handleMessage;
+      ws.onerror = handleError;
+    }
   });
 }
 
