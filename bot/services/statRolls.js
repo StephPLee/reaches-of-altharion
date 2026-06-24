@@ -19,12 +19,17 @@ function isValidStatLine(stats) {
   return true;
 }
 
-function rollValidStatLine() {
+function rollTargetTotal() {
+  return Math.floor(Math.random() * 5) + 80;
+}
+
+function rollValidStatLine(targetTotal = rollTargetTotal()) {
   for (let i = 0; i < 100000; i++) {
     const line = rollStatLine();
-    if (isValidStatLine(line)) return line;
+    const total = line.reduce((a, b) => a + b, 0);
+    if (total === targetTotal && isValidStatLine(line)) return line;
   }
-  throw new Error("Could not roll a valid stat line after 100000 attempts");
+  throw new Error(`Could not roll a valid ${targetTotal} stat line after 100000 attempts`);
 }
 
 function rollFiveStatLines() {
