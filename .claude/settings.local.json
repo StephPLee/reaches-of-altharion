@@ -32,7 +32,12 @@
       "Bash(git submodule *)",
       "Bash(grep -v \"^./.git$\")",
       "Bash(grep -E \"\\\\.tsx?$\")",
-      "Bash(xargs grep -l \"character\")"
+      "Bash(xargs grep -l \"character\")",
+      "Bash(echo \"started with pid $!\")",
+      "Bash(sleep 5; cat /tmp/docusaurus.log 2>/dev/null | tail -50)",
+      "Bash(curl -s http://127.0.0.1:3000/docs/world/guilds)",
+      "Bash(curl -s http://127.0.0.1:3000/docs/world/guilds/)",
+      "Bash(npm install *)"
     ]
   }
 }

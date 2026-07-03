@@ -274,9 +274,18 @@ const config: Config = {
           ],
         },
         {
-          to: "/?view=world",
           label: "The World of Altharion",
           position: "left",
+          items: [
+            {
+              to: "/?view=world",
+              label: "World Map",
+            },
+            {
+              to: "/docs/world/guild-lore",
+              label: "Guild Lore",
+            },
+          ],
         },
       ],
     },

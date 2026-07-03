@@ -16,7 +16,13 @@ const NAV_GROUPS = [
     links: [
       { label: "Home", to: "/?view=map" },
       { label: "RP Rules", to: "/docs/rp-rules" },
-      { label: "The World of Altharion", to: "/?view=world" },
+    ],
+  },
+  {
+    title: "The World of Altharion",
+    links: [
+      { label: "World Map", to: "/?view=world" },
+      { label: "Guild Lore", to: "/docs/world/guild-lore" },
     ],
   },
   {
