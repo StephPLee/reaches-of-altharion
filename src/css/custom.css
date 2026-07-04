@@ -88,15 +88,6 @@
     align-items: center;
 }
 
-.custom-navbar-auth-shell {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    margin-left: 1rem;
-    padding-left: 1rem;
-    border-left: 1px solid rgba(190, 176, 138, 0.16);
-}
-
 .custom-navbar-auth-notice,
 .custom-mobile-auth-notice {
     display: flex;
@@ -136,15 +127,12 @@
     opacity: 1;
 }
 
-.custom-navbar-auth-label,
 .custom-navbar-auth-status {
     color: rgba(236, 226, 255, 0.82);
     font-size: 0.85rem;
     white-space: nowrap;
 }
 
-.custom-navbar-auth-button,
-.custom-navbar-auth-link,
 .custom-navbar-discord-link {
     display: inline-flex;
     align-items: center;
@@ -169,10 +157,6 @@
         transform 0.18s ease;
 }
 
-.custom-navbar-auth-button:hover,
-.custom-navbar-auth-button:focus-visible,
-.custom-navbar-auth-link:hover,
-.custom-navbar-auth-link:focus-visible,
 .custom-navbar-discord-link:hover,
 .custom-navbar-discord-link:focus-visible {
     color: #e4d1ff;
@@ -256,6 +240,58 @@
     width: 1px;
     height: 0.85rem;
     background: rgba(210, 192, 145, 0.28);
+}
+
+.custom-navbar-account-shell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-left: 0.75rem;
+    padding: 0.4rem 0.95rem;
+    border: 1px solid rgba(202, 168, 255, 0.28);
+    border-radius: 0.6rem;
+    background: rgba(9, 11, 24, 0.65);
+    box-shadow: 0 6px 16px rgba(2, 4, 12, 0.28);
+    color: #f0e5ff;
+}
+
+.custom-navbar-account-shell__label {
+    color: rgba(236, 226, 255, 0.82);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.custom-navbar-account-shell__action {
+    display: inline-flex;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.18s ease;
+}
+
+.custom-navbar-account-shell__action:hover,
+.custom-navbar-account-shell__action:focus-visible {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+.custom-navbar-account-shell__action:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.custom-navbar-account-shell__divider {
+    width: 1px;
+    height: 0.85rem;
+    background: rgba(202, 168, 255, 0.28);
 }
 
 .custom-calendar-nav-item {

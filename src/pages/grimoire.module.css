@@ -11,7 +11,7 @@
 
 .appPage {
     min-height: 100vh;
-    padding: 0 0 3.8rem;
+    padding: 1rem 0 3.8rem;
     background:
         linear-gradient(rgba(7, 8, 18, 0.72), rgba(7, 8, 18, 0.8)),
         url("/img/altharion-background.png");

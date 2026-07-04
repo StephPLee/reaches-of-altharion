@@ -8,7 +8,7 @@ import "dotenv/config";
 const config: Config = {
   title: "Reaches of Altharion",
   tagline: "D&D 5.5e Westmarch Server",
-  favicon: "img/altharion_logo_white.ico",
+  favicon: "img/A logo gold.ico",
   headTags: [
     {
       tagName: "link",

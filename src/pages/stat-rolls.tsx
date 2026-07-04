@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Layout from "@theme/Layout";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
-import ToolsSidebarFrame from "../components/ToolsSidebarFrame";
 import styles from "./stat-rolls.module.css";
 
 type StatRollSet = {
@@ -324,8 +323,7 @@ export default function StatRollsPage(): ReactNode {
 
   return (
     <Layout title="Stat Rolls" description="Available stat roll sets to claim.">
-      <ToolsSidebarFrame sidebarOffset="5.3rem">
-        <div className={styles.page}>
+      <div className={styles.page}>
           <div className={styles.shell}>
             <h1 className={styles.heading}>Stat Roll Repository</h1>
 
@@ -404,7 +402,6 @@ export default function StatRollsPage(): ReactNode {
             )}
           </div>
         </div>
-      </ToolsSidebarFrame>
     </Layout>
   );
 }

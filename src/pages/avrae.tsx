@@ -7,7 +7,6 @@ import {
   parseTargets,
   type AvraeActionKind,
 } from "../data/avraeCommandBuilder";
-import ToolsSidebarFrame from "../components/ToolsSidebarFrame";
 import styles from "./grimoire.module.css";
 
 const ABILITIES = [
@@ -1534,7 +1533,6 @@ export default function AvraeCommandsPage(): ReactNode {
       description="Avrae command builder for Reaches of Altharion."
     >
       <main className={styles.appPage}>
-        <ToolsSidebarFrame sidebarOffset="5.3rem">
         <div className={styles.appShell}>
           <header className={styles.appHeader}>
             <div>
@@ -2747,7 +2745,6 @@ export default function AvraeCommandsPage(): ReactNode {
             </section>
           ) : null}
         </div>
-      </ToolsSidebarFrame>
       </main>
     </Layout>
   );

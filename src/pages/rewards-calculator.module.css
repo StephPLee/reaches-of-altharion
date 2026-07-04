@@ -1,6 +1,6 @@
 .page {
     min-height: 100vh;
-    padding: 0 0 3rem;
+    padding: 1rem 0 3rem;
     background:
         linear-gradient(rgba(8, 9, 19, 0.76), rgba(8, 9, 19, 0.88)),
         url("/img/altharion-background.png");

@@ -564,9 +564,6 @@ function NavbarAuthControls({
             </button>
           </div>
         ) : null}
-        {!isMobile ? (
-          <DiscordInviteLink inviteUrl={discordInviteUrl} />
-        ) : null}
         <span
           className={clsx(
             isMobile
@@ -668,46 +665,61 @@ function NavbarAuthControls({
           </button>
         </div>
       ) : null}
-      {!isMobile ? (
-        <DiscordInviteLink inviteUrl={discordInviteUrl} />
-      ) : null}
-      <div
-        className={clsx(
-          isMobile
-            ? "custom-mobile-auth-shell"
-            : "navbar__item custom-navbar-auth-shell",
-        )}
-      >
-        <span
-          className={clsx(
-            isMobile ? "custom-mobile-auth-label" : "custom-navbar-auth-label",
-          )}
-        >
-          {displayName}
-        </span>
-        {user.isStaff ? (
-          <Link
-            to="/admin"
-            className={clsx(
-              isMobile ? "custom-mobile-auth-link" : "custom-navbar-auth-link",
-            )}
-            onClick={onNavigate}
+      {isMobile ? (
+        <div className="custom-mobile-auth-shell">
+          <span className="custom-mobile-auth-label">{displayName}</span>
+          {user.isStaff ? (
+            <Link
+              to="/admin"
+              className="custom-mobile-auth-link"
+              onClick={onNavigate}
+            >
+              Staff Panel
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            className="clean-btn custom-mobile-auth-link"
+            onClick={handleLogout}
+            disabled={isSubmitting}
           >
-            Staff Panel
-          </Link>
-        ) : null}
-        <button
-          type="button"
-          className={clsx(
-            "clean-btn",
-            isMobile ? "custom-mobile-auth-link" : "custom-navbar-auth-link",
-          )}
-          onClick={handleLogout}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Signing Out..." : "Sign Out"}
-        </button>
-      </div>
+            {isSubmitting ? "Signing Out..." : "Sign Out"}
+          </button>
+        </div>
+      ) : (
+        <div className="navbar__item custom-navbar-account-shell">
+          <span className="custom-navbar-account-shell__label">
+            {displayName}
+          </span>
+          {user.isStaff ? (
+            <>
+              <span
+                className="custom-navbar-account-shell__divider"
+                aria-hidden="true"
+              />
+              <Link
+                to="/admin"
+                className="custom-navbar-account-shell__action"
+                onClick={onNavigate}
+              >
+                Staff Panel
+              </Link>
+            </>
+          ) : null}
+          <span
+            className="custom-navbar-account-shell__divider"
+            aria-hidden="true"
+          />
+          <button
+            type="button"
+            className="custom-navbar-account-shell__action"
+            onClick={handleLogout}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Signing Out..." : "Sign Out"}
+          </button>
+        </div>
+      )}
     </>
   );
 }
