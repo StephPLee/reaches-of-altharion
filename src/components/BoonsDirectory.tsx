@@ -882,10 +882,7 @@ export default function BoonsDirectory() {
             ) : null}
           </div>
         </div>
-        <p className={styles.searchHint}>
-          Search filters by boon name, body text, setup commands, and
-          automation.
-        </p>
+
         <p className={styles.count}>
           Showing {visibleBoons.length} of {boons.length} boons.
         </p>

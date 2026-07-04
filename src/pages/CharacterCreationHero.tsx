@@ -48,7 +48,7 @@ const STEPS: Step[] = [
     title: "3. Create Your Hero",
     detail:
       "Build your character using approved methods and bring your story to life.",
-    to: "/style-preview/character-creation-guide",
+    to: "/character-creation-guide",
     linkLabel: "View the Guide",
   },
 ];
@@ -91,7 +91,7 @@ export default function CharacterCreationHero({
       <Divider />
 
       <section className={styles.introSection}>
-        <h2 className={styles.sectionHeading}>
+        <h2 className={styles.heroSectionHeading}>
           <span className={styles.sectionMark}>+</span> I. The First Spark{" "}
           <span className={styles.sectionMark}>+</span>
         </h2>
@@ -105,7 +105,7 @@ export default function CharacterCreationHero({
       <Divider />
 
       <section className={styles.stepsSection}>
-        <h2 className={styles.sectionHeading}>
+        <h2 className={styles.heroSectionHeading}>
           <span className={styles.sectionMark}>+</span> II. Getting Started{" "}
           <span className={styles.sectionMark}>+</span>
         </h2>
@@ -138,7 +138,7 @@ export default function CharacterCreationHero({
       <Divider />
 
       <section className={styles.basicsSection}>
-        <h2 className={styles.sectionHeading}>
+        <h2 className={styles.heroSectionHeading}>
           <span className={styles.sectionMark}>+</span> III. Character Basics{" "}
           <span className={styles.sectionMark}>+</span>
         </h2>

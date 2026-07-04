@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
 
-import EditableWikiPage from "@site/src/components/EditableWikiPage";
+import EditableWikiPage, {
+  type MarkdownHeading,
+} from "@site/src/components/EditableWikiPage";
 import styles from "./character-creation.module.css";
 
 const fallbackMarkdown = `This is a step by step guide on getting your character created and playable on the server.
@@ -13,19 +16,19 @@ First things first, you need to log into [WestMarches.games](https://www.westmar
 
 We allow character sheets from DnD Beyond, Dicecloud, and GSheets. If you are using DnD Beyond, we have several campaigns for content sharing, access to the allowed partnered content and server homebrew. We have a Discord bot that distributes the links which can be used inside the server using /cc-link.
 
-Additional creation rules:
+**Additional creation rules**
 
-Your character must comply with the 2024 PHB rules and use 5.5e content. You may use the 2014 version of content that doesn't have a 2024 reprint.
+> **2024 Rules —** Your character must comply with the 2024 PHB rules and use 5.5e content. You may use the 2014 version of content that doesn't have a 2024 reprint.
 
-You can choose to start your character anywhere between level 1 and level 4. If you choose to start above level 1, when creating your character on WestMarches.games add the initial starting xp on creation
+> **Starting Level —** You can choose to start your character anywhere between level 1 and level 4. If you choose to start above level 1, when creating your character on WestMarches.games add the initial starting xp on creation.
 
 | 2nd level | 3rd level | 4th level |
 | :---- | :---- | :---- |
 | 300xp | 900xp | 2700xp |
 
-You may only multiclass your character twice which means a total of 3 classes across 20 levels
+> **Multiclassing —** You may only multiclass your character twice, which means a total of 3 classes across 20 levels.
 
-You start with one character slot, but you gain more as your characters reach certain milestone levels according to the table
+> **Character Slots —** You start with one character slot, but you gain more as your characters reach certain milestone levels according to the table.
 
 | 5th level | 9th level | 13th level | 17th level |
 | :---- | :---- | :---- | :---- |
@@ -85,24 +88,45 @@ If you rolled please include a link to the message in Character Rolls with your 
 
 A member of staff or DM on the server will then assess your submission, check the character is correct and let you know if you have missed anything.`;
 
-export default function CharacterCreationGuideStylePreview(): ReactNode {
+export default function CharacterCreationGuidePage(): ReactNode {
+  const [toc, setToc] = useState<MarkdownHeading[]>([]);
+
   return (
     <Layout
-      title="Style Preview: Character Creation Guide"
-      description="The full, staff-editable character creation guide restyled to match the Character Creation landing page."
+      title="Character Creation Guide"
+      description="The full, staff-editable character creation guide."
     >
       <div className={styles.page}>
+        <Link className={styles.backLink} to="/character-creation">
+          &larr; Character Creation
+        </Link>
+
         <div className={styles.bodyWrap}>
-          <Link className={styles.backLink} to="/style-preview/character-creation">
-            &larr; Character Creation
-          </Link>
           <div className="theme-doc-markdown">
             <EditableWikiPage
               slug="getting-set-up"
               title="Character Creation"
               fallbackMarkdown={fallbackMarkdown}
+              onTableOfContentsChange={setToc}
             />
           </div>
+
+          {toc.length > 1 ? (
+            <nav className={styles.tocSidebar} aria-label="On this page">
+              <div className={styles.tocSidebarInner}>
+                <p className={styles.tocSidebarTitle}>On this page</p>
+                {toc.map((entry) => (
+                  <a
+                    key={entry.id}
+                    className={styles.tocSidebarLink}
+                    href={`#${entry.id}`}
+                  >
+                    {entry.text}
+                  </a>
+                ))}
+              </div>
+            </nav>
+          ) : null}
         </div>
       </div>
     </Layout>

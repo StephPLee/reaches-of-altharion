@@ -343,6 +343,44 @@ function groupEventsByMonth(events: EventRecord[]): EventMonthGroup[] {
   return Array.from(groups.values());
 }
 
+function EventSummary({ text }: { text: string }): ReactNode {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isClampable, setIsClampable] = useState(false);
+  const paragraphRef = useRef<HTMLParagraphElement | null>(null);
+
+  useEffect(() => {
+    const node = paragraphRef.current;
+    if (!node) {
+      return;
+    }
+    setIsClampable(node.scrollHeight > node.clientHeight + 1);
+  }, [text]);
+
+  return (
+    <div className={styles.eventSummaryWrap}>
+      <p
+        ref={paragraphRef}
+        className={
+          isExpanded
+            ? styles.eventSummary
+            : `${styles.eventSummary} ${styles.eventSummaryClamped}`
+        }
+      >
+        {text}
+      </p>
+      {isClampable ? (
+        <button
+          type="button"
+          className={styles.eventSummaryToggle}
+          onClick={() => setIsExpanded((current) => !current)}
+        >
+          {isExpanded ? "Show less" : "Read more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export default function CalendarPage(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
@@ -700,9 +738,7 @@ export default function CalendarPage(): ReactNode {
                             </div>
                             <div className={styles.eventCell}>
                               {event.summary ? (
-                                <p className={styles.eventSummary}>
-                                  {event.summary}
-                                </p>
+                                <EventSummary text={event.summary} />
                               ) : (
                                 <p className={styles.eventSummaryMuted}>-</p>
                               )}

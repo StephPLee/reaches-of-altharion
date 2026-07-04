@@ -104,11 +104,15 @@ export default function BannedContentTables() {
   const [editingBookId, setEditingBookId] = useState<number | null>(null);
   const [editingContentId, setEditingContentId] = useState<number | null>(null);
   const [deletingBookId, setDeletingBookId] = useState<number | null>(null);
-  const [deletingContentId, setDeletingContentId] = useState<number | null>(null);
+  const [deletingContentId, setDeletingContentId] = useState<number | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [bookForm, setBookForm] = useState<BookFormState>(createEmptyBookForm());
+  const [bookForm, setBookForm] = useState<BookFormState>(
+    createEmptyBookForm(),
+  );
   const [contentForm, setContentForm] = useState<ContentFormState>(
     createEmptyContentForm(),
   );
@@ -126,7 +130,9 @@ export default function BannedContentTables() {
     }
 
     const payload = await response.json();
-    setSourcebooks(Array.isArray(payload.sourcebooks) ? payload.sourcebooks : []);
+    setSourcebooks(
+      Array.isArray(payload.sourcebooks) ? payload.sourcebooks : [],
+    );
     setBannedBooks(
       Array.isArray(payload.bannedBooks) ? payload.bannedBooks : [],
     );
@@ -142,7 +148,9 @@ export default function BannedContentTables() {
         const response = await fetch(`${authApiBaseUrl}/api/banned-content`);
 
         if (!response.ok) {
-          throw new Error(`Failed to load banned content (${response.status}).`);
+          throw new Error(
+            `Failed to load banned content (${response.status}).`,
+          );
         }
 
         const payload = await response.json();
@@ -700,24 +708,6 @@ export default function BannedContentTables() {
 
   return (
     <>
-      <div className={styles.searchPanel}>
-        <label className={styles.searchLabel} htmlFor="banned-content-search">
-          Search banned content
-        </label>
-        <input
-          id="banned-content-search"
-          className={styles.searchInput}
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by book, content type, title, or notes"
-        />
-        <p className={styles.searchHint}>
-          Banned books are listed separately from specific banned options.
-        </p>
-        {loading ? <p className={styles.searchHint}>Loading banned content...</p> : null}
-      </div>
-
       {message ? <p className={styles.success}>{message}</p> : null}
       {error ? <p className={styles.error}>{error}</p> : null}
 
@@ -743,14 +733,28 @@ export default function BannedContentTables() {
           </div>
         ) : null}
         {renderBookForm()}
+        <div className={styles.searchPanel}>
+          <label className={styles.searchLabel} htmlFor="banned-content-search">
+            Search banned content
+          </label>
+          <input
+            id="banned-content-search"
+            className={styles.searchInput}
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by book, content type, title, or notes"
+          />
+          {loading ? (
+            <p className={styles.searchHint}>Loading banned content...</p>
+          ) : null}
+        </div>
         {filteredBannedBooks.length > 0 ? (
           <table>
             <thead>
               <tr>
                 <th>Title</th>
                 <th>Publisher</th>
-                <th>Type</th>
-                <th>Edition</th>
                 <th>Specific Bans</th>
                 {isStaff ? <th>Actions</th> : null}
               </tr>
@@ -760,8 +764,6 @@ export default function BannedContentTables() {
                 <tr key={book.id ?? book.title}>
                   <td>{book.title}</td>
                   <td>{book.publisher}</td>
-                  <td>{book.type}</td>
-                  <td>{book.edition}</td>
                   <td>
                     {book.id && (book.bannedContentCount ?? 0) > 0 ? (
                       <a href={`#${slugForBook(book.id)}`}>
@@ -799,7 +801,9 @@ export default function BannedContentTables() {
             </tbody>
           </table>
         ) : (
-          <p className={styles.emptyState}>No banned books match that search.</p>
+          <p className={styles.emptyState}>
+            No banned books match that search.
+          </p>
         )}
       </div>
 
@@ -838,7 +842,9 @@ export default function BannedContentTables() {
                   <button
                     type="button"
                     className={styles.secondaryButton}
-                    onClick={() => openCreateContentForm(String(group.sourcebookId))}
+                    onClick={() =>
+                      openCreateContentForm(String(group.sourcebookId))
+                    }
                   >
                     Add Entry For This Book
                   </button>
@@ -856,7 +862,9 @@ export default function BannedContentTables() {
                   </thead>
                   <tbody>
                     {group.entries.map((entry) => (
-                      <tr key={entry.id ?? `${entry.sourcebookId}-${entry.title}`}>
+                      <tr
+                        key={entry.id ?? `${entry.sourcebookId}-${entry.title}`}
+                      >
                         <td>{entry.contentType || "Option"}</td>
                         <td>{entry.title}</td>
                         <td>{entry.notes}</td>

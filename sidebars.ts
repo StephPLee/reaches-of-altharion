@@ -9,7 +9,7 @@ const sidebars: SidebarsConfig = {
       label: "Player Information",
       collapsible: true,
       collapsed: false,
-      items: ["getting-set-up", "faq", "sourcebooks", "banned-content", "transformations"],
+      items: ["faq", "sourcebooks", "banned-content", "transformations"],
     },
     {
       type: "category",

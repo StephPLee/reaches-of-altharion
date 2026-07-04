@@ -37,7 +37,16 @@
       "Bash(sleep 5; cat /tmp/docusaurus.log 2>/dev/null | tail -50)",
       "Bash(curl -s http://127.0.0.1:3000/docs/world/guilds)",
       "Bash(curl -s http://127.0.0.1:3000/docs/world/guilds/)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(curl -s -o /dev/null -w \"home: %{http_code}\\\\n\" http://127.0.0.1:3000/)",
+      "Bash(curl -s -o /dev/null -w \"home: %{http_code}\\\\n\" http://127.0.0.1:3000/ --max-time 5)",
+      "Bash(curl -s -o /dev/null -w \"rp-rules: %{http_code}\\\\n\" http://127.0.0.1:3000/docs/rp-rules --max-time 5)",
+      "Bash(curl -s -o /dev/null -w \"guide: %{http_code}\\\\n\" http://127.0.0.1:3000/style-preview/character-creation-guide --max-time 5)",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Bash(ls -la \"/c/Users/Steph/.claude/projects/C--Users-Steph-reaches-of-altharion/memory/\")",
+      "Skill(run)",
+      "Skill(run:*)"
     ]
   }
 }

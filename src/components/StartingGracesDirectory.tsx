@@ -1071,10 +1071,7 @@ export default function StartingGracesDirectory() {
             ) : null}
           </div>
         </div>
-        <p className={styles.searchHint}>
-          Search filters by grace name, body text, setup commands, and
-          automation.
-        </p>
+
         <p className={styles.count}>
           Showing {visibleGraces.length} of {graces.length} starting graces.
         </p>

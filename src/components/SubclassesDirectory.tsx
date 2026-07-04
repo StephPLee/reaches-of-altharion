@@ -769,7 +769,6 @@ export default function SubclassesDirectory({
             </button>
           </div>
         </div>
-        <p className={styles.searchHint}>{searchHint}</p>
         <p className={styles.count}>
           Showing {visibleSections.length} of {sections.length} {nounPlural}.
         </p>

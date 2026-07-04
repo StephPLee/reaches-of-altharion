@@ -2,12 +2,14 @@ import type { FormEvent, ReactElement, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
+import PageLoader from "./PageLoader";
 import styles from "./EditableWikiPage.module.css";
 
 type EditableWikiPageProps = {
   slug: string;
   title: string;
   fallbackMarkdown: string;
+  onTableOfContentsChange?: (headings: MarkdownHeading[]) => void;
 };
 
 type SessionUser = {
@@ -118,9 +120,28 @@ function parseTableRow(line: string) {
     .map((cell) => cell.trim());
 }
 
-function renderMarkdown(markdown: string) {
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+export type MarkdownHeading = {
+  id: string;
+  text: string;
+  level: number;
+};
+
+function renderMarkdown(markdown: string): {
+  blocks: ReactNode[];
+  headings: MarkdownHeading[];
+} {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
+  const headings: MarkdownHeading[] = [];
+  const usedIds = new Map<string, number>();
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -154,15 +175,38 @@ function renderMarkdown(markdown: string) {
     const heading = trimmed.match(/^(#{1,4})\s+(.+)$/);
     if (heading) {
       const level = heading[1].length;
-      const content = renderInlineMarkdown(heading[2]);
+      const headingText = heading[2];
+      const content = renderInlineMarkdown(headingText);
+      const baseId = slugify(headingText) || `section-${index}`;
+      const seenCount = usedIds.get(baseId) ?? 0;
+      usedIds.set(baseId, seenCount + 1);
+      const id = seenCount > 0 ? `${baseId}-${seenCount}` : baseId;
+      headings.push({ id, text: headingText, level });
+
       if (level === 1) {
-        blocks.push(<h1 key={`h-${index}`}>{content}</h1>);
+        blocks.push(
+          <h1 id={id} key={`h-${index}`}>
+            {content}
+          </h1>,
+        );
       } else if (level === 2) {
-        blocks.push(<h2 key={`h-${index}`}>{content}</h2>);
+        blocks.push(
+          <h2 id={id} key={`h-${index}`}>
+            {content}
+          </h2>,
+        );
       } else if (level === 3) {
-        blocks.push(<h3 key={`h-${index}`}>{content}</h3>);
+        blocks.push(
+          <h3 id={id} key={`h-${index}`}>
+            {content}
+          </h3>,
+        );
       } else {
-        blocks.push(<h4 key={`h-${index}`}>{content}</h4>);
+        blocks.push(
+          <h4 id={id} key={`h-${index}`}>
+            {content}
+          </h4>,
+        );
       }
       continue;
     }
@@ -318,7 +362,7 @@ function renderMarkdown(markdown: string) {
     );
   }
 
-  return blocks;
+  return { blocks, headings };
 }
 
 function insertMarkdown(
@@ -422,6 +466,7 @@ export default function EditableWikiPage({
   slug,
   title,
   fallbackMarkdown,
+  onTableOfContentsChange,
 }: EditableWikiPageProps): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
@@ -501,14 +546,22 @@ export default function EditableWikiPage({
     };
   }, [authApiBaseUrl]);
 
-  const renderedMarkdown = useMemo(
+  const { blocks: renderedMarkdown, headings } = useMemo(
     () => renderMarkdown(page.markdown),
     [page.markdown],
   );
-  const renderedPreview = useMemo(
+  const { blocks: renderedPreview } = useMemo(
     () => renderMarkdown(draftMarkdown),
     [draftMarkdown],
   );
+  const tableOfContents = useMemo(
+    () => headings.filter((entry) => entry.level === 2),
+    [headings],
+  );
+
+  useEffect(() => {
+    onTableOfContentsChange?.(tableOfContents);
+  }, [tableOfContents, onTableOfContentsChange]);
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -822,13 +875,7 @@ export default function EditableWikiPage({
           </section>
         </form>
       ) : isPageLoading ? (
-        <div className={styles.skeleton} aria-hidden="true">
-          <div className={styles.skeletonLine} style={{ width: "38%" }} />
-          <div className={styles.skeletonLine} style={{ width: "94%" }} />
-          <div className={styles.skeletonLine} style={{ width: "88%" }} />
-          <div className={styles.skeletonLine} style={{ width: "91%" }} />
-          <div className={styles.skeletonLine} style={{ width: "58%" }} />
-        </div>
+        <PageLoader label="Loading page" />
       ) : (
         <div className={styles.content}>{renderedMarkdown}</div>
       )}

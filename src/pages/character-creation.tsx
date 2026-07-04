@@ -5,7 +5,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import CharacterCreationHero from "./CharacterCreationHero";
 import styles from "./character-creation.module.css";
 
-export default function CharacterCreationStylePreview(): ReactNode {
+export default function CharacterCreationPage(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   const discordInviteUrl =
     typeof siteConfig.customFields?.discordInviteUrl === "string"
@@ -14,8 +14,8 @@ export default function CharacterCreationStylePreview(): ReactNode {
 
   return (
     <Layout
-      title="Style Preview: Character Creation"
-      description="Layout and iconography mockup for a Character Creation page redesign."
+      title="Character Creation"
+      description="Everything you need to know to create a character in the Reaches of Altharion."
     >
       <div className={styles.page}>
         <CharacterCreationHero discordInviteUrl={discordInviteUrl} />

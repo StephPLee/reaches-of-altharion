@@ -1042,7 +1042,6 @@ export default function SpeciesDirectory({
             </button>
           </div>
         </div>
-        <p className={styles.searchHint}>{searchHint}</p>
         <p className={styles.count}>Showing 1 section.</p>
       </div>
 

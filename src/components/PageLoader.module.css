@@ -1,0 +1,54 @@
+.wrap {
+    position: fixed;
+    top: var(--ifm-navbar-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    background:
+        linear-gradient(rgba(8, 9, 19, 0.82), rgba(8, 9, 19, 0.88)),
+        url("/img/altharion-background.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.stack {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 7rem;
+    height: 7rem;
+}
+
+.ring {
+    grid-area: 1 / 1;
+    width: 100%;
+    height: 100%;
+    border: 3px solid rgba(210, 192, 145, 0.16);
+    border-top-color: rgba(210, 192, 145, 0.9);
+    border-radius: 50%;
+    animation: page-loader-spin 1s linear infinite;
+}
+
+.logo {
+    grid-area: 1 / 1;
+    width: 3.8rem;
+    height: 3.8rem;
+    object-fit: contain;
+    filter: drop-shadow(0 0 6px rgba(210, 192, 145, 0.25));
+}
+
+@keyframes page-loader-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ring {
+        animation-duration: 2.4s;
+    }
+}

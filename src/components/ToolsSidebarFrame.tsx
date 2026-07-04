@@ -25,7 +25,7 @@ const SIDEBAR: SidebarItem[] = [
     collapsible: true,
     collapsed: false,
     items: [
-      { type: "link", label: "Character Creation", href: "/docs/getting-set-up" },
+      { type: "link", label: "Character Creation", href: "/character-creation" },
       { type: "link", label: "FAQ", href: "/docs/faq" },
       { type: "link", label: "Sourcebooks", href: "/docs/sourcebooks" },
       { type: "link", label: "Banned Content", href: "/docs/banned-content" },
