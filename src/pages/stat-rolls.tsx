@@ -186,11 +186,14 @@ function StatCard({
             rel="noreferrer"
             className={styles.discordLink}
           >
-            Discord ↗
+            Source ↗
           </a>
         )}
         {roll.claimedByDiscordUserId ? (
-          <span className={styles.claimedLabel}>
+          <span
+            className={styles.claimedLabel}
+            title={`Claimed by ${roll.claimedByUsername ?? "someone"}`}
+          >
             Claimed by {roll.claimedByUsername ?? "someone"}
           </span>
         ) : (
@@ -326,6 +329,10 @@ export default function StatRollsPage(): ReactNode {
       <div className={styles.page}>
           <div className={styles.shell}>
             <h1 className={styles.heading}>Stat Roll Repository</h1>
+            <p className={styles.intro}>
+              Browse unclaimed stat arrays, reserve one for a character, or
+              check which rolls are locked and claimed.
+            </p>
 
             {claimError && <p className={styles.error}>{claimError}</p>}
 
@@ -362,13 +369,16 @@ export default function StatRollsPage(): ReactNode {
                   )}
                 </button>
               </div>
-              <input
-                type="search"
-                className={styles.searchInput}
-                placeholder="Search by roller, total:84, 84, 18x2, 2 18s, 15+ x3, 3 over 15, stat:18"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <label className={styles.searchField}>
+                <span className={styles.searchLabel}>Find a Roll</span>
+                <input
+                  type="search"
+                  className={styles.searchInput}
+                  placeholder="Search by roller, total:84, 84, 18x2, 2 18s, 15+ x3, 3 over 15, stat:18"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </label>
             </div>
 
             {rollsLoading && <p className={styles.hint}>Loading stat rolls…</p>}

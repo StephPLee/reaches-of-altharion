@@ -164,6 +164,17 @@ function isDicecloudCharacterLink(value: string): boolean {
   return /(?:^|\/\/)(?:v1\.)?dicecloud\.com\/character\//i.test(value.trim());
 }
 
+function isBestiaryBuilderLink(value: string): boolean {
+  return /(?:^|\/\/)(?:www\.)?bestiarybuilder\.com\//i.test(value.trim());
+}
+
+function detectImportKind(value: string): "character" | "creature" | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (isBestiaryBuilderLink(trimmed)) return "creature";
+  return "character";
+}
+
 type AvraeModifier = {
   id: string;
   name: string;
@@ -259,7 +270,10 @@ function signedNum(n: number): string {
   return n >= 0 ? `+${n}` : String(n);
 }
 
-function proficiencyValue(proficiency: string | undefined, proficiencyBonus: number): number {
+function proficiencyValue(
+  proficiency: string | undefined,
+  proficiencyBonus: number,
+): number {
   if (proficiency === "expertise") return proficiencyBonus * 2;
   if (proficiency === "proficient") return proficiencyBonus;
   if (proficiency === "half") return Math.floor(proficiencyBonus / 2);
@@ -272,9 +286,9 @@ export default function AvraeCommandsPage(): ReactNode {
   const [view, setView] = useState<AppView>("vault");
   const [kind, setKind] = useState<AvraeActionKind>("attack");
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [ddbUrl, setDdbUrl] = useState("");
-  const [bestiaryUrl, setBestiaryUrl] = useState("");
+  const [, setAuthLoading] = useState(true);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
   const [vaultSearch, setVaultSearch] = useState("");
   const [character, setCharacter] = useState<SyncedDdbCharacter | null>(null);
   const [returnLinkSource, setReturnLinkSource] = useState<{
@@ -352,14 +366,21 @@ export default function AvraeCommandsPage(): ReactNode {
 
   function loadGuestCharacters(preferredId?: string): void {
     try {
-      const storedChars = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
-      const storedOverrides = JSON.parse(window.localStorage.getItem(OVERRIDES_STORAGE_KEY) ?? "{}");
-      const guestChars: SyncedDdbCharacter[] = (Array.isArray(storedChars) ? storedChars : []).map(
-        (c: SyncedDdbCharacter) => storedOverrides[c.id] ? { ...c, ...storedOverrides[c.id] } : c,
+      const storedChars = JSON.parse(
+        window.localStorage.getItem(STORAGE_KEY) ?? "[]",
+      );
+      const storedOverrides = JSON.parse(
+        window.localStorage.getItem(OVERRIDES_STORAGE_KEY) ?? "{}",
+      );
+      const guestChars: SyncedDdbCharacter[] = (
+        Array.isArray(storedChars) ? storedChars : []
+      ).map((c: SyncedDdbCharacter) =>
+        storedOverrides[c.id] ? { ...c, ...storedOverrides[c.id] } : c,
       );
       setSavedCharacters(guestChars);
       if (guestChars.length) {
-        const selected = guestChars.find((c) => c.id === preferredId) || guestChars[0];
+        const selected =
+          guestChars.find((c) => c.id === preferredId) || guestChars[0];
         applyCharacterToBuilder(selected);
       }
     } catch {
@@ -432,7 +453,6 @@ export default function AvraeCommandsPage(): ReactNode {
           } else {
             setCharacter(null);
             setSelectedCharacterId("");
-            setDdbUrl("");
           }
           setAuthLoading(false);
         }
@@ -776,9 +796,10 @@ export default function AvraeCommandsPage(): ReactNode {
 
   function setActiveCharacter(
     nextCharacter: SyncedDdbCharacter,
-    origin:
-      | { characterId: string; tab: "companions" | "wildshapes" }
-      | null = null,
+    origin: {
+      characterId: string;
+      tab: "companions" | "wildshapes";
+    } | null = null,
   ): void {
     setReturnLinkSource(origin);
     applyCharacterToBuilder(nextCharacter);
@@ -974,15 +995,22 @@ export default function AvraeCommandsPage(): ReactNode {
         return ids.filter((id) => id !== modifierId);
       }
       let next = ids;
-      if (modifierId === "builtin:adv") next = next.filter((id) => id !== "builtin:dis");
-      if (modifierId === "builtin:dis") next = next.filter((id) => id !== "builtin:adv");
+      if (modifierId === "builtin:adv")
+        next = next.filter((id) => id !== "builtin:dis");
+      if (modifierId === "builtin:dis")
+        next = next.filter((id) => id !== "builtin:adv");
       return [...next, modifierId];
     });
   }
 
   function toggleOutOfTurn(checked: boolean): void {
     setOutOfTurn(checked);
-    if (checked && isCreatureSheet && !combatantName.trim() && character?.name) {
+    if (
+      checked &&
+      isCreatureSheet &&
+      !combatantName.trim() &&
+      character?.name
+    ) {
       setCombatantName(character.name);
     }
   }
@@ -1086,7 +1114,10 @@ export default function AvraeCommandsPage(): ReactNode {
     applyCharacterToBuilder(nextCharacter);
     if (!user) {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSavedCharacters));
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(nextSavedCharacters),
+        );
       } catch {}
     }
   }
@@ -1126,7 +1157,6 @@ export default function AvraeCommandsPage(): ReactNode {
     } else {
       setCharacter(null);
       setSelectedCharacterId("");
-      setDdbUrl("");
     }
   }
 
@@ -1189,8 +1219,8 @@ export default function AvraeCommandsPage(): ReactNode {
     } catch {}
   }
 
-  async function syncDdbCharacter(sourceUrl?: string): Promise<void> {
-    const requestedUrl = sourceUrl ?? ddbUrl;
+  async function syncDdbCharacter(sourceUrl: string): Promise<void> {
+    const requestedUrl = sourceUrl;
     const isDicecloud = isDicecloudCharacterLink(requestedUrl);
     const endpoint = isDicecloud ? "dicecloud-character" : "ddb-character";
     const sourceLabel = isDicecloud ? "Dicecloud" : "D&D Beyond";
@@ -1227,7 +1257,6 @@ export default function AvraeCommandsPage(): ReactNode {
         upsertSavedCharacter(nextCharacter);
       }
       setView("character");
-      if (sourceUrl === undefined) setDdbUrl("");
       setSyncStatus("success");
     } catch (error) {
       setSyncStatus("error");
@@ -1239,7 +1268,10 @@ export default function AvraeCommandsPage(): ReactNode {
     }
   }
 
-  async function syncBestiaryBuilderCreatures(): Promise<void> {
+  async function syncBestiaryBuilderCreatures(
+    sourceUrl: string,
+  ): Promise<void> {
+    const requestedUrl = sourceUrl;
     if (!user) {
       setCreatureSyncStatus("error");
       setCreatureSyncError("Sign in with Discord before importing creatures.");
@@ -1255,7 +1287,7 @@ export default function AvraeCommandsPage(): ReactNode {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ url: bestiaryUrl }),
+          body: JSON.stringify({ url: requestedUrl }),
         },
       );
       const payload = await response.json();
@@ -1284,6 +1316,27 @@ export default function AvraeCommandsPage(): ReactNode {
       );
     }
   }
+
+  const detectedImportKind = detectImportKind(importUrl);
+
+  async function handleUnifiedImport(): Promise<void> {
+    if (detectedImportKind === "creature") {
+      await syncBestiaryBuilderCreatures(importUrl);
+    } else if (detectedImportKind === "character") {
+      await syncDdbCharacter(importUrl);
+    }
+  }
+
+  useEffect(() => {
+    if (
+      isImportOpen &&
+      (syncStatus === "success" || creatureSyncStatus === "success")
+    ) {
+      setIsImportOpen(false);
+      setImportUrl("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncStatus, creatureSyncStatus]);
 
   function renderVaultCard(entry: SyncedDdbCharacter): ReactNode {
     const isCreature = entry.sourceKind === "bestiary-builder";
@@ -1358,57 +1411,89 @@ export default function AvraeCommandsPage(): ReactNode {
     );
   }
 
-  function renderCharacterImportBar(): ReactNode {
-    return (
-      <div className={styles.vaultImportBar}>
-        <div className={styles.vaultImportHeading}>
-          <strong>+</strong>
-          <span>Add character</span>
-        </div>
-        <div className={styles.vaultImportForm}>
-          <input
-            placeholder="D&D Beyond or Dicecloud character link"
-            value={ddbUrl}
-            onChange={(event) => setDdbUrl(event.target.value)}
-          />
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={() => syncDdbCharacter()}
-            disabled={syncStatus === "syncing"}
-          >
-            {syncStatus === "syncing"
-              ? "Syncing"
-              : user
-                ? "Add / Sync"
-                : "Preview"}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  function renderImportDialog(): ReactNode {
+    if (!isImportOpen) return null;
 
-  function renderCreatureImportBar(): ReactNode {
+    const isSyncing =
+      syncStatus === "syncing" || creatureSyncStatus === "syncing";
+    const dialogError =
+      detectedImportKind === "creature" && creatureSyncStatus === "error"
+        ? creatureSyncError
+        : detectedImportKind !== "creature" && syncStatus === "error"
+          ? syncError
+          : "";
+    const needsLogin = detectedImportKind === "creature" && !user;
+
+    let actionLabel = "Import";
+    if (isSyncing) actionLabel = "Importing";
+    else if (detectedImportKind === "character")
+      actionLabel = user ? "Add / Sync" : "Preview";
+    else if (detectedImportKind === "creature") actionLabel = "Import";
+
     return (
-      <div className={styles.vaultImportBar}>
-        <div className={styles.vaultImportHeading}>
-          <strong>+</strong>
-          <span>Add creature stats</span>
-        </div>
-        <div className={styles.vaultImportForm}>
+      <div
+        className={styles.importDialogOverlay}
+        onClick={() => setIsImportOpen(false)}
+      >
+        <div
+          className={styles.importDialogPanel}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Import a character or creature"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className={styles.importDialogHeader}>
+            <h2>Import</h2>
+            <button
+              type="button"
+              className={styles.importDialogClose}
+              onClick={() => setIsImportOpen(false)}
+              aria-label="Close import dialog"
+            >
+              ×
+            </button>
+          </div>
+          <p className={styles.importDialogHint}>
+            Paste a D&amp;D Beyond, Dicecloud, or Bestiary Builder link. We’ll
+            work out what it is automatically.
+          </p>
           <input
-            placeholder="https://bestiarybuilder.com/bestiary-viewer/..."
-            value={bestiaryUrl}
-            onChange={(event) => setBestiaryUrl(event.target.value)}
+            autoFocus
+            placeholder="Paste a character or creature link"
+            value={importUrl}
+            onChange={(event) => setImportUrl(event.target.value)}
           />
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={() => syncBestiaryBuilderCreatures()}
-            disabled={!user || creatureSyncStatus === "syncing"}
-          >
-            {creatureSyncStatus === "syncing" ? "Importing" : "Import"}
-          </button>
+          {importUrl.trim() ? (
+            <p className={styles.importDialogDetected}>
+              {detectedImportKind === "creature"
+                ? "Detected: Bestiary Builder creature"
+                : "Detected: D&D Beyond / Dicecloud character"}
+            </p>
+          ) : null}
+          {needsLogin ? (
+            <p className={styles.errorText}>
+              Sign in with Discord before importing creatures.
+            </p>
+          ) : dialogError ? (
+            <p className={styles.errorText}>{dialogError}</p>
+          ) : null}
+          <div className={styles.importDialogActions}>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => setIsImportOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={handleUnifiedImport}
+              disabled={!importUrl.trim() || isSyncing || needsLogin}
+            >
+              {actionLabel}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1455,27 +1540,27 @@ export default function AvraeCommandsPage(): ReactNode {
           </button>
           {pickerOpen ? (
             <div className={styles.csCreaturePickerMenu}>
-            {availableEntries.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                className={styles.csCreaturePickerOption}
-                onClick={() => {
-                  updateCharacterCreatureLinks(linkKind, [
-                    ...linkedIds,
-                    entry.id,
-                  ]);
-                  setOpenCreaturePicker(null);
-                }}
-              >
-                <strong>{entry.name}</strong>
-                <span>
-                  {entry.challengeRating != null
-                    ? `CR ${entry.challengeRating}`
-                    : "Creature"}
-                </span>
-              </button>
-            ))}
+              {availableEntries.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className={styles.csCreaturePickerOption}
+                  onClick={() => {
+                    updateCharacterCreatureLinks(linkKind, [
+                      ...linkedIds,
+                      entry.id,
+                    ]);
+                    setOpenCreaturePicker(null);
+                  }}
+                >
+                  <strong>{entry.name}</strong>
+                  <span>
+                    {entry.challengeRating != null
+                      ? `CR ${entry.challengeRating}`
+                      : "Creature"}
+                  </span>
+                </button>
+              ))}
             </div>
           ) : null}
         </div>
@@ -1518,14 +1603,12 @@ export default function AvraeCommandsPage(): ReactNode {
           </div>
         ) : (
           <div className={styles.csCreatureLinksEmpty}>
-            Import creature stats in the vault, then add them here.
+            Import creature stats in the collection, then add them here.
           </div>
         )}
       </div>
     );
   }
-
-  const displayName = user?.globalName || user?.username || "not signed in";
 
   return (
     <Layout
@@ -1535,35 +1618,40 @@ export default function AvraeCommandsPage(): ReactNode {
       <main className={styles.appPage}>
         <div className={styles.appShell}>
           <header className={styles.appHeader}>
-            <div>
-              <p className={styles.appTitle}>Avrae Commands</p>
-            </div>
+            {view === "vault" ? (
+              <button
+                type="button"
+                className={`${styles.primaryButton} ${styles.appHeaderAction}`}
+                onClick={() => setIsImportOpen(true)}
+              >
+                + Import
+              </button>
+            ) : null}
+            <p className={styles.appTitle}>Avrae Commands</p>
             <nav className={styles.appTabs} aria-label="Avrae tool sections">
-              {(["vault", "character", "modifiers"] as AppView[]).map((tab) => (
+              {(
+                [
+                  { id: "vault", label: "Collection" },
+                  { id: "character", label: "Active Character" },
+                  { id: "modifiers", label: "Modifiers" },
+                ] as { id: AppView; label: string }[]
+              ).map((tab) => (
                 <button
-                  key={tab}
+                  key={tab.id}
                   type="button"
-                  className={view === tab ? styles.appTabActive : styles.appTab}
-                  onClick={() => setView(tab)}
+                  className={
+                    view === tab.id ? styles.appTabActive : styles.appTab
+                  }
+                  onClick={() => setView(tab.id)}
                 >
-                  {tab}
+                  {tab.label}
                 </button>
               ))}
             </nav>
-            <div className={styles.appUser}>
-              {authLoading ? "checking..." : displayName}
-            </div>
           </header>
 
           {view === "vault" ? (
             <section className={styles.appView}>
-              <div className={styles.viewHeading}>
-                <h1>Vault</h1>
-                <p>
-                  Choose a character, companion, wildshape, or creature to use
-                  with Avrae commands.
-                </p>
-              </div>
               {!user ? (
                 <div className={styles.loginPrompt}>
                   <p>
@@ -1579,101 +1667,105 @@ export default function AvraeCommandsPage(): ReactNode {
                   </button>
                 </div>
               ) : null}
-              <label className={styles.vaultSearch}>
-                <span>Search vault</span>
-                <input
-                  type="search"
-                  placeholder="Search by name, type, CR, level, attack, or spell"
-                  value={vaultSearch}
-                  onChange={(event) => setVaultSearch(event.target.value)}
-                />
+              <label
+                htmlFor="vault-search-input"
+                className={styles.vaultSearchLabel}
+              >
+                Search collection
               </label>
+              <input
+                id="vault-search-input"
+                type="search"
+                className={styles.vaultSearchInput}
+                placeholder="Search by name, type, CR, level, attack, or spell"
+                value={vaultSearch}
+                onChange={(event) => setVaultSearch(event.target.value)}
+              />
+              {renderImportDialog()}
               <section className={styles.vaultSection}>
                 <div className={styles.vaultSectionHeader}>
-                  <h2>Character Stats</h2>
+                  <h2>Characters</h2>
                   <span>
                     {visibleCharacterEntries.length} of{" "}
                     {characterEntries.length} saved
                   </span>
                 </div>
-                {renderCharacterImportBar()}
-              <div className={styles.vaultGrid}>
-                {visibleCharacterEntries.map((entry) => (
-                  <article key={entry.id} className={styles.vaultCard}>
-                    <button
-                      type="button"
-                      className={styles.vaultCardMain}
-                      onClick={() => setActiveCharacter(entry)}
-                    >
-                      <span className={styles.vaultAvatar}>
-                        {entry.avatarUrl ? (
-                          <img
-                            src={entry.avatarUrl}
-                            alt={entry.name}
-                            className={styles.vaultAvatarImg}
-                          />
-                        ) : (
-                          entry.name.slice(0, 1)
-                        )}
-                      </span>
-                      <span>
-                        <strong>{entry.name}</strong>
-                        <em>
-                          {[
-                            entry.ancestry,
-                            entry.classes
-                              ?.map((item) => item.subclass || item.name)
-                              .join(" / "),
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </em>
-                        <small>
-                          {entry.sourceKind === "bestiary-builder"
-                            ? `CR ${entry.challengeRating ?? "?"} - ${entry.attacks.length} actions - ${entry.spells.length} spells`
-                            : `Level ${entry.level || "?"} - ${entry.attacks.length} attacks - ${entry.spells.length} spells`}
-                        </small>
-                      </span>
-                    </button>
-                    <div className={styles.vaultCardActions}>
-                      {entry.sourceKind === "bestiary-builder" ? (
-                        <a
-                          href={entry.sourceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Source
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => syncDdbCharacter(entry.sourceUrl)}
-                          disabled={syncStatus === "syncing"}
-                        >
-                          Refresh
-                        </button>
-                      )}
+                <div className={styles.vaultGrid}>
+                  {visibleCharacterEntries.map((entry) => (
+                    <article key={entry.id} className={styles.vaultCard}>
                       <button
                         type="button"
-                        onClick={() => removeCharacter(entry.id)}
+                        className={styles.vaultCardMain}
+                        onClick={() => setActiveCharacter(entry)}
                       >
-                        Remove
+                        <span className={styles.vaultAvatar}>
+                          {entry.avatarUrl ? (
+                            <img
+                              src={entry.avatarUrl}
+                              alt={entry.name}
+                              className={styles.vaultAvatarImg}
+                            />
+                          ) : (
+                            entry.name.slice(0, 1)
+                          )}
+                        </span>
+                        <span>
+                          <strong>{entry.name}</strong>
+                          <em>
+                            {[
+                              entry.ancestry,
+                              entry.classes
+                                ?.map((item) => item.subclass || item.name)
+                                .join(" / "),
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </em>
+                          <small>
+                            {entry.sourceKind === "bestiary-builder"
+                              ? `CR ${entry.challengeRating ?? "?"} - ${entry.attacks.length} actions - ${entry.spells.length} spells`
+                              : `Level ${entry.level || "?"} - ${entry.attacks.length} attacks - ${entry.spells.length} spells`}
+                          </small>
+                        </span>
                       </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                      <div className={styles.vaultCardActions}>
+                        {entry.sourceKind === "bestiary-builder" ? (
+                          <a
+                            href={entry.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Source
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => syncDdbCharacter(entry.sourceUrl)}
+                            disabled={syncStatus === "syncing"}
+                          >
+                            Refresh
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeCharacter(entry.id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               </section>
 
               <section className={styles.vaultSection}>
                 <div className={styles.vaultSectionHeader}>
-                  <h2>Creature Stats</h2>
+                  <h2>Creatures</h2>
                   <span>
                     {visibleCreatureEntries.length} of {creatureEntries.length}{" "}
                     saved
                   </span>
                 </div>
-                {renderCreatureImportBar()}
                 {visibleCreatureEntries.length > 0 ? (
                   <div className={styles.vaultGrid}>
                     {visibleCreatureEntries.map(renderVaultCard)}
@@ -1684,7 +1776,10 @@ export default function AvraeCommandsPage(): ReactNode {
                   </div>
                 ) : (
                   <div className={styles.emptyVaultSection}>
-                    <p>Import a Bestiary Builder link to add creature stat blocks here.</p>
+                    <p>
+                      Import a Bestiary Builder link to add creature stat blocks
+                      here.
+                    </p>
                   </div>
                 )}
               </section>
@@ -1702,7 +1797,9 @@ export default function AvraeCommandsPage(): ReactNode {
               {!character ? (
                 <div className={styles.viewHeading}>
                   <h1>Character Sheet</h1>
-                  <p>Select a character from the vault to view their sheet.</p>
+                  <p>
+                    Select a character from the collection to view their sheet.
+                  </p>
                 </div>
               ) : (
                 <div className={styles.csCommandGrid}>
@@ -1842,8 +1939,11 @@ export default function AvraeCommandsPage(): ReactNode {
                             const score = character.abilities?.[id];
                             const base = score != null ? abilityMod(score) : 0;
                             const pb = character.proficiencyBonus || 2;
-                            const fallbackTotal = base + proficiencyValue(prof, pb);
-                            const total = character.savingThrowTotals?.[id] ?? fallbackTotal;
+                            const fallbackTotal =
+                              base + proficiencyValue(prof, pb);
+                            const total =
+                              character.savingThrowTotals?.[id] ??
+                              fallbackTotal;
                             return (
                               <button
                                 key={id}
@@ -1882,8 +1982,10 @@ export default function AvraeCommandsPage(): ReactNode {
                             const score = character.abilities?.[ability];
                             const base = score != null ? abilityMod(score) : 0;
                             const pb = character.proficiencyBonus || 2;
-                            const fallbackTotal = base + proficiencyValue(prof, pb);
-                            const total = character.skillTotals?.[id] ?? fallbackTotal;
+                            const fallbackTotal =
+                              base + proficiencyValue(prof, pb);
+                            const total =
+                              character.skillTotals?.[id] ?? fallbackTotal;
                             return (
                               <button
                                 key={id}
@@ -2151,6 +2253,7 @@ export default function AvraeCommandsPage(): ReactNode {
                             <h2>Roll Modifiers</h2>
                             <button
                               type="button"
+                              className={styles.drawerCloseButton}
                               onClick={() => setOpenDrawer(null)}
                             >
                               close
@@ -2171,54 +2274,54 @@ export default function AvraeCommandsPage(): ReactNode {
                             </strong>
                           </div>
                           {kind !== "initiative" ? (
-                          <div className={styles.sideModifierGrid}>
-                            {availableModifiers.map((modifier) => {
-                              const isActive = activeModifierIds.includes(
-                                modifier.id,
-                              );
-                              return (
-                                <div
-                                  key={modifier.id}
-                                  className={
-                                    isActive
-                                      ? styles.sideModifierActive
-                                      : styles.sideModifier
-                                  }
-                                >
-                                  <label>
-                                    <input
-                                      type="checkbox"
-                                      checked={isActive}
-                                      onChange={() =>
-                                        toggleModifier(modifier.id)
-                                      }
-                                    />
-                                    <span>{modifier.name}</span>
-                                  </label>
-                                  {modifier.id === "builtin:bardic" &&
-                                  isActive ? (
-                                    <select
-                                      className={styles.modifierParamSelect}
-                                      value={
-                                        modifierParams[modifier.id] || "1d8"
-                                      }
-                                      onChange={(event) =>
-                                        setModifierParams((params) => ({
-                                          ...params,
-                                          [modifier.id]: event.target.value,
-                                        }))
-                                      }
-                                    >
-                                      <option value="1d6">d6</option>
-                                      <option value="1d8">d8</option>
-                                      <option value="1d10">d10</option>
-                                      <option value="1d12">d12</option>
-                                    </select>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
+                            <div className={styles.sideModifierGrid}>
+                              {availableModifiers.map((modifier) => {
+                                const isActive = activeModifierIds.includes(
+                                  modifier.id,
+                                );
+                                return (
+                                  <div
+                                    key={modifier.id}
+                                    className={
+                                      isActive
+                                        ? styles.sideModifierActive
+                                        : styles.sideModifier
+                                    }
+                                  >
+                                    <label>
+                                      <input
+                                        type="checkbox"
+                                        checked={isActive}
+                                        onChange={() =>
+                                          toggleModifier(modifier.id)
+                                        }
+                                      />
+                                      <span>{modifier.name}</span>
+                                    </label>
+                                    {modifier.id === "builtin:bardic" &&
+                                    isActive ? (
+                                      <select
+                                        className={styles.modifierParamSelect}
+                                        value={
+                                          modifierParams[modifier.id] || "1d8"
+                                        }
+                                        onChange={(event) =>
+                                          setModifierParams((params) => ({
+                                            ...params,
+                                            [modifier.id]: event.target.value,
+                                          }))
+                                        }
+                                      >
+                                        <option value="1d6">d6</option>
+                                        <option value="1d8">d8</option>
+                                        <option value="1d10">d10</option>
+                                        <option value="1d12">d12</option>
+                                      </select>
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           ) : null}
                           <section className={styles.rollFields}>
                             {kind === "initiative" ? (
@@ -2239,217 +2342,234 @@ export default function AvraeCommandsPage(): ReactNode {
                                 </div>
                                 {useGroupInitiative ? (
                                   <>
-                                <label>
-                                  <span>Group name</span>
-                                  <input
-                                    placeholder={character.name}
-                                    value={initiativeGroupName}
-                                    onChange={(event) =>
-                                      setInitiativeGroupName(event.target.value)
-                                    }
-                                  />
-                                </label>
-                                {!isCreatureSheet ? (
-                                  <label>
-                                    <span>Companion</span>
-                                    <div className={styles.csCreaturePicker}>
-                                      <button
-                                        type="button"
-                                        className={styles.csCreaturePickerButton}
-                                        disabled={!linkedCompanions.length}
-                                        aria-expanded={
-                                          openCreaturePicker ===
-                                          "initiative-companion"
-                                        }
-                                        onClick={() =>
-                                          setOpenCreaturePicker((current) =>
-                                            current === "initiative-companion"
-                                              ? null
-                                              : "initiative-companion",
+                                    <label>
+                                      <span>Group name</span>
+                                      <input
+                                        placeholder={character.name}
+                                        value={initiativeGroupName}
+                                        onChange={(event) =>
+                                          setInitiativeGroupName(
+                                            event.target.value,
                                           )
                                         }
-                                      >
-                                        <span>
-                                          {selectedInitiativeCompanion?.name ||
-                                            (linkedCompanions.length
-                                              ? "No companion"
-                                              : "No linked companions")}
-                                        </span>
-                                        <span aria-hidden="true">⌄</span>
-                                      </button>
-                                      {openCreaturePicker ===
-                                      "initiative-companion" ? (
+                                      />
+                                    </label>
+                                    {!isCreatureSheet ? (
+                                      <label>
+                                        <span>Companion</span>
                                         <div
-                                          className={
-                                            styles.csCreaturePickerMenu
-                                          }
+                                          className={styles.csCreaturePicker}
                                         >
                                           <button
                                             type="button"
                                             className={
-                                              styles.csCreaturePickerOption
+                                              styles.csCreaturePickerButton
                                             }
-                                            onClick={() => {
-                                              setInitiativeCompanionId("");
-                                              setInitiativeCompanionNickname("");
-                                              setOpenCreaturePicker(null);
-                                            }}
+                                            disabled={!linkedCompanions.length}
+                                            aria-expanded={
+                                              openCreaturePicker ===
+                                              "initiative-companion"
+                                            }
+                                            onClick={() =>
+                                              setOpenCreaturePicker(
+                                                (current) =>
+                                                  current ===
+                                                  "initiative-companion"
+                                                    ? null
+                                                    : "initiative-companion",
+                                              )
+                                            }
                                           >
-                                            <strong>No companion</strong>
-                                            <span>Only join character</span>
+                                            <span>
+                                              {selectedInitiativeCompanion?.name ||
+                                                (linkedCompanions.length
+                                                  ? "No companion"
+                                                  : "No linked companions")}
+                                            </span>
+                                            <span aria-hidden="true">⌄</span>
                                           </button>
-                                          {linkedCompanions.map((entry) => (
-                                            <button
-                                              key={entry.id}
-                                              type="button"
+                                          {openCreaturePicker ===
+                                          "initiative-companion" ? (
+                                            <div
                                               className={
-                                                styles.csCreaturePickerOption
+                                                styles.csCreaturePickerMenu
                                               }
-                                              onClick={() => {
-                                                setInitiativeCompanionId(
-                                                  entry.id,
-                                                );
-                                                setInitiativeCompanionNickname(
-                                                  entry.name,
-                                                );
-                                                setOpenCreaturePicker(null);
-                                              }}
                                             >
-                                              <strong>{entry.name}</strong>
-                                              <span>
-                                                {entry.challengeRating != null
-                                                  ? `CR ${entry.challengeRating}`
-                                                  : "Companion"}
-                                              </span>
-                                            </button>
-                                          ))}
+                                              <button
+                                                type="button"
+                                                className={
+                                                  styles.csCreaturePickerOption
+                                                }
+                                                onClick={() => {
+                                                  setInitiativeCompanionId("");
+                                                  setInitiativeCompanionNickname(
+                                                    "",
+                                                  );
+                                                  setOpenCreaturePicker(null);
+                                                }}
+                                              >
+                                                <strong>No companion</strong>
+                                                <span>Only join character</span>
+                                              </button>
+                                              {linkedCompanions.map((entry) => (
+                                                <button
+                                                  key={entry.id}
+                                                  type="button"
+                                                  className={
+                                                    styles.csCreaturePickerOption
+                                                  }
+                                                  onClick={() => {
+                                                    setInitiativeCompanionId(
+                                                      entry.id,
+                                                    );
+                                                    setInitiativeCompanionNickname(
+                                                      entry.name,
+                                                    );
+                                                    setOpenCreaturePicker(null);
+                                                  }}
+                                                >
+                                                  <strong>{entry.name}</strong>
+                                                  <span>
+                                                    {entry.challengeRating !=
+                                                    null
+                                                      ? `CR ${entry.challengeRating}`
+                                                      : "Companion"}
+                                                  </span>
+                                                </button>
+                                              ))}
+                                            </div>
+                                          ) : null}
                                         </div>
-                                      ) : null}
-                                    </div>
-                                  </label>
-                                ) : null}
-                                {selectedInitiativeCompanion ? (
-                                  <label>
-                                    <span>Companion nickname</span>
-                                    <input
-                                      value={initiativeCompanionNickname}
-                                      onChange={(event) =>
-                                        setInitiativeCompanionNickname(
-                                          event.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
-                                ) : null}
+                                      </label>
+                                    ) : null}
+                                    {selectedInitiativeCompanion ? (
+                                      <label>
+                                        <span>Companion nickname</span>
+                                        <input
+                                          value={initiativeCompanionNickname}
+                                          onChange={(event) =>
+                                            setInitiativeCompanionNickname(
+                                              event.target.value,
+                                            )
+                                          }
+                                        />
+                                      </label>
+                                    ) : null}
                                   </>
                                 ) : null}
                               </>
                             ) : (
                               <>
-                            {kind === "spell" &&
-                            selectedSpell &&
-                            selectedSpell.level > 0 ? (
-                              <label>
-                                <span>Cast level</span>
-                                <select
-                                  value={upcastLevel}
-                                  onChange={(event) =>
-                                    setUpcastLevel(event.target.value)
-                                  }
-                                >
-                                  <option value="base">
-                                    Base level {selectedSpell.level}
-                                  </option>
-                                  {Array.from(
-                                    { length: 9 - selectedSpell.level },
-                                    (_, index) =>
-                                      selectedSpell.level + index + 1,
-                                  ).map((level) => (
-                                    <option key={level} value={String(level)}>
-                                      Level {level}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            ) : null}
-                            <label>
-                              <span>Custom bonus</span>
-                              <input
-                                placeholder="e.g. 2 or 1d4"
-                                value={bonus}
-                                onChange={(event) =>
-                                  setBonus(event.target.value)
-                                }
-                              />
-                            </label>
-                            {kind === "attack" || kind === "spell" ? (
-                              <label>
-                                <span>Custom extra damage</span>
-                                <input
-                                  placeholder="e.g. 1d6[fire]"
-                                  value={damage}
-                                  onChange={(event) =>
-                                    setDamage(event.target.value)
-                                  }
-                                />
-                              </label>
-                            ) : null}
-                            {kind === "attack" || kind === "spell" ? (
-                              <label>
-                                <span>Targets</span>
-                                <input
-                                  placeholder="one per line or comma separated"
-                                  value={targets}
-                                  onChange={(event) =>
-                                    setTargets(event.target.value)
-                                  }
-                                />
-                              </label>
-                            ) : null}
-                            <label>
-                              <span>Flavor phrase</span>
-                              <input
-                                value={phrase}
-                                onChange={(event) =>
-                                  setPhrase(event.target.value)
-                                }
-                              />
-                            </label>
-                            <div className={styles.toggleRow}>
-                              <label>
-                                <input
-                                  type="checkbox"
-                                  checked={isCreatureSheet || initContext}
-                                  disabled={isCreatureSheet}
-                                  onChange={(event) =>
-                                    setInitContext(event.target.checked)
-                                  }
-                                />
-                                <span>Use initiative command</span>
-                              </label>
-                              <label>
-                                <input
-                                  type="checkbox"
-                                  checked={outOfTurn}
-                                  disabled={!isCreatureSheet && !initContext}
-                                  onChange={(event) =>
-                                    toggleOutOfTurn(event.target.checked)
-                                  }
-                                />
-                                <span>Out of turn</span>
-                              </label>
-                            </div>
-                            {(isCreatureSheet || initContext) && outOfTurn ? (
-                              <label>
-                                <span>Combatant name</span>
-                                <input
-                                  value={combatantName}
-                                  onChange={(event) =>
-                                    setCombatantName(event.target.value)
-                                  }
-                                />
-                              </label>
-                            ) : null}
+                                {kind === "spell" &&
+                                selectedSpell &&
+                                selectedSpell.level > 0 ? (
+                                  <label>
+                                    <span>Cast level</span>
+                                    <select
+                                      value={upcastLevel}
+                                      onChange={(event) =>
+                                        setUpcastLevel(event.target.value)
+                                      }
+                                    >
+                                      <option value="base">
+                                        Base level {selectedSpell.level}
+                                      </option>
+                                      {Array.from(
+                                        { length: 9 - selectedSpell.level },
+                                        (_, index) =>
+                                          selectedSpell.level + index + 1,
+                                      ).map((level) => (
+                                        <option
+                                          key={level}
+                                          value={String(level)}
+                                        >
+                                          Level {level}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                ) : null}
+                                <label>
+                                  <span>Custom bonus</span>
+                                  <input
+                                    placeholder="e.g. 2 or 1d4"
+                                    value={bonus}
+                                    onChange={(event) =>
+                                      setBonus(event.target.value)
+                                    }
+                                  />
+                                </label>
+                                {kind === "attack" || kind === "spell" ? (
+                                  <label>
+                                    <span>Custom extra damage</span>
+                                    <input
+                                      placeholder="e.g. 1d6[fire]"
+                                      value={damage}
+                                      onChange={(event) =>
+                                        setDamage(event.target.value)
+                                      }
+                                    />
+                                  </label>
+                                ) : null}
+                                {kind === "attack" || kind === "spell" ? (
+                                  <label>
+                                    <span>Targets</span>
+                                    <input
+                                      placeholder="one per line or comma separated"
+                                      value={targets}
+                                      onChange={(event) =>
+                                        setTargets(event.target.value)
+                                      }
+                                    />
+                                  </label>
+                                ) : null}
+                                <label>
+                                  <span>Flavor phrase</span>
+                                  <input
+                                    value={phrase}
+                                    onChange={(event) =>
+                                      setPhrase(event.target.value)
+                                    }
+                                  />
+                                </label>
+                                <div className={styles.toggleRow}>
+                                  <label>
+                                    <input
+                                      type="checkbox"
+                                      checked={isCreatureSheet || initContext}
+                                      disabled={isCreatureSheet}
+                                      onChange={(event) =>
+                                        setInitContext(event.target.checked)
+                                      }
+                                    />
+                                    <span>Use initiative command</span>
+                                  </label>
+                                  <label>
+                                    <input
+                                      type="checkbox"
+                                      checked={outOfTurn}
+                                      disabled={
+                                        !isCreatureSheet && !initContext
+                                      }
+                                      onChange={(event) =>
+                                        toggleOutOfTurn(event.target.checked)
+                                      }
+                                    />
+                                    <span>Out of turn</span>
+                                  </label>
+                                </div>
+                                {(isCreatureSheet || initContext) &&
+                                outOfTurn ? (
+                                  <label>
+                                    <span>Combatant name</span>
+                                    <input
+                                      value={combatantName}
+                                      onChange={(event) =>
+                                        setCombatantName(event.target.value)
+                                      }
+                                    />
+                                  </label>
+                                ) : null}
                               </>
                             )}
                           </section>
@@ -2470,6 +2590,7 @@ export default function AvraeCommandsPage(): ReactNode {
                             <h2>Targets</h2>
                             <button
                               type="button"
+                              className={styles.drawerCloseButton}
                               onClick={() => setOpenDrawer(null)}
                             >
                               close
@@ -2585,9 +2706,9 @@ export default function AvraeCommandsPage(): ReactNode {
           {view === "modifiers" ? (
             <section className={styles.appView}>
               <div className={styles.viewHeading}>
-                <h1>Modifier Forge</h1>
+                <h1>Modifier Builder</h1>
                 <p>
-                  Forge togglable buffs, debuffs, and conditions that stack onto
+                  Build togglable buffs, debuffs, and conditions that stack onto
                   rolls.
                 </p>
               </div>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
@@ -330,6 +331,14 @@ export default function RewardsCalculatorPage(): ReactNode {
   const [adventures, setAdventures] = useState<WestMarchesAdventure[]>([]);
 
   const [playerAdventureId, setPlayerAdventureId] = useState("");
+  const [isAdventureMenuOpen, setIsAdventureMenuOpen] = useState(false);
+  const [adventureMenuRect, setAdventureMenuRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+  const adventureMenuRef = useRef<HTMLDivElement>(null);
+  const adventurePanelRef = useRef<HTMLDivElement>(null);
   const [dmCharacterId, setDmCharacterId] = useState("");
   const [rpCharacterId, setRpCharacterId] = useState("");
   const [dmCharacterQuery, setDmCharacterQuery] = useState("");
@@ -342,6 +351,50 @@ export default function RewardsCalculatorPage(): ReactNode {
   );
   const [submissionMessage, setSubmissionMessage] = useState("");
   const [submissionError, setSubmissionError] = useState("");
+
+  useEffect(() => {
+    if (!isAdventureMenuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      const isInsideTrigger = adventureMenuRef.current?.contains(target);
+      const isInsidePanel = adventurePanelRef.current?.contains(target);
+      if (!isInsideTrigger && !isInsidePanel) {
+        setIsAdventureMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsAdventureMenuOpen(false);
+      }
+    }
+
+    function updatePosition() {
+      if (!adventureMenuRef.current) {
+        return;
+      }
+      const rect = adventureMenuRef.current.getBoundingClientRect();
+      setAdventureMenuRect({
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isAdventureMenuOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -447,21 +500,18 @@ export default function RewardsCalculatorPage(): ReactNode {
         setIsWestMarchesLoading(true);
         setWestMarchesError("");
 
-        const [
-          charactersResponse,
-          currenciesResponse,
-          adventuresResponse,
-        ] = await Promise.all([
-          fetch(`${authApiBaseUrl}/api/rewards/westmarches/characters`, {
-            credentials: "include",
-          }),
-          fetch(`${authApiBaseUrl}/api/rewards/westmarches/currencies`, {
-            credentials: "include",
-          }),
-          fetch(`${authApiBaseUrl}/api/rewards/westmarches/adventures`, {
-            credentials: "include",
-          }),
-        ]);
+        const [charactersResponse, currenciesResponse, adventuresResponse] =
+          await Promise.all([
+            fetch(`${authApiBaseUrl}/api/rewards/westmarches/characters`, {
+              credentials: "include",
+            }),
+            fetch(`${authApiBaseUrl}/api/rewards/westmarches/currencies`, {
+              credentials: "include",
+            }),
+            fetch(`${authApiBaseUrl}/api/rewards/westmarches/adventures`, {
+              credentials: "include",
+            }),
+          ]);
 
         const charactersPayload = await charactersResponse
           .json()
@@ -627,7 +677,6 @@ export default function RewardsCalculatorPage(): ReactNode {
       : Math.floor(dmSc / 2)
     : 0;
 
-
   const rpXp = Math.round((rpDuration * rpRewardRow.xpPerHour) / 3);
   const rpGold = Math.round((rpDuration * rpRewardRow.goldPerHour) / 3);
 
@@ -653,26 +702,23 @@ export default function RewardsCalculatorPage(): ReactNode {
   const selectedPlayerCharacterIds =
     selectedPlayerAdventure?.approvedCharacterIds || [];
 
-  const filteredDmCharacters = useMemo(
-    () => {
-      const gmDiscordId = selectedPlayerAdventure?.gm?.discordId;
-      const dmOwnedCharacters = gmDiscordId
-        ? characters.filter(
-            (character) => character.user?.discordId === gmDiscordId,
-          )
-        : characters;
-      const normalizedQuery = dmCharacterQuery.trim().toLowerCase();
+  const filteredDmCharacters = useMemo(() => {
+    const gmDiscordId = selectedPlayerAdventure?.gm?.discordId;
+    const dmOwnedCharacters = gmDiscordId
+      ? characters.filter(
+          (character) => character.user?.discordId === gmDiscordId,
+        )
+      : characters;
+    const normalizedQuery = dmCharacterQuery.trim().toLowerCase();
 
-      if (!normalizedQuery) {
-        return dmOwnedCharacters;
-      }
+    if (!normalizedQuery) {
+      return dmOwnedCharacters;
+    }
 
-      return dmOwnedCharacters.filter((character) =>
-        formatCharacterOption(character).toLowerCase().includes(normalizedQuery),
-      );
-    },
-    [characters, dmCharacterQuery, selectedPlayerAdventure],
-  );
+    return dmOwnedCharacters.filter((character) =>
+      formatCharacterOption(character).toLowerCase().includes(normalizedQuery),
+    );
+  }, [characters, dmCharacterQuery, selectedPlayerAdventure]);
   const rpCharacterList = user?.canSubmitRewards ? characters : myCharacters;
   const filteredRpCharacters = useMemo(
     () => filterCharacters(rpCharacterQuery, rpCharacterList),
@@ -836,7 +882,8 @@ export default function RewardsCalculatorPage(): ReactNode {
     const singleCharacterId = target === "dm" ? dmCharacterId : rpCharacterId;
     const setSingleCharacterId =
       target === "dm" ? setDmCharacterId : setRpCharacterId;
-    const characterQuery = target === "dm" ? dmCharacterQuery : rpCharacterQuery;
+    const characterQuery =
+      target === "dm" ? dmCharacterQuery : rpCharacterQuery;
     const setCharacterQuery =
       target === "dm" ? setDmCharacterQuery : setRpCharacterQuery;
     const filteredCharacters =
@@ -864,24 +911,101 @@ export default function RewardsCalculatorPage(): ReactNode {
 
     return (
       <div className={styles.submissionPanel}>
-        <p className={styles.muted}>{description}</p>
+        {description ? <p className={styles.muted}>{description}</p> : null}
         <div className={styles.submissionGrid}>
           {target === "player" ? (
             <div className={styles.field}>
-              <label htmlFor="player-adventure">Adventure</label>
-              <select
-                id="player-adventure"
-                className={styles.select}
-                value={playerAdventureId}
-                onChange={(event) => handleAdventureChange(event.target.value)}
+              <label
+                htmlFor="player-adventure"
+                className={styles.fieldSubheading}
               >
-                <option value="">Choose a recent adventure...</option>
-                {adventures.map((adventure) => (
-                  <option key={adventure.id} value={adventure.id}>
-                    {formatAdventureOption(adventure)}
-                  </option>
-                ))}
-              </select>
+                Adventure
+              </label>
+              <div className={styles.selectCombo} ref={adventureMenuRef}>
+                <button
+                  type="button"
+                  id="player-adventure"
+                  className={styles.selectTrigger}
+                  aria-haspopup="listbox"
+                  aria-expanded={isAdventureMenuOpen}
+                  onClick={() => {
+                    if (!isAdventureMenuOpen && adventureMenuRef.current) {
+                      const rect =
+                        adventureMenuRef.current.getBoundingClientRect();
+                      setAdventureMenuRect({
+                        top: rect.bottom + 6,
+                        left: rect.left,
+                        width: rect.width,
+                      });
+                    }
+                    setIsAdventureMenuOpen((open) => !open);
+                  }}
+                >
+                  <span
+                    className={
+                      selectedPlayerAdventure
+                        ? styles.selectTriggerValue
+                        : styles.selectTriggerPlaceholder
+                    }
+                  >
+                    {selectedPlayerAdventure
+                      ? formatAdventureOption(selectedPlayerAdventure)
+                      : "Choose a recent adventure..."}
+                  </span>
+                  <span className={styles.selectChevron} aria-hidden="true" />
+                </button>
+                {isAdventureMenuOpen && adventureMenuRect
+                  ? createPortal(
+                      <div
+                        ref={adventurePanelRef}
+                        className={styles.selectPanel}
+                        role="listbox"
+                        style={{
+                          top: adventureMenuRect.top,
+                          left: adventureMenuRect.left,
+                          width: adventureMenuRect.width,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={playerAdventureId === ""}
+                          className={`${styles.selectOption} ${
+                            playerAdventureId === ""
+                              ? styles.selectOptionActive
+                              : ""
+                          }`}
+                          onClick={() => {
+                            handleAdventureChange("");
+                            setIsAdventureMenuOpen(false);
+                          }}
+                        >
+                          Choose a recent adventure...
+                        </button>
+                        {adventures.map((adventure) => (
+                          <button
+                            key={adventure.id}
+                            type="button"
+                            role="option"
+                            aria-selected={adventure.id === playerAdventureId}
+                            className={`${styles.selectOption} ${
+                              adventure.id === playerAdventureId
+                                ? styles.selectOptionActive
+                                : ""
+                            }`}
+                            onClick={() => {
+                              handleAdventureChange(adventure.id);
+                              setIsAdventureMenuOpen(false);
+                            }}
+                          >
+                            {formatAdventureOption(adventure)}
+                          </button>
+                        ))}
+                      </div>,
+                      document.body,
+                    )
+                  : null}
+              </div>
               {selectedPlayerAdventure ? (
                 <div className={styles.selectionChips}>
                   {selectedPlayerCharacterIds.map((characterId) => (
@@ -895,16 +1019,6 @@ export default function RewardsCalculatorPage(): ReactNode {
           ) : (
             <div className={styles.field}>
               <label htmlFor={`${target}-character-search`}>Character</label>
-              {target === "dm" && selectedPlayerAdventure?.gm?.discordId ? (
-                <p className={styles.muted}>
-                  Showing characters owned by the selected adventure&apos;s DM.
-                </p>
-              ) : target === "dm" ? (
-                <p className={styles.muted}>
-                  Choose a player reward adventure first to filter this list to
-                  that adventure&apos;s DM.
-                </p>
-              ) : null}
               <input
                 id={`${target}-character-search`}
                 className={styles.input}
@@ -1065,7 +1179,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               ) : null}
 
               <section className={`${styles.panel} ${styles.rewardPanel}`}>
-                <Heading as="h2">Player Rewards</Heading>
+                <Heading as="h3">Player Rewards</Heading>
                 <div
                   className={`${styles.rewardGrid} ${hasEventCurrency ? styles.rewardGridQuad : styles.rewardGridTriple}`}
                 >
@@ -1089,7 +1203,9 @@ export default function RewardsCalculatorPage(): ReactNode {
                   </div>
                   {hasEventCurrency ? (
                     <div className={styles.rewardCard}>
-                      <span className={styles.rewardLabel}>{eventCurrencyName}</span>
+                      <span className={styles.rewardLabel}>
+                        {eventCurrencyName}
+                      </span>
                       <span className={styles.rewardValue}>
                         {formatReward(playerRf)}
                       </span>
@@ -1098,7 +1214,8 @@ export default function RewardsCalculatorPage(): ReactNode {
                 </div>
                 {hasEventCurrency ? (
                   <p className={styles.muted}>
-                    {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"} of SC for player rewards.
+                    {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"}{" "}
+                    of SC for player rewards.
                   </p>
                 ) : null}
                 {appliesEventRewardBonus ? (
@@ -1109,7 +1226,7 @@ export default function RewardsCalculatorPage(): ReactNode {
                 {user?.canSubmitRewards
                   ? renderRewardSubmissionControls(
                       "player",
-                      "Choose the adventure that received these player rewards. Approved player characters on that adventure will receive the calculated reward package.",
+                      "",
                       playerReason,
                       setPlayerReason,
                       playerDefaultReason,
@@ -1118,7 +1235,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               </section>
 
               <section className={`${styles.panel} ${styles.rewardPanel}`}>
-                <Heading as="h2">DM Rewards</Heading>
+                <Heading as="h3">DM Rewards</Heading>
                 <div
                   className={`${styles.rewardGrid} ${hasEventCurrency ? styles.rewardGridQuad : styles.rewardGridTriple}`}
                 >
@@ -1142,7 +1259,9 @@ export default function RewardsCalculatorPage(): ReactNode {
                   </div>
                   {hasEventCurrency ? (
                     <div className={styles.rewardCard}>
-                      <span className={styles.rewardLabel}>{eventCurrencyName}</span>
+                      <span className={styles.rewardLabel}>
+                        {eventCurrencyName}
+                      </span>
                       <span className={styles.rewardValue}>
                         {formatReward(dmRf)}
                       </span>
@@ -1151,7 +1270,8 @@ export default function RewardsCalculatorPage(): ReactNode {
                 </div>
                 {hasEventCurrency ? (
                   <p className={styles.muted}>
-                    {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"} of SC for DM rewards.
+                    {eventCurrencyName} pays {isEventRelated ? "100%" : "50%"}{" "}
+                    of SC for DM rewards.
                   </p>
                 ) : null}
                 {appliesEventRewardBonus ? (
@@ -1159,26 +1279,17 @@ export default function RewardsCalculatorPage(): ReactNode {
                     Event quest bonus adds 50% to DM XP, gold, and SC.
                   </p>
                 ) : null}
-                {dmScMultiplier > 1 ? (
-                  <p className={styles.muted}>
-                    Quests below level 10 grant DMs twice the usual SC.
-                  </p>
-                ) : null}
                 <p className={styles.muted}>
-                  DM rewards use an effective quest level of{" "}
-                  <strong>{safeQuestLevel + dmBonusLevel}</strong> based on{" "}
+                  Effective quest level{" "}
+                  <strong>{safeQuestLevel + dmBonusLevel}</strong> for{" "}
                   <strong>{safePlayers}</strong> player
-                  {safePlayers === 1 ? "" : "s"}.
+                  {safePlayers === 1 ? "" : "s"}
+                  {dmBonusLevel > 0 ? ` (+${dmBonusLevel} bonus)` : ""}.
                 </p>
-                <div className={styles.callout}>
-                  The DM also picks one of their own characters to reward. That
-                  character&apos;s effective quest level increases by{" "}
-                  <strong>+{dmBonusLevel}</strong> based on player count.
-                </div>
                 {user?.canSubmitRewards
                   ? renderRewardSubmissionControls(
                       "dm",
-                      "Search and select the single DM character that should receive the DM reward package.",
+                      "",
                       dmReason,
                       setDmReason,
                       dmDefaultReason,

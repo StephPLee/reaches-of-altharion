@@ -58,24 +58,28 @@
 }
 
 .staffToggle {
-    border: 1px solid rgba(202, 168, 255, 0.28);
+    border: 1px solid rgba(190, 176, 138, 0.38);
     border-radius: 0.55rem;
-    background: rgba(24, 21, 52, 0.7);
-    color: #f0e5ff;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.92);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 2.75rem;
     padding: 0.75rem 1rem;
-    font-weight: 600;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 .staffToggle:hover,
 .staffToggle:focus-visible {
-    color: #ffffff;
-    border-color: rgba(224, 232, 255, 0.34);
-    background: rgba(37, 31, 76, 0.92);
+    color: #f5e9c8;
+    border-color: rgba(210, 192, 145, 0.68);
+    background: rgba(8, 9, 19, 0.8);
 }
 
 .contentGrid {
@@ -223,67 +227,51 @@
 }
 
 .deleteButton {
-    border: 1px solid rgba(255, 181, 198, 0.18);
-    border-radius: 999px;
-    background: rgba(58, 22, 42, 0.46);
-    color: #ffdbe4;
+    border: 1px solid rgba(255, 181, 198, 0.24);
+    border-radius: 0.5rem;
+    background: rgba(9, 11, 24, 0.6);
+    color: #ffb4c8;
     cursor: pointer;
     flex-shrink: 0;
     min-height: 2rem;
     padding: 0.35rem 0.7rem;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 .editButton,
 .secondaryActionButton {
-    border: 1px solid rgba(196, 215, 255, 0.18);
-    border-radius: 999px;
-    background: rgba(17, 26, 56, 0.52);
-    color: #edf1ff;
+    border: 1px solid rgba(190, 176, 138, 0.3);
+    border-radius: 0.5rem;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.9);
     cursor: pointer;
     min-height: 2rem;
     padding: 0.35rem 0.7rem;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 .editButton:hover,
 .editButton:focus-visible,
 .secondaryActionButton:hover,
 .secondaryActionButton:focus-visible {
-    background: rgba(29, 42, 85, 0.72);
-    border-color: rgba(224, 232, 255, 0.28);
-    color: #ffffff;
-}
-
-.editButton,
-.secondaryActionButton {
-    border: 1px solid rgba(196, 215, 255, 0.18);
-    border-radius: 999px;
-    background: rgba(17, 26, 56, 0.52);
-    color: #edf1ff;
-    cursor: pointer;
-    min-height: 2rem;
-    padding: 0.35rem 0.7rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.editButton:hover,
-.editButton:focus-visible,
-.secondaryActionButton:hover,
-.secondaryActionButton:focus-visible {
-    background: rgba(29, 42, 85, 0.72);
-    border-color: rgba(224, 232, 255, 0.28);
-    color: #ffffff;
+    background: rgba(8, 9, 19, 0.8);
+    border-color: rgba(210, 192, 145, 0.62);
+    color: #f5e9c8;
 }
 
 .deleteButton:hover,
 .deleteButton:focus-visible {
-    background: rgba(83, 26, 54, 0.68);
-    border-color: rgba(255, 210, 221, 0.28);
-    color: #fff0f4;
+    background: rgba(58, 22, 34, 0.55);
+    border-color: rgba(255, 181, 198, 0.5);
+    color: #ffd6e0;
 }
 
 .deleteButton:disabled {
@@ -703,31 +691,30 @@
     align-items: center;
     justify-content: center;
     min-height: 2.6rem;
-    padding: 0.7rem 1rem;
-    border: 1px solid rgba(202, 168, 255, 0.28);
-    border-radius: 999px;
-    background: rgba(24, 21, 52, 0.7);
-    color: #f0e5ff;
-    font-weight: 600;
+    padding: 0.7rem 1.4rem;
+    border: 1px solid rgba(190, 176, 138, 0.4);
+    border-radius: 0.65rem;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.92);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 .actionButton:hover,
 .actionButton:focus-visible {
-    color: #ffffff;
-    border-color: rgba(224, 232, 255, 0.34);
-    background: rgba(37, 31, 76, 0.92);
+    color: #f5e9c8;
+    border-color: rgba(210, 192, 145, 0.68);
+    background: rgba(8, 9, 19, 0.8);
 }
 
 .actionButton:disabled {
     cursor: wait;
-    opacity: 0.72;
+    opacity: 0.55;
 }
 
-.staffToggle,
-.editButton,
-.secondaryActionButton,
-.deleteButton,
-.actionButton,
 .datePickerButton,
 .datePickerNav,
 .datePickerFooterButton,

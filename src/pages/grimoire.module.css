@@ -24,70 +24,84 @@
 .appShell {
     position: relative;
     width: min(1240px, calc(100% - 2rem));
-    min-height: calc(100vh - 9rem);
     margin: 0 auto;
-    border: 1px solid rgba(190, 176, 138, 0.1);
+    border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 1.25rem;
-    background: rgba(8, 9, 19, 0.2);
+    background: rgba(8, 10, 20, 0.58);
+    box-shadow: 0 24px 60px rgba(2, 4, 12, 0.44);
+    backdrop-filter: blur(6px);
     overflow: visible;
 }
 
 .appHeader {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(14rem, 1fr) auto minmax(12rem, 1fr);
-    gap: 1.2rem;
-    align-items: start;
-    padding: 1.45rem 1.6rem 1rem;
-    border-bottom: 1px solid rgba(190, 176, 138, 0.12);
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 1.6rem 1.6rem 1rem;
+}
+
+.appHeaderAction {
+    position: absolute;
+    top: 1.6rem;
+    right: 1.6rem;
 }
 
 .appTitle {
     margin: 0;
-    color: #f4ecff;
-    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    font-size: 1.45rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    color: rgba(210, 192, 145, 0.9);
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-variant: small-caps;
+    letter-spacing: 0.03em;
+    text-transform: none;
 }
 
 .appSubtitle {
     margin: 0.35rem 0 0;
-    color: rgba(232, 225, 241, 0.72);
+    color: rgba(215, 222, 242, 0.78);
     font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
     font-style: italic;
 }
 
 .appTabs {
-    display: inline-flex;
-    gap: 0.3rem;
-    padding: 0.35rem;
-    border: 1px solid rgba(190, 176, 138, 0.16);
-    border-radius: 999px;
-    background: rgba(6, 8, 18, 0.72);
+    display: flex;
+    gap: 0;
 }
 
 .appTab,
 .appTabActive {
     min-height: 1.85rem;
     border: 0;
-    border-radius: 999px;
-    background: transparent;
-    color: rgba(216, 208, 229, 0.72);
+    border-right: 1px solid rgba(190, 176, 138, 0.2);
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    color: rgba(215, 222, 242, 0.65);
     cursor: pointer;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    padding: 0.35rem 0.82rem;
+    padding: 0.5rem 1rem;
     text-transform: uppercase;
-    transition: background-color 140ms ease, color 140ms ease;
+    transition:
+        color 140ms ease,
+        border-color 140ms ease;
+}
+
+.appTab:last-child,
+.appTabActive:last-child {
+    border-right: none;
+}
+
+.appTab:hover {
+    color: rgba(232, 225, 241, 0.85);
 }
 
 .appTabActive {
-    background: linear-gradient(135deg, rgba(196, 176, 134, 0.28), rgba(128, 109, 74, 0.22));
-    box-shadow: 0 0 0 1px rgba(212, 193, 148, 0.22) inset, 0 4px 10px rgba(0, 0, 0, 0.18);
-    color: #fff7e6;
+    border-bottom-color: rgba(202, 168, 255, 0.7);
+    color: #f0e8fb;
 }
 
 a.appTab,
@@ -97,24 +111,15 @@ a.appTabActive {
     text-decoration: none;
 }
 
-.appUser {
-    justify-self: end;
-    color: rgba(232, 225, 241, 0.7);
-    font-size: 0.82rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
 .appShell input,
 .appShell select,
 .appShell textarea {
     width: 100%;
     min-height: 2.35rem;
-    border: 1px solid rgba(190, 176, 138, 0.22);
+    border: 1px solid rgba(190, 176, 138, 0.28);
     border-radius: 0.65rem;
-    background: rgba(5, 6, 14, 0.56);
-    color: #f4ecff;
+    background: rgba(8, 9, 19, 0.7);
+    color: #ece2ff;
     font: inherit;
     padding: 0.55rem 0.65rem;
 }
@@ -133,20 +138,52 @@ a.appTabActive {
 
 .viewHeading {
     margin-bottom: 1.35rem;
+    text-align: center;
 }
 
 .viewHeading h1 {
+    position: relative;
     margin: 0;
-    color: #f4ecff;
-    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    font-size: 1.45rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    padding-top: 1.5rem;
+    color: #e4d1ff;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.03em;
+    text-transform: none;
+}
+
+.viewHeading h1::before {
+    content: "";
+    position: absolute;
+    top: 0.55rem;
+    left: 50%;
+    width: 6rem;
+    height: 1px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(190, 176, 138, 0.45),
+        transparent
+    );
+}
+
+.viewHeading h1::after {
+    content: "";
+    position: absolute;
+    top: 0.05rem;
+    left: 50%;
+    width: 0.9rem;
+    height: 0.9rem;
+    transform: translateX(-50%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d2c091' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z'/%3E%3Cpath d='M20 3v4'/%3E%3Cpath d='M22 5h-4'/%3E%3Cpath d='M4 17v2'/%3E%3Cpath d='M5 18H3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 
 .viewHeading p {
     margin: 0.3rem 0 0;
-    color: rgba(232, 225, 241, 0.72);
+    color: rgba(215, 222, 242, 0.78);
     font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
     font-style: italic;
 }
@@ -163,14 +200,10 @@ a.appTabActive {
     margin-top: 1.25rem;
 }
 
-.vaultSearch {
-    display: grid;
-    gap: 0.4rem;
-    margin: 0 0 1.15rem;
-}
-
-.vaultSearch span {
-    color: rgba(232, 225, 241, 0.68);
+.vaultSearchLabel {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: rgba(210, 192, 145, 0.82);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.75rem;
     font-weight: 800;
@@ -178,53 +211,86 @@ a.appTabActive {
     text-transform: uppercase;
 }
 
-.vaultImportBar {
-    display: grid;
-    grid-template-columns: auto minmax(16rem, 1fr);
-    gap: 1rem;
-    align-items: center;
-    padding: 0.65rem 0.8rem;
-    border: 1px dashed rgba(190, 176, 138, 0.18);
-    border-radius: 0.85rem;
-    background: rgba(15, 16, 32, 0.46);
+.vaultSearchInput {
+    width: 100%;
+    margin-bottom: 1.4rem;
 }
 
-.vaultImportHeading {
+.importDialogOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    min-width: 11rem;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(4, 5, 12, 0.72);
+    backdrop-filter: blur(3px);
 }
 
-.vaultImportHeading strong {
-    color: #f4ecff;
-    font-size: 1.1rem;
+.importDialogPanel {
+    width: min(30rem, 100%);
+    display: grid;
+    gap: 0.9rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(190, 176, 138, 0.3);
+    border-radius: 1rem;
+    background: rgba(10, 11, 24, 0.98);
+    box-shadow: 0 24px 60px rgba(2, 4, 12, 0.5);
+}
+
+.importDialogHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.importDialogHeader h2 {
+    margin: 0;
+    color: #e4d1ff;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
+}
+
+.importDialogClose {
+    border: 0;
+    background: none;
+    color: rgba(215, 222, 242, 0.6);
+    cursor: pointer;
+    font-size: 1.6rem;
     line-height: 1;
+    padding: 0.1rem 0.3rem;
 }
 
-.vaultImportHeading span {
-    color: rgba(232, 225, 241, 0.78);
+.importDialogClose:hover {
+    color: #f5e9c8;
+}
+
+.importDialogHint {
+    margin: 0;
+    color: rgba(215, 222, 242, 0.78);
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.importDialogDetected {
+    margin: 0;
+    color: rgba(210, 192, 145, 0.85);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    font-size: 0.82rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
-.vaultImportForm {
+.importDialogActions {
     display: flex;
-    gap: 0.55rem;
-    align-items: center;
-    min-width: 0;
-}
-
-.vaultImportForm input {
-    flex: 1;
-    min-width: 0;
-}
-
-.vaultImportForm .primaryButton {
-    min-height: 2.35rem;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 0.3rem;
 }
 
 .vaultSection:first-of-type {
@@ -232,26 +298,58 @@ a.appTabActive {
 }
 
 .vaultSectionHeader {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    padding-bottom: 0.35rem;
-    border-bottom: 1px solid rgba(190, 176, 138, 0.12);
+    position: relative;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.18);
+    text-align: center;
 }
 
 .vaultSectionHeader h2 {
+    position: relative;
     margin: 0;
-    color: #f4ecff;
-    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    font-size: 0.95rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    padding-top: 1.5rem;
+    color: #e4d1ff;
+    font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.03em;
+    text-transform: none;
+}
+
+.vaultSectionHeader h2::before {
+    content: "";
+    position: absolute;
+    top: 0.55rem;
+    left: 50%;
+    width: 6rem;
+    height: 1px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(190, 176, 138, 0.45),
+        transparent
+    );
+}
+
+.vaultSectionHeader h2::after {
+    content: "";
+    position: absolute;
+    top: 0.05rem;
+    left: 50%;
+    width: 0.9rem;
+    height: 0.9rem;
+    transform: translateX(-50%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d2c091' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z'/%3E%3Cpath d='M20 3v4'/%3E%3Cpath d='M22 5h-4'/%3E%3Cpath d='M4 17v2'/%3E%3Cpath d='M5 18H3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 
 .vaultSectionHeader span {
-    color: rgba(232, 225, 241, 0.56);
-    font-size: 0.78rem;
+    position: absolute;
+    right: 0;
+    bottom: 0.7rem;
+    color: rgba(210, 192, 145, 0.7);
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -263,35 +361,38 @@ a.appTabActive {
     justify-content: space-between;
     gap: 1rem;
     padding: 0.9rem 1rem;
-    border: 1px dashed rgba(190, 176, 138, 0.18);
+    border: 1px dashed rgba(190, 176, 138, 0.24);
     border-radius: 1rem;
-    background: rgba(15, 16, 32, 0.42);
+    background: rgba(9, 11, 24, 0.42);
 }
 
 .emptyVaultSection p {
     margin: 0;
-    color: rgba(232, 225, 241, 0.72);
+    color: rgba(215, 222, 242, 0.78);
 }
 
 .emptyVaultSection a {
     flex-shrink: 0;
-    border: 1px solid rgba(202, 168, 255, 0.18);
-    border-radius: 999px;
-    background: rgba(7, 8, 18, 0.56);
-    color: #e8e1f1;
+    border: 1px solid rgba(190, 176, 138, 0.35);
+    border-radius: 0.6rem;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.92);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 0.38rem 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.42rem 0.9rem;
     text-decoration: none;
 }
 
 .vaultCard,
 .addCharacterCard,
 .sheetPanel,
-.modEditor,
-.modLibraryItem {
-    border: 1px solid rgba(190, 176, 138, 0.2);
+.modEditor {
+    border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 1rem;
-    background: rgba(15, 16, 32, 0.76);
+    background: rgba(9, 11, 24, 0.6);
 }
 
 .vaultCard {
@@ -308,9 +409,9 @@ a.appTabActive {
     align-items: center;
     min-height: 5.1rem;
     padding: 0.75rem 0.85rem;
-    border: 1px solid rgba(190, 176, 138, 0.2);
+    border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 0.85rem;
-    background: rgba(15, 16, 32, 0.76);
+    background: rgba(9, 11, 24, 0.6);
 }
 
 .vaultCardMain {
@@ -368,7 +469,7 @@ a.appTabActive {
 .actionCardActive strong,
 .modLibraryItem strong {
     display: block;
-    color: #f4ecff;
+    color: #ece2ff;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -378,7 +479,7 @@ a.appTabActive {
 .vaultCreatureCard em,
 .characterStrip em {
     display: block;
-    color: rgba(232, 225, 241, 0.72);
+    color: rgba(215, 222, 242, 0.78);
     font-style: normal;
 }
 
@@ -387,7 +488,7 @@ a.appTabActive {
 .actionCard span,
 .actionCardActive span,
 .modLibraryItem span {
-    color: rgba(232, 225, 241, 0.64);
+    color: rgba(215, 222, 242, 0.6);
 }
 
 .vaultCardActions {
@@ -401,16 +502,32 @@ a.appTabActive {
 .vaultCardActions a,
 .csCommandBar button,
 .sideHeader button {
-    border: 1px solid rgba(190, 176, 138, 0.18);
-    border-radius: 999px;
-    background: rgba(7, 8, 18, 0.56);
-    color: #e8e1f1;
+    border: 1px solid rgba(190, 176, 138, 0.3);
+    border-radius: 0.5rem;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.9);
     cursor: pointer;
-    font: inherit;
-    font-size: 0.8rem;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     line-height: 1;
-    padding: 0.28rem 0.7rem;
+    padding: 0.35rem 0.75rem;
+    text-transform: uppercase;
     text-decoration: none;
+    transition:
+        border-color 140ms ease,
+        background-color 140ms ease,
+        color 140ms ease;
+}
+
+.vaultCardActions button:hover,
+.vaultCardActions a:hover,
+.csCommandBar button:hover,
+.sideHeader button:hover {
+    border-color: rgba(210, 192, 145, 0.62);
+    background: rgba(8, 9, 19, 0.8);
+    color: #f5e9c8;
 }
 
 .commandBar button {
@@ -435,12 +552,12 @@ a.appTabActive {
 }
 
 .addCharacterHeading strong {
-    color: #f4ecff;
+    color: #ece2ff;
     font-size: 1.3rem;
 }
 
 .addCharacterHeading span {
-    color: rgba(232, 225, 241, 0.78);
+    color: rgba(210, 192, 145, 0.82);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -472,35 +589,43 @@ a.appTabActive {
 }
 
 .rollTabs {
-    display: inline-flex;
-    gap: 0.25rem;
+    display: flex;
+    gap: 0;
     margin-bottom: 1rem;
-    padding: 0.3rem;
-    border: 1px solid rgba(190, 176, 138, 0.14);
-    border-radius: 999px;
-    background: rgba(6, 8, 18, 0.62);
 }
 
 .rollTab,
 .rollTabActive {
     border: 0;
-    border-radius: 999px;
-    background: transparent;
-    color: rgba(232, 225, 241, 0.6);
+    border-right: 1px solid rgba(190, 176, 138, 0.2);
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    color: rgba(215, 222, 242, 0.65);
     cursor: pointer;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    padding: 0.35rem 0.85rem;
+    padding: 0.5rem 1rem;
     text-transform: uppercase;
-    transition: background-color 140ms ease, color 140ms ease;
+    transition:
+        color 140ms ease,
+        border-color 140ms ease;
+}
+
+.rollTab:last-child,
+.rollTabActive:last-child {
+    border-right: none;
+}
+
+.rollTab:hover {
+    color: rgba(232, 225, 241, 0.85);
 }
 
 .rollTabActive {
-    background: linear-gradient(135deg, rgba(196, 176, 134, 0.26), rgba(128, 109, 74, 0.2));
-    box-shadow: 0 0 0 1px rgba(212, 193, 148, 0.2) inset;
-    color: #fff7e6;
+    border-bottom-color: rgba(202, 168, 255, 0.7);
+    color: #f0e8fb;
 }
 
 .actionGrid {
@@ -520,7 +645,7 @@ a.appTabActive {
 
 .actionGroup h3 {
     margin: 0.4rem 0 0;
-    color: rgba(232, 225, 241, 0.74);
+    color: rgba(210, 192, 145, 0.78);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -530,9 +655,9 @@ a.appTabActive {
 .actionCardActive {
     align-self: start;
     min-height: 3.75rem;
-    border: 1px solid rgba(190, 176, 138, 0.18);
+    border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 0.85rem;
-    background: rgba(15, 16, 32, 0.72);
+    background: rgba(9, 11, 24, 0.6);
     cursor: pointer;
     padding: 0.8rem 0.9rem;
     text-align: left;
@@ -559,7 +684,7 @@ a.appTabActive {
 
 .sideHeader h2 {
     margin: 0;
-    color: #f4ecff;
+    color: #e4d1ff;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.95rem;
     letter-spacing: 0.1em;
@@ -571,10 +696,14 @@ a.appTabActive {
     padding: 0.28rem 0.55rem;
 }
 
+.drawerCloseButton {
+    display: none;
+}
+
 .sideModifierGrid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.35rem;
+    gap: 0;
 }
 
 .sideModifier,
@@ -582,18 +711,28 @@ a.appTabActive {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    border: 1px solid rgba(190, 176, 138, 0.18);
-    border-radius: 0.5rem;
-    background: rgba(15, 16, 32, 0.62);
-    color: #e8e1f1;
+    border: 0;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 0;
+    background: none;
+    color: #ece2ff;
     cursor: pointer;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.06em;
     line-height: 1.15;
-    padding: 0.32rem 0.45rem;
+    padding: 0.5rem 0.3rem;
     text-transform: uppercase;
+}
+
+.sideModifierGrid > .sideModifier:last-child,
+.sideModifierGrid > .sideModifierActive:last-child {
+    border-bottom: 0;
+}
+
+.sideModifier:hover {
+    background: rgba(72, 54, 126, 0.16);
 }
 
 .sideModifier label,
@@ -651,8 +790,8 @@ a.appTabActive {
 }
 
 .sideModifierActive {
-    border-color: rgba(202, 168, 255, 0.54);
-    background: rgba(72, 54, 126, 0.44);
+    background: rgba(72, 54, 126, 0.28);
+    box-shadow: inset 2px 0 0 rgba(202, 168, 255, 0.7);
 }
 
 .rollFields {
@@ -668,7 +807,7 @@ a.appTabActive {
 
 .rollFields span,
 .manualAction span {
-    color: rgba(232, 225, 241, 0.62);
+    color: rgba(210, 192, 145, 0.78);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.68rem;
     font-weight: 800;
@@ -679,7 +818,7 @@ a.appTabActive {
 .rollFields input,
 .rollFields select {
     min-height: 2.15rem;
-    background: rgba(5, 6, 14, 0.34);
+    background: rgba(8, 9, 19, 0.6);
     padding: 0.4rem 0.55rem;
 }
 
@@ -689,13 +828,13 @@ a.appTabActive {
     gap: 0.8rem;
     align-items: center;
     padding: 0.65rem 0.85rem;
-    border: 1px solid rgba(190, 176, 138, 0.18);
+    border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 0.85rem;
-    background: rgba(5, 6, 14, 0.55);
+    background: rgba(8, 9, 19, 0.7);
 }
 
 .csCommandBar span {
-    color: rgba(232, 225, 241, 0.7);
+    color: rgba(210, 192, 145, 0.78);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.72rem;
     letter-spacing: 0.08em;
@@ -771,11 +910,11 @@ a.appTabActive {
     width: 2.45rem;
     flex-shrink: 0;
     min-height: 8.5rem;
-    border: 1px solid rgba(202, 168, 255, 0.32);
+    border: 1px solid rgba(190, 176, 138, 0.28);
     border-left: none;
     border-radius: 0 0.85rem 0.85rem 0;
-    background: rgba(18, 17, 36, 0.96);
-    color: #f4ecff;
+    background: rgba(9, 11, 24, 0.92);
+    color: rgba(210, 192, 145, 0.9);
     cursor: pointer;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.68rem;
@@ -798,8 +937,8 @@ a.appTabActive {
     border: 1px solid rgba(190, 176, 138, 0.28);
     border-left: none;
     border-radius: 0 0.85rem 0.85rem 0;
-    background: rgba(18, 17, 36, 0.96);
-    color: #f4ecff;
+    background: rgba(9, 11, 24, 0.92);
+    color: rgba(210, 192, 145, 0.9);
     cursor: pointer;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.68rem;
@@ -866,11 +1005,44 @@ a.appTabActive {
     max-height: calc(100vh - 6.5rem);
     border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 0 0 1rem 0;
-    background:
-        radial-gradient(circle at 30% 0%, rgba(82, 57, 132, 0.18), transparent 24rem),
-        rgba(10, 11, 24, 0.98);
+    background: rgba(9, 11, 24, 0.92);
     box-shadow: 0 20px 54px rgba(2, 4, 12, 0.42);
     padding: 1.2rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(210, 192, 145, 0.55) rgba(8, 9, 19, 0.3);
+}
+
+.csModifierDrawerInner::-webkit-scrollbar,
+.csTargetDrawerInner::-webkit-scrollbar {
+    width: 0.7rem;
+}
+
+.csModifierDrawerInner::-webkit-scrollbar-track,
+.csTargetDrawerInner::-webkit-scrollbar-track {
+    background: rgba(8, 9, 19, 0.3);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(190, 176, 138, 0.1);
+}
+
+.csModifierDrawerInner::-webkit-scrollbar-thumb,
+.csTargetDrawerInner::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgba(210, 192, 145, 0.65) 0%,
+        rgba(202, 168, 255, 0.42) 100%
+    );
+    background-clip: padding-box;
+}
+
+.csModifierDrawerInner::-webkit-scrollbar-thumb:hover,
+.csTargetDrawerInner::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        rgba(222, 202, 156, 0.78) 0%,
+        rgba(212, 178, 255, 0.52) 100%
+    );
 }
 
 .csTargetDrawerInner {
@@ -891,7 +1063,7 @@ a.appTabActive {
 
 .csTargetHint {
     margin: 0;
-    color: rgba(232, 225, 241, 0.42);
+    color: rgba(215, 222, 242, 0.5);
     font-size: 0.8rem;
     font-style: italic;
 }
@@ -911,7 +1083,7 @@ a.appTabActive {
 .csTargetInput,
 .csCombatantList {
     scrollbar-width: thin;
-    scrollbar-color: rgba(222, 231, 255, 0.62) rgba(7, 11, 38, 0.3);
+    scrollbar-color: rgba(210, 192, 145, 0.55) rgba(8, 9, 19, 0.3);
 }
 
 .csTargetInput::-webkit-scrollbar,
@@ -921,9 +1093,9 @@ a.appTabActive {
 
 .csTargetInput::-webkit-scrollbar-track,
 .csCombatantList::-webkit-scrollbar-track {
-    background: rgba(7, 11, 38, 0.3);
+    background: rgba(8, 9, 19, 0.3);
     border-radius: 999px;
-    box-shadow: inset 0 0 0 1px rgba(123, 145, 219, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(190, 176, 138, 0.1);
 }
 
 .csTargetInput::-webkit-scrollbar-thumb,
@@ -932,21 +1104,18 @@ a.appTabActive {
     border-radius: 999px;
     background: linear-gradient(
         180deg,
-        rgba(222, 231, 255, 0.72) 0%,
-        rgba(160, 180, 240, 0.46) 100%
+        rgba(210, 192, 145, 0.65) 0%,
+        rgba(202, 168, 255, 0.42) 100%
     );
     background-clip: padding-box;
-    box-shadow:
-        inset 0 0 0 1px rgba(245, 248, 255, 0.12),
-        0 4px 10px rgba(4, 7, 24, 0.16);
 }
 
 .csTargetInput::-webkit-scrollbar-thumb:hover,
 .csCombatantList::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(
         180deg,
-        rgba(236, 242, 255, 0.82) 0%,
-        rgba(176, 196, 250, 0.56) 100%
+        rgba(222, 202, 156, 0.78) 0%,
+        rgba(212, 178, 255, 0.52) 100%
     );
 }
 
@@ -956,38 +1125,41 @@ a.appTabActive {
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    border: 1px solid rgba(190, 176, 138, 0.14);
-    border-radius: 0.5rem;
-    background: rgba(6, 8, 18, 0.38);
+    border: 0;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0;
+    background: none;
     color: rgba(232, 225, 241, 0.82);
     cursor: pointer;
     font-size: 0.84rem;
-    padding: 0.35rem 0.55rem;
+    padding: 0.4rem 0.3rem;
     text-align: left;
 }
 
+.csCombatantList > .csCombatantItem:last-child,
+.csCombatantList > .csCombatantItemActive:last-child {
+    border-bottom: 0;
+}
+
 .csCombatantItem:hover {
-    border-color: rgba(202, 168, 255, 0.32);
-    background: rgba(72, 54, 126, 0.28);
+    background: rgba(72, 54, 126, 0.16);
 }
 
 .csCombatantItemActive {
-    border-color: rgba(202, 168, 255, 0.5);
-    background: rgba(72, 54, 126, 0.42);
+    background: rgba(72, 54, 126, 0.28);
+    box-shadow: inset 2px 0 0 rgba(202, 168, 255, 0.7);
     color: #f4ecff;
 }
 
 .selectedCommandSummary {
     display: grid;
     gap: 0.25rem;
-    padding: 0.65rem 0.75rem;
-    border: 1px solid rgba(202, 168, 255, 0.2);
-    border-radius: 0.75rem;
-    background: rgba(6, 8, 18, 0.42);
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.18);
 }
 
 .selectedCommandSummary span {
-    color: rgba(232, 225, 241, 0.58);
+    color: rgba(210, 192, 145, 0.75);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.6rem;
     font-weight: 800;
@@ -1029,10 +1201,10 @@ a.appTabActive {
 
 .csReturnButton {
     margin-left: auto;
-    border: 1px solid rgba(190, 176, 138, 0.22);
-    border-radius: 999px;
-    background: rgba(6, 8, 18, 0.52);
-    color: rgba(232, 225, 241, 0.78);
+    border: 1px solid rgba(190, 176, 138, 0.3);
+    border-radius: 0.5rem;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.85);
     cursor: pointer;
     flex-shrink: 0;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
@@ -1044,25 +1216,24 @@ a.appTabActive {
 }
 
 .csReturnButton:hover {
-    border-color: rgba(202, 168, 255, 0.4);
-    background: rgba(72, 54, 126, 0.26);
-    color: #f4ecff;
+    border-color: rgba(210, 192, 145, 0.6);
+    background: rgba(8, 9, 19, 0.8);
+    color: #f5e9c8;
 }
 
 .csStatBar {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.55rem;
 }
 
 .csStat {
     display: grid;
     place-items: center;
-    min-width: 5rem;
     padding: 0.55rem 0.8rem;
     border: 1px solid rgba(190, 176, 138, 0.2);
     border-radius: 0.85rem;
-    background: rgba(15, 16, 32, 0.76);
+    background: rgba(8, 9, 19, 0.55);
     gap: 0.1rem;
     text-align: center;
 }
@@ -1071,11 +1242,10 @@ a.appTabActive {
 .csStatButtonActive {
     display: grid;
     place-items: center;
-    min-width: 5rem;
     padding: 0.55rem 0.8rem;
     border: 1px solid rgba(190, 176, 138, 0.2);
     border-radius: 0.85rem;
-    background: rgba(15, 16, 32, 0.76);
+    background: rgba(8, 9, 19, 0.55);
     color: inherit;
     cursor: pointer;
     gap: 0.1rem;
@@ -1089,7 +1259,7 @@ a.appTabActive {
 }
 
 .csStatLabel {
-    color: rgba(232, 225, 241, 0.6);
+    color: rgba(210, 192, 145, 0.75);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.6rem;
     font-weight: 800;
@@ -1118,15 +1288,15 @@ a.appTabActive {
 }
 
 .csSection {
-    border: 1px solid rgba(190, 176, 138, 0.2);
+    border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 1rem;
-    background: rgba(15, 16, 32, 0.76);
+    background: rgba(9, 11, 24, 0.6);
     padding: 0.85rem;
 }
 
 .csSectionTitle {
     margin: 0 0 0.65rem;
-    color: #f4ecff;
+    color: #e4d1ff;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.7rem;
     font-weight: 800;
@@ -1144,13 +1314,13 @@ a.appTabActive {
     display: grid;
     gap: 0.12rem;
     padding: 0.45rem 0.55rem;
-    border: 1px solid rgba(190, 176, 138, 0.16);
+    border: 1px solid rgba(190, 176, 138, 0.2);
     border-radius: 0.75rem;
-    background: rgba(6, 8, 18, 0.42);
+    background: rgba(8, 9, 19, 0.55);
 }
 
 .csAbilityLabel {
-    color: rgba(232, 225, 241, 0.6);
+    color: rgba(210, 192, 145, 0.72);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.58rem;
     font-weight: 800;
@@ -1174,17 +1344,9 @@ a.appTabActive {
 }
 
 .csAbilityMod {
-    display: grid;
-    place-items: center;
-    min-width: 1.7rem;
-    height: 1.7rem;
-    padding: 0 0.25rem;
-    border: 1px solid rgba(202, 168, 255, 0.28);
-    border-radius: 0.4rem;
-    background: rgba(72, 54, 126, 0.32);
-    color: #f4ecff;
+    color: rgba(202, 168, 255, 0.92);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
-    font-size: 0.72rem;
+    font-size: 0.85rem;
     font-weight: 800;
     white-space: nowrap;
 }
@@ -1234,7 +1396,7 @@ a.appTabActive {
 }
 
 .csSaveAbility {
-    color: rgba(232, 225, 241, 0.52);
+    color: rgba(210, 192, 145, 0.65);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.6rem;
     font-weight: 800;
@@ -1244,10 +1406,10 @@ a.appTabActive {
 
 .csOverrideBtn {
     align-self: center;
-    border: 1px solid rgba(190, 176, 138, 0.18);
-    border-radius: 999px;
-    background: rgba(7, 8, 18, 0.56);
-    color: rgba(232, 225, 241, 0.6);
+    border: 1px solid rgba(190, 176, 138, 0.3);
+    border-radius: 0.5rem;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.75);
     cursor: pointer;
     font: inherit;
     font-size: 0.72rem;
@@ -1272,7 +1434,7 @@ a.appTabActive {
 }
 
 .csOverrideField span {
-    color: rgba(232, 225, 241, 0.62);
+    color: rgba(210, 192, 145, 0.75);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.6rem;
     font-weight: 800;
@@ -1288,35 +1450,44 @@ a.appTabActive {
 
 .csTabBar {
     display: flex;
-    gap: 0.3rem;
+    gap: 0;
     margin-bottom: 0.75rem;
-    padding: 0.28rem;
-    border-radius: 999px;
-    background: rgba(6, 8, 18, 0.52);
-    border: 1px solid rgba(190, 176, 138, 0.14);
 }
 
 .csTab,
 .csTabActive {
     flex: 1;
     border: 0;
-    border-radius: 999px;
-    background: transparent;
-    color: rgba(232, 225, 241, 0.6);
+    border-right: 1px solid rgba(190, 176, 138, 0.2);
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    color: rgba(215, 222, 242, 0.65);
     cursor: pointer;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.66rem;
     font-weight: 800;
     letter-spacing: 0.08em;
-    padding: 0.3rem 0.7rem;
+    padding: 0.4rem 0.7rem;
     text-transform: uppercase;
-    transition: background-color 140ms ease, color 140ms ease;
+    text-align: center;
+    transition:
+        color 140ms ease,
+        border-color 140ms ease;
+}
+
+.csTab:last-child,
+.csTabActive:last-child {
+    border-right: none;
+}
+
+.csTab:hover {
+    color: rgba(232, 225, 241, 0.85);
 }
 
 .csTabActive {
-    background: linear-gradient(135deg, rgba(196, 176, 134, 0.28), rgba(128, 109, 74, 0.22));
-    box-shadow: 0 0 0 1px rgba(212, 193, 148, 0.2) inset;
-    color: #fff7e6;
+    border-bottom-color: rgba(202, 168, 255, 0.7);
+    color: #f0e8fb;
 }
 
 .csProfDot,
@@ -1351,7 +1522,7 @@ a.appTabActive {
 
 .csAttackList {
     display: grid;
-    gap: 0.4rem;
+    gap: 0;
 }
 
 .csAttackRow,
@@ -1359,19 +1530,28 @@ a.appTabActive {
     display: grid;
     gap: 0.12rem;
     width: 100%;
-    padding: 0.5rem 0.6rem;
-    border: 1px solid rgba(190, 176, 138, 0.14);
-    border-radius: 0.65rem;
-    background: rgba(6, 8, 18, 0.38);
+    padding: 0.5rem 0.3rem;
+    border: 0;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.14);
+    border-radius: 0;
+    background: none;
     color: inherit;
     cursor: pointer;
     text-align: left;
 }
 
+.csAttackList > .csAttackRow:last-child,
+.csAttackList > .csAttackRowActive:last-child {
+    border-bottom: 0;
+}
+
 .csAttackRow:hover,
 .csAttackRowActive {
-    border-color: rgba(202, 168, 255, 0.46);
-    background: rgba(72, 54, 126, 0.32);
+    background: rgba(72, 54, 126, 0.16);
+}
+
+.csAttackRowActive {
+    box-shadow: inset 2px 0 0 rgba(202, 168, 255, 0.7);
 }
 
 .csAttackRow strong,
@@ -1498,7 +1678,7 @@ a.appTabActive {
 
 .csSpellGroupTitle {
     margin: 0 0 0.3rem;
-    color: rgba(232, 225, 241, 0.58);
+    color: rgba(210, 192, 145, 0.7);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.63rem;
     font-weight: 800;
@@ -1555,7 +1735,7 @@ a.appTabActive {
 
 .csCreatureLinksHeader h3 {
     margin: 0;
-    color: #f4ecff;
+    color: #e4d1ff;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.82rem;
     font-weight: 800;
@@ -1564,7 +1744,7 @@ a.appTabActive {
 }
 
 .csCreatureLinksHeader span {
-    color: rgba(232, 225, 241, 0.46);
+    color: rgba(210, 192, 145, 0.65);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.62rem;
     font-weight: 800;
@@ -1591,9 +1771,9 @@ a.appTabActive {
     gap: 0.75rem;
     width: 100%;
     min-height: 2.35rem;
-    border: 1px solid rgba(190, 176, 138, 0.18);
+    border: 1px solid rgba(190, 176, 138, 0.28);
     border-radius: 0.65rem;
-    background: rgba(6, 8, 18, 0.58);
+    background: rgba(8, 9, 19, 0.7);
     color: #ece2ff;
     font: inherit;
     padding: 0.45rem 0.65rem;
@@ -1680,32 +1860,37 @@ a.appTabActive {
 
 .csLinkedCreatureList {
     display: grid;
-    gap: 0.4rem;
+    gap: 0;
 }
 
 .csLinkedCreatureRow {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.45rem;
-    align-items: stretch;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.14);
+}
+
+.csLinkedCreatureList > .csLinkedCreatureRow:last-child {
+    border-bottom: 0;
 }
 
 .csLinkedCreatureMain {
     display: grid;
     gap: 0.12rem;
     min-width: 0;
-    border: 1px solid rgba(190, 176, 138, 0.14);
-    border-radius: 0.65rem;
-    background: rgba(6, 8, 18, 0.38);
+    border: 0;
+    border-radius: 0.4rem;
+    background: none;
     color: inherit;
     cursor: pointer;
-    padding: 0.5rem 0.6rem;
+    padding: 0.3rem;
     text-align: left;
 }
 
 .csLinkedCreatureMain:hover {
-    border-color: rgba(202, 168, 255, 0.46);
-    background: rgba(72, 54, 126, 0.32);
+    background: rgba(72, 54, 126, 0.16);
 }
 
 .csLinkedCreatureMain strong {
@@ -1750,7 +1935,7 @@ a.appTabActive {
 .sheetPanel h2,
 .modLibrary h2 {
     margin: 0 0 0.9rem;
-    color: #f4ecff;
+    color: #e4d1ff;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.95rem;
     letter-spacing: 0.08em;
@@ -1784,11 +1969,16 @@ a.appTabActive {
 .modLibrary {
     display: grid;
     align-content: start;
-    gap: 0.6rem;
+    gap: 0;
 }
 
 .modLibraryItem {
-    padding: 0.8rem;
+    padding: 0.6rem 0.3rem;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.16);
+}
+
+.modLibrary > .modLibraryItem:last-child {
+    border-bottom: 0;
 }
 
 @media screen and (max-width: 996px) {
@@ -1798,7 +1988,6 @@ a.appTabActive {
 
     .appShell {
         width: 100%;
-        min-height: calc(100vh - 7.8rem);
         border-left: 0;
         border-right: 0;
         border-radius: 0;
@@ -1810,6 +1999,11 @@ a.appTabActive {
     .modForgeGrid,
     .csBody {
         grid-template-columns: 1fr;
+    }
+
+    .appHeaderAction {
+        position: static;
+        margin-top: 0.4rem;
     }
 
     .csCommandGrid {
@@ -1824,6 +2018,10 @@ a.appTabActive {
         position: static;
     }
 
+    .drawerCloseButton {
+        display: inline-flex;
+    }
+
     .csModifierDrawerHandle {
         position: fixed;
         top: auto;
@@ -1831,7 +2029,7 @@ a.appTabActive {
         bottom: 5.2rem;
         min-width: 2.7rem;
         min-height: 2.7rem;
-        border: 1px solid rgba(202, 168, 255, 0.32);
+        border: 1px solid rgba(190, 176, 138, 0.28);
         border-radius: 999px;
         padding: 0.55rem;
         writing-mode: horizontal-tb;
@@ -1903,10 +2101,6 @@ a.appTabActive {
         overflow-x: auto;
     }
 
-    .appUser {
-        justify-self: start;
-    }
-
     .actionGrid,
     .sideModifierGrid {
         grid-template-columns: 1fr;
@@ -1966,13 +2160,13 @@ a.appTabActive {
     letter-spacing: 0.02em;
     text-transform: none;
     font-variant: normal;
-    color: #f4ecff;
+    color: rgba(210, 192, 145, 0.9);
 }
 
 .hero p {
     margin: 0;
     max-width: 58rem;
-    color: #d6ddef;
+    color: rgba(215, 222, 242, 0.86);
     line-height: 1.7;
 }
 
@@ -1997,23 +2191,20 @@ a.appTabActive {
 
 .panel {
     padding: 1.35rem;
-    border: 1px solid rgba(190, 176, 138, 0.16);
+    border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 1rem;
-    background: rgba(13, 15, 29, 0.82);
-    box-shadow:
-        0 10px 22px rgba(2, 4, 12, 0.16),
-        0 1px 0 rgba(233, 221, 186, 0.06) inset;
+    background: rgba(9, 11, 24, 0.55);
 }
 
 .panel h2 {
     margin-top: 0;
     font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
-    color: #f0e8fb;
+    color: #e4d1ff;
 }
 
 .panel p,
 .panel li {
-    color: #d4dbed;
+    color: rgba(215, 222, 242, 0.86);
     line-height: 1.65;
 }
 
@@ -2028,10 +2219,10 @@ a.appTabActive {
     min-height: 2.1rem;
     align-items: center;
     padding: 0.4rem 0.85rem;
-    border: 1px solid rgba(202, 168, 255, 0.28);
+    border: 1px solid rgba(190, 176, 138, 0.35);
     border-radius: 999px;
-    background: rgba(24, 21, 52, 0.68);
-    color: #f0e5ff;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.9);
     font-weight: 700;
 }
 
@@ -2048,7 +2239,7 @@ a.appTabActive {
 }
 
 .panelHeader span {
-    color: rgba(214, 221, 239, 0.72);
+    color: rgba(210, 192, 145, 0.75);
     font-size: 0.84rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -2060,22 +2251,25 @@ a.appTabActive {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.4rem;
     padding: 0.35rem;
-    border: 1px solid rgba(202, 168, 255, 0.18);
+    border: 1px solid rgba(190, 176, 138, 0.22);
     border-radius: 0.85rem;
-    background: rgba(6, 8, 18, 0.62);
+    background: rgba(8, 9, 19, 0.7);
 }
 
 .segmented button,
 .copyButton,
 .primaryButton,
 .secondaryButton {
-    border: 1px solid rgba(202, 168, 255, 0.18);
+    border: 1px solid rgba(190, 176, 138, 0.4);
     border-radius: 0.65rem;
-    background: rgba(20, 23, 42, 0.76);
-    color: #f0e8fb;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.92);
     cursor: pointer;
-    font: inherit;
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.82rem;
     font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .segmented button {
@@ -2088,8 +2282,9 @@ a.appTabActive {
 .primaryButton:hover,
 .secondaryButton:hover,
 .segmentActive {
-    border-color: rgba(202, 168, 255, 0.48) !important;
-    background: rgba(72, 54, 126, 0.72) !important;
+    border-color: rgba(210, 192, 145, 0.65) !important;
+    background: rgba(8, 9, 19, 0.85) !important;
+    color: #f5e9c8 !important;
 }
 
 .formGrid {
@@ -2109,13 +2304,13 @@ a.appTabActive {
 
 .inlineHeader h3 {
     margin: 0;
-    color: #f0e8fb;
+    color: #e4d1ff;
     font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
     font-size: 1.45rem;
 }
 
 .inlineHeader span {
-    color: rgba(214, 221, 239, 0.7);
+    color: rgba(210, 192, 145, 0.75);
     font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -2312,7 +2507,7 @@ a.appTabActive {
 
 .savedModifierList {
     display: grid;
-    gap: 0.5rem;
+    gap: 0;
     margin-top: 1rem;
 }
 
@@ -2321,12 +2516,17 @@ a.appTabActive {
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.55rem 0.75rem;
-    border: 1px solid rgba(190, 176, 138, 0.14);
-    border-radius: 0.85rem;
-    background: rgba(6, 8, 18, 0.5);
+    padding: 0.55rem 0.3rem;
+    border: 0;
+    border-bottom: 1px solid rgba(190, 176, 138, 0.16);
+    border-radius: 0;
+    background: none;
     color: #d6ddef;
     font-weight: 700;
+}
+
+.savedModifierList > .savedModifierItem:last-child {
+    border-bottom: 0;
 }
 
 .savedModifierItem input[type="checkbox"] {
@@ -2458,9 +2658,9 @@ a.appTabActive {
     gap: 1rem;
     margin-bottom: 1rem;
     padding: 0.9rem 1rem;
-    border: 1px solid rgba(202, 168, 255, 0.18);
+    border: 1px solid rgba(190, 176, 138, 0.28);
     border-radius: 1rem;
-    background: rgba(6, 8, 18, 0.52);
+    background: rgba(9, 11, 24, 0.55);
 }
 
 .loginPrompt p {
