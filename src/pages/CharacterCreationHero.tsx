@@ -39,7 +39,7 @@ const STEPS: Step[] = [
   },
   {
     icon: Compass,
-    title: "2. Join the Discord",
+    title: "2. Join the Server",
     detail:
       "Log into WestMarches.games with your Discord account to manage your character and join sessions.",
   },
@@ -57,7 +57,8 @@ const BASICS = [
   {
     icon: TrendingUp,
     title: "Leveling",
-    detail: "Start anywhere from level 1 to level 4. XP is tracked automatically.",
+    detail:
+      "Start anywhere from level 1 to level 4. XP is tracked automatically.",
   },
   {
     icon: Layers,
@@ -72,15 +73,15 @@ const BASICS = [
   {
     icon: BookOpen,
     title: "Content",
-    detail: "Use 2024 PHB content; 2014 content without a reprint is also allowed.",
+    detail:
+      "Use 2024 PHB content; 2014 content without a reprint is also allowed.",
   },
 ];
 
-export default function CharacterCreationHero({
-  discordInviteUrl,
-}: {
-  discordInviteUrl: string;
-}): ReactNode {
+const SERVER_JOIN_URL =
+  "https://www.westmarches.games/communities/reaches-of-altharion";
+
+export default function CharacterCreationHero(): ReactNode {
   return (
     <>
       <header className={styles.hero}>
@@ -97,8 +98,8 @@ export default function CharacterCreationHero({
         </h2>
         <p className={styles.introText}>
           Creating a character is the first step in your journey across the
-          Reaches of Altharion. This guide will walk you through everything
-          you need to know to craft a hero worthy of legend.
+          Reaches of Altharion. This guide will walk you through everything you
+          need to know to craft a hero worthy of legend.
         </p>
       </section>
 
@@ -127,11 +128,11 @@ export default function CharacterCreationHero({
         </div>
         <a
           className={styles.discordLink}
-          href={discordInviteUrl}
+          href={SERVER_JOIN_URL}
           target="_blank"
           rel="noreferrer"
         >
-          Join our Discord &rarr;
+          Join our Server &rarr;
         </a>
       </section>
 

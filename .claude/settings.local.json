@@ -79,7 +79,24 @@
       "Bash(curl -s -o /dev/null -w \"http_code=%{http_code}\\\\n\" http://localhost:3100/avrae --max-time 5)",
       "Bash(grep -n \"fetch\\(\\\\`\\\\${\" \"C:\\\\Users\\\\Steph\\\\reaches-of-altharion\\\\src\\\\pages\\\\avrae.tsx\")",
       "Bash(grep -n \"^\\\\.csCombatantItem,\\\\|^\\\\.csCombatantItem {\" -A 12 \"C:\\\\Users\\\\Steph\\\\reaches-of-altharion\\\\src\\\\pages\\\\grimoire.module.css\")",
-      "Bash(grep -n \"^\\\\.modLibrary\\\\b\\\\|^\\\\.modLibraryItem\\\\b\\\\|^\\\\.vaultCard,$\" -A 10 \"C:\\\\Users\\\\Steph\\\\reaches-of-altharion\\\\src\\\\pages\\\\grimoire.module.css\")"
+      "Bash(grep -n \"^\\\\.modLibrary\\\\b\\\\|^\\\\.modLibraryItem\\\\b\\\\|^\\\\.vaultCard,$\" -A 10 \"C:\\\\Users\\\\Steph\\\\reaches-of-altharion\\\\src\\\\pages\\\\grimoire.module.css\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3100/avrae)",
+      "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/avrae-fieldcode.js\")",
+      "Bash(sed -i \"s#/c/Users/Steph/reaches-of-altharion/node_modules/playwright#C:/Users/Steph/reaches-of-altharion/node_modules/playwright#\" \"C:/Users/Steph/AppData/Local/Temp/pwtest/avrae-fieldcode.js\")",
+      "Bash(find / -maxdepth 6 -iname \"playwright\" -type d 2>/dev/null | grep -v node_modules/.cache)",
+      "Bash(npm ls *)",
+      "Bash(npm root *)",
+      "Bash(timeout 20 cat \"C:\\\\Users\\\\Steph\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Steph-reaches-of-altharion\\\\5d371ed7-98e4-4307-af75-13538ee6626a\\\\tasks\\\\by053ts1r.output\")",
+      "Bash(npm list *)",
+      "Bash(where npx *)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(find 'C:\\\\Users\\\\Steph/AppData/Local/npm-cache/_npx' -maxdepth 2 -iname *playwright*)",
+      "Bash(node -e \"require.resolve\\('playwright'\\)\")",
+      "Bash(sed -i \"s/targets: \\\\['attacks'\\\\]/appliesTo: ['attacks']/\" \"C:/Users/Steph/AppData/Local/Temp/pwtest/avrae-debug.js\" \"C:/Users/Steph/AppData/Local/Temp/pwtest/avrae-fieldcode.js\")",
+      "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/avrae-debug.js\")",
+      "Bash(grep -rl \"GuildLoreIndex\" docs)",
+      "Bash(grep -rl \"lore home for guild identity\" docs)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\")"
     ]
   }
 }

@@ -374,26 +374,43 @@
     }
 
     .card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.35rem 0.75rem;
+        align-items: start;
         padding: 0.55rem 0.2rem;
     }
 
     .statsRow {
-        flex: 0 0 100%;
+        grid-column: 1 / -1;
+        flex: none;
         flex-wrap: wrap;
     }
 
     .rollerText {
-        flex: 1 1 auto;
+        min-width: 0;
+        flex: none;
         font-size: 0.85rem;
     }
 
     .dateText {
-        flex: 0 0 auto;
+        justify-self: end;
+        flex: none;
         font-size: 0.85rem;
     }
 
     .cardActions {
+        grid-column: 1 / -1;
+        min-width: 0;
         margin-left: 0;
+    }
+
+    .claimedLabel {
+        width: 100%;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        line-height: 1.35;
     }
 }
 

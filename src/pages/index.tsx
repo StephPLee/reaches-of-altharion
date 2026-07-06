@@ -451,7 +451,7 @@ function HomepageHeader() {
             aria-label={siteConfig.title}
           >
             <img
-              src="/img/A%20logo%20gold.png"
+              src="/img/full%20logo%20gold.png"
               alt=""
               className={styles.cornerLogoImage}
             />
@@ -689,7 +689,7 @@ function HomepageHeader() {
             className={styles.heroButton}
             onClick={() => setHasEnteredMapMode(true)}
           >
-            Enter the Wiki
+            Join the Reach
           </button>
         </m.div>
       </header>

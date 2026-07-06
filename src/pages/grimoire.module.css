@@ -2001,9 +2001,26 @@ a.appTabActive {
         grid-template-columns: 1fr;
     }
 
+    .appHeader {
+        justify-items: stretch;
+        padding: 1.6rem 1.25rem 1rem;
+        text-align: center;
+    }
+
+    .appTitle {
+        order: 1;
+    }
+
+    .appTabs {
+        order: 2;
+        justify-content: center;
+    }
+
     .appHeaderAction {
         position: static;
-        margin-top: 0.4rem;
+        order: 3;
+        width: 100%;
+        margin-top: 0.6rem;
     }
 
     .csCommandGrid {
@@ -2360,7 +2377,7 @@ a.appTabActive {
     display: grid;
     gap: 0.38rem;
     color: #d4dbed;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .field span {
@@ -2378,6 +2395,7 @@ a.appTabActive {
     background: rgba(6, 8, 18, 0.72);
     color: #f4ecff;
     font: inherit;
+    font-weight: 400;
     padding: 0.65rem 0.75rem;
 }
 
@@ -2400,7 +2418,7 @@ a.appTabActive {
     align-items: center;
     gap: 0.5rem;
     color: #d6ddef;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .toggleRow input[type="checkbox"] {
@@ -2461,7 +2479,7 @@ a.appTabActive {
     align-items: center;
     gap: 0.45rem;
     color: #d6ddef;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .checkboxGrid input[type="checkbox"] {
@@ -2522,7 +2540,7 @@ a.appTabActive {
     border-radius: 0;
     background: none;
     color: #d6ddef;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .savedModifierList > .savedModifierItem:last-child {

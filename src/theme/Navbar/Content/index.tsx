@@ -49,10 +49,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "The World of Altharion",
-    links: [
-      { label: "World Map", to: "/?view=world" },
-      { label: "Guild Lore", to: "/docs/world/guild-lore" },
-    ],
+    links: [{ label: "World Map", to: "/?view=world" }],
   },
   {
     title: "Player Information",
@@ -518,10 +515,16 @@ function NavbarAuthControls({
   async function handleLogout() {
     try {
       setIsSubmitting(true);
-      await fetch(`${apiBaseUrl}/auth/logout`, {
+      const response = await fetch(`${apiBaseUrl}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
+
+      if (!response.ok) {
+        setAuthNotice(`Sign out failed (${response.status}). Please try again.`);
+        return;
+      }
+
       setUser(null);
       onNavigate?.();
       const returnTo =
@@ -530,6 +533,10 @@ function NavbarAuthControls({
         window.location.hash;
       window.location.href =
         window.location.pathname === "/admin" ? "/?view=map" : returnTo;
+    } catch {
+      setAuthNotice(
+        "Sign out failed. Please check your connection and try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }

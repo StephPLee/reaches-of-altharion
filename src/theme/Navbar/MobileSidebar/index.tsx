@@ -20,10 +20,7 @@ const NAV_GROUPS = [
   },
   {
     title: "The World of Altharion",
-    links: [
-      { label: "World Map", to: "/?view=world" },
-      { label: "Guild Lore", to: "/docs/world/guild-lore" },
-    ],
+    links: [{ label: "World Map", to: "/?view=world" }],
   },
   {
     title: "Player Information",

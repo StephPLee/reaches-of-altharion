@@ -281,10 +281,6 @@ const config: Config = {
               to: "/?view=world",
               label: "World Map",
             },
-            {
-              to: "/docs/world/guild-lore",
-              label: "Guild Lore",
-            },
           ],
         },
       ],
