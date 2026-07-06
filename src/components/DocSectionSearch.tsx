@@ -282,10 +282,7 @@ export default function DocSectionSearch({
           </button>
         </div>
       </div>
-      <p className={styles.searchHint}>
-        Search filters by heading and content. Matching sections open while a
-        search is active.
-      </p>
+
       <p className={styles.count}>
         Showing {counts.visible} of {counts.total} {nounPlural}.
       </p>

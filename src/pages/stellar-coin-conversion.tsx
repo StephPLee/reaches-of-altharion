@@ -3,7 +3,6 @@ import { useState } from "react";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 
-import ToolsSidebarFrame from "../components/ToolsSidebarFrame";
 import styles from "./rewards-calculator.module.css";
 
 type ConversionRow = {
@@ -54,10 +53,9 @@ const GOLD_CONVERSION_TABLE: ConversionRow[] = [
   { level: 20, goldPerSc: 2000 },
 ];
 
-const GOLD_TABLE_GROUPS = [
-  GOLD_CONVERSION_TABLE.filter((row) => row.level >= 1 && row.level <= 7),
-  GOLD_CONVERSION_TABLE.filter((row) => row.level >= 8 && row.level <= 14),
-  GOLD_CONVERSION_TABLE.filter((row) => row.level >= 15 && row.level <= 20),
+const GOLD_TABLE_ROW_GROUPS = [
+  GOLD_CONVERSION_TABLE.filter((row) => row.level >= 1 && row.level <= 10),
+  GOLD_CONVERSION_TABLE.filter((row) => row.level >= 11 && row.level <= 20),
 ] as const;
 
 const XP_CONVERSION_TABLE: XpConversionRow[] = [
@@ -262,8 +260,7 @@ export default function StellarCoinConversionPage(): ReactNode {
       description="Convert Stellar Coins into gold or experience rewards."
     >
       <main className={styles.page}>
-        <ToolsSidebarFrame sidebarOffset="6.5rem">
-        <div className={styles.shell}>
+        <div className={`${styles.shell} ${styles.shellNarrow}`}>
           <section className={styles.hero}>
             <Heading as="h1">Stellar Coin Conversion</Heading>
             <p>
@@ -302,7 +299,9 @@ export default function StellarCoinConversionPage(): ReactNode {
                     Gold scales by character level and is calculated as Stellar
                     Coins multiplied by the gold-per-SC rate for that level.
                   </p>
-                  <div className={styles.inputGrid}>
+                  <div
+                    className={`${styles.inputGrid} ${styles.inputGridDouble}`}
+                  >
                     <div className={styles.field}>
                       <label htmlFor="sc-level">Character Level</label>
                       <input
@@ -360,23 +359,27 @@ export default function StellarCoinConversionPage(): ReactNode {
 
                 <section className={styles.panel}>
                   <Heading as="h2">Gold Conversion Table</Heading>
-                  <div className={styles.tableColumnsTriple}>
-                    {GOLD_TABLE_GROUPS.map((group, index) => (
+                  <div className={styles.tableRowGroups}>
+                    {GOLD_TABLE_ROW_GROUPS.map((group, index) => (
                       <div key={index} className={styles.tableWrap}>
-                        <table className={styles.table}>
-                          <thead>
-                            <tr>
-                              <th>Level</th>
-                              <th>Gold / SC</th>
-                            </tr>
-                          </thead>
+                        <table
+                          className={`${styles.table} ${styles.compactTable} ${styles.transposedTable}`}
+                        >
                           <tbody>
-                            {group.map((row) => (
-                              <tr key={row.level}>
-                                <td>{row.level}</td>
-                                <td>{formatValue(row.goldPerSc)}</td>
-                              </tr>
-                            ))}
+                            <tr>
+                              <th scope="row">Level</th>
+                              {group.map((row) => (
+                                <td key={row.level}>{row.level}</td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <th scope="row">Gold / SC</th>
+                              {group.map((row) => (
+                                <td key={row.level}>
+                                  {formatValue(row.goldPerSc)}
+                                </td>
+                              ))}
+                            </tr>
                           </tbody>
                         </table>
                       </div>
@@ -393,7 +396,9 @@ export default function StellarCoinConversionPage(): ReactNode {
                     XP total, then spends Stellar Coins through each level using
                     that level&apos;s XP-per-SC rate.
                   </p>
-                  <div className={styles.inputGrid}>
+                  <div
+                    className={`${styles.inputGrid} ${styles.inputGridDouble}`}
+                  >
                     <div className={styles.field}>
                       <label htmlFor="xp-starting-xp">Starting XP</label>
                       <input
@@ -555,7 +560,9 @@ export default function StellarCoinConversionPage(): ReactNode {
                     Stellar Coins at a rate of 5,000 XP per SC without dropping
                     below the level 20 threshold.
                   </p>
-                  <div className={styles.inputGrid}>
+                  <div
+                    className={`${styles.inputGrid} ${styles.inputGridSingle}`}
+                  >
                     <div className={styles.field}>
                       <label htmlFor="level-20-xp">Current XP</label>
                       <input
@@ -616,7 +623,9 @@ export default function StellarCoinConversionPage(): ReactNode {
                 <div className={styles.twoCol}>
                   <section className={styles.panel}>
                     <Heading as="h2">EXP Per SC Table</Heading>
-                    <div className={styles.tableColumns}>
+                    <div
+                      className={`${styles.tableColumnsNarrow} ${styles.tableColumnsNarrowDouble}`}
+                    >
                       {XP_RATE_TABLE_GROUPS.map((group, index) => (
                         <div key={index} className={styles.tableWrap}>
                           <table className={styles.table}>
@@ -642,7 +651,9 @@ export default function StellarCoinConversionPage(): ReactNode {
 
                   <section className={styles.panel}>
                     <Heading as="h2">XP Thresholds</Heading>
-                    <div className={styles.tableColumns}>
+                    <div
+                      className={`${styles.tableColumnsNarrow} ${styles.tableColumnsNarrowDouble}`}
+                    >
                       {XP_THRESHOLD_GROUPS.map((group, index) => (
                         <div key={index} className={styles.tableWrap}>
                           <table className={styles.table}>
@@ -670,7 +681,6 @@ export default function StellarCoinConversionPage(): ReactNode {
             )}
           </section>
         </div>
-      </ToolsSidebarFrame>
       </main>
     </Layout>
   );

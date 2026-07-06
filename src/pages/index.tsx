@@ -66,7 +66,7 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
           "The city of Nemisa was built on the edge of a scorching desert, with its back to some massive mesas and is truly a wonder to behold. The climate these wide open and usually clear skies brought were of great importance, but they were also influential when it came to architectural designs as the vast majority of buildings have been built to weather harsh desert storms and the unearthly chills of desert nights. Yet, strangely enough, Nemisa, and all of Solcrata, does not see the night. A massive magical tarp covers the city, providing cool shade away from the heat. It is held aloft by the dome-like roofs of Nemisa's architecture, and pinned down in a way that looks like it can be easily pulled down or set back up, which anyone would know is due to the semi-frequent sand storms.\n\nLife is great in Nemisa and yet, it hasn't attracted that much attention, remaining mostly private and under the care of the various desert tribes. Nemisa's tribes share a long, ancient history, moving across the desert as it became more and more uninhabitable. This has shaped the methods in which they teach their new generations, and the habits in which they develop. Many focus their worship on gods of the sun specifically, yet many others broaden that to other aspects, worshiping deities of light, fire, warmth, and in the rarest of cases, life and death.\n\nIt's this multitribal identity that has truly left its mark on the few travelers and tourists that come to brave the Sands of Unwavering Sun. Hundreds of bars, bistros and bakeries offer a plethora of culinary choices, and those who feel hungry for something else can enjoy theaters, concerts, ruin tours, or one of the many other recreational venues.",
       },
     ],
-    to: "/docs/getting-set-up",
+    to: "/character-creation",
     image: "/img/Solcrata.png",
     x: 32.2,
     y: 31.5,
@@ -451,7 +451,7 @@ function HomepageHeader() {
             aria-label={siteConfig.title}
           >
             <img
-              src="/img/altharion_logo_white.png"
+              src="/img/full%20logo%20gold.png"
               alt=""
               className={styles.cornerLogoImage}
             />
@@ -689,7 +689,7 @@ function HomepageHeader() {
             className={styles.heroButton}
             onClick={() => setHasEnteredMapMode(true)}
           >
-            Enter the Wiki
+            Join the Reach
           </button>
         </m.div>
       </header>

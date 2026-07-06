@@ -15,6 +15,7 @@ import {
 import type { ChartData, ChartOptions } from "chart.js";
 import { Bar, Doughnut } from "react-chartjs-2";
 
+import PageLoader from "../components/PageLoader";
 import styles from "./character-attributes.module.css";
 
 type AttributeStatOption = {
@@ -41,20 +42,8 @@ type WestMarchesAttributeStats = {
   attributes: AttributeStat[];
 };
 
-const CHART_PALETTE = [
-  "#244a73",
-  "#14a3a3",
-  "#cf1f73",
-  "#f5514f",
-  "#ffad31",
-  "#bd0fe1",
-  "#7210b5",
-  "#3d8de3",
-  "#2f38c8",
-  "#1a0f9d",
-  "#1e426b",
-  "#0faeb0",
-];
+const BAR_COLOR = "rgba(190, 176, 138, 0.82)";
+const BAR_BORDER_COLOR = "rgba(233, 221, 186, 0.58)";
 
 ChartJS.register(
   ArcElement,
@@ -64,6 +53,17 @@ ChartJS.register(
   Tooltip,
   Legend,
 );
+
+ChartJS.defaults.font.family = '"Georgia", "Times New Roman", serif';
+
+const HIDDEN_LEGEND_ATTRIBUTES = new Set([
+  "Class",
+  "Starting Grace",
+  "Elemental Apotheosis",
+]);
+
+const TOP_SEGMENT_COUNT = 9;
+const OTHER_SEGMENT_COLOR = "rgba(190, 176, 138, 0.4)";
 
 function getAuthApiBaseUrl(siteConfig): string {
   const configuredBaseUrl = siteConfig.customFields?.authApiBaseUrl;
@@ -76,25 +76,57 @@ function formatAttributeName(attributeName: string) {
   return attributeName.replace(/\s*\(if applicable\)\s*/i, "");
 }
 
-function renderAttributeChart(attribute: AttributeStat) {
-  const segments = [...attribute.options]
-    .sort((left, right) => right.count - left.count)
-    .map((option, index) => ({
-      ...option,
-      color: CHART_PALETTE[index % CHART_PALETTE.length],
-    }));
+function buildSegments(attribute: AttributeStat, displayName: string) {
+  const sorted = [...attribute.options].sort(
+    (left, right) => right.count - left.count,
+  );
+
+  const grouped =
+    displayName === "Species" && sorted.length > TOP_SEGMENT_COUNT + 1
+      ? (() => {
+          const top = sorted.slice(0, TOP_SEGMENT_COUNT);
+          const rest = sorted.slice(TOP_SEGMENT_COUNT);
+          const otherCount = rest.reduce((sum, option) => sum + option.count, 0);
+          const otherPercentage = attribute.totalSelections
+            ? Number(((otherCount / attribute.totalSelections) * 100).toFixed(1))
+            : 0;
+          return [
+            ...top,
+            {
+              value: `Other (${rest.length})`,
+              count: otherCount,
+              percentage: otherPercentage,
+            },
+          ];
+        })()
+      : sorted;
+
+  return grouped.map((option, index) => ({
+    ...option,
+    color:
+      index === grouped.length - 1 && grouped.length !== sorted.length
+        ? OTHER_SEGMENT_COLOR
+        : BAR_COLOR,
+  }));
+}
+
+function AttributeChartCard({ attribute }: { attribute: AttributeStat }) {
+  const [isLegendExpanded, setIsLegendExpanded] = useState(false);
   const displayName = formatAttributeName(attribute.attributeName);
+  const segments = buildSegments(attribute, displayName);
   const useBarChart =
     segments.length > 8 ||
     segments.some((segment) => segment.value.length > 18) ||
     displayName === "Species";
+  const showLegend = !useBarChart || !HIDDEN_LEGEND_ATTRIBUTES.has(displayName);
+  const legendBelow = useBarChart && showLegend;
   const chartData: ChartData<"doughnut" | "bar", number[], string> = {
     labels: segments.map((segment) => segment.value),
     datasets: [
       {
         data: segments.map((segment) => segment.count),
         backgroundColor: segments.map((segment) => segment.color),
-        borderColor: "rgba(13, 15, 29, 0.9)",
+        borderColor: BAR_BORDER_COLOR,
         borderWidth: useBarChart ? 1 : 2,
         borderRadius: useBarChart ? 8 : 0,
         hoverOffset: useBarChart ? 0 : 4,
@@ -162,9 +194,15 @@ function renderAttributeChart(attribute: AttributeStat) {
   };
 
   return (
-    <article key={attribute.attributeName} className={styles.attributeCard}>
+    <article
+      className={
+        showLegend && !legendBelow
+          ? styles.attributeCard
+          : `${styles.attributeCard} ${styles.attributeCardFull}`
+      }
+    >
       <div className={styles.attributeHeader}>
-        <h2 className={styles.attributeCardTitle}>{displayName}</h2>
+        <h2>{displayName}</h2>
       </div>
       <div className={styles.attributeChartWrap}>
         {useBarChart ? (
@@ -195,25 +233,52 @@ function renderAttributeChart(attribute: AttributeStat) {
           </div>
         )}
       </div>
-      <div className={styles.attributeLegend}>
-        {segments.map((segment) => (
-          <div
-            key={`${attribute.attributeName}-${segment.value}`}
-            className={styles.attributeLegendRow}
+      {showLegend && !legendBelow ? (
+        <div className={styles.attributeLegend}>
+          {segments.map((segment) => (
+            <div
+              key={`${attribute.attributeName}-${segment.value}`}
+              className={styles.attributeLegendRow}
+            >
+              <span className={styles.attributeLegendLabel}>
+                {segment.value}
+              </span>
+              <span className={styles.attributeLegendValue}>
+                {segment.count} ({segment.percentage}%)
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {legendBelow ? (
+        <div className={styles.attributeLegendBelow}>
+          <button
+            type="button"
+            className={styles.attributeLegendToggle}
+            onClick={() => setIsLegendExpanded((expanded) => !expanded)}
+            aria-expanded={isLegendExpanded}
           >
-            <span className={styles.attributeLegendLabel}>
-              <span
-                className={styles.attributeLegendSwatch}
-                style={{ backgroundColor: segment.color }}
-              />
-              {segment.value}
-            </span>
-            <span className={styles.attributeLegendValue}>
-              {segment.count} ({segment.percentage}%)
-            </span>
-          </div>
-        ))}
-      </div>
+            {isLegendExpanded ? "Hide full breakdown" : "Show full breakdown"}
+          </button>
+          {isLegendExpanded ? (
+            <div className={styles.attributeLegendGrid}>
+              {segments.map((segment) => (
+                <div
+                  key={`${attribute.attributeName}-${segment.value}`}
+                  className={styles.attributeLegendRow}
+                >
+                  <span className={styles.attributeLegendLabel}>
+                    {segment.value}
+                  </span>
+                  <span className={styles.attributeLegendValue}>
+                    {segment.count} ({segment.percentage}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -282,6 +347,7 @@ function renderLevelChart(levels: CharacterLevelStat[]) {
           font: {
             size: 14,
             weight: "bold",
+            family: '"Cormorant Garamond", "Garamond", "Times New Roman", serif',
           },
         },
         ticks: {
@@ -300,7 +366,7 @@ function renderLevelChart(levels: CharacterLevelStat[]) {
 
   return (
     <article className={styles.levelChartPanel}>
-      <h2 className={styles.levelChartTitle}>Character Levels</h2>
+      <h2>Character Levels</h2>
       <div className={styles.levelChartWrap}>
         <Bar
           data={chartData}
@@ -373,42 +439,39 @@ export default function CharacterAttributesPage(): ReactNode {
       title="Server Stats"
       description="Server-wide West Marches character attribute statistics"
     >
-      <main className={styles.page}>
-        <div className={styles.shell}>
-          <section className={styles.hero}>
-            <Heading as="h1">Server Stats</Heading>
-            <p>
-              Server stats so we can track balance. Data comes from the
-              westmarches.games API.
-            </p>
-          </section>
-
-          <section className={styles.panel}>
-            {isAttributeStatsLoading ? (
-              <p className={styles.statusText}>
-                Loading character attribute statistics...
-              </p>
-            ) : null}
-            {attributeStatsError ? (
-              <p className={styles.errorText}>{attributeStatsError}</p>
-            ) : null}
-            {attributeStats ? (
-              <>
-                {attributeStats.levels?.length
-                  ? renderLevelChart(attributeStats.levels)
-                  : null}
-                <p className={styles.attributeSummary}>
-                  Active characters counted:{" "}
-                  <strong>{attributeStats.totalCharacters}</strong>
-                </p>
-                <div className={styles.attributeGrid}>
-                  {attributeStats.attributes.map(renderAttributeChart)}
-                </div>
-              </>
-            ) : null}
-          </section>
-        </div>
-      </main>
+      {isAttributeStatsLoading ? (
+        <PageLoader label="Loading server stats" />
+      ) : (
+        <main className={styles.page}>
+          <div className="theme-doc-markdown">
+            <div className="doc-prose-panel">
+              <Heading as="h1">Server Stats</Heading>
+              {attributeStatsError ? (
+                <p className={styles.errorText}>{attributeStatsError}</p>
+              ) : null}
+              {attributeStats ? (
+                <>
+                  {attributeStats.levels?.length
+                    ? renderLevelChart(attributeStats.levels)
+                    : null}
+                  <p className={styles.attributeSummary}>
+                    Active characters counted:{" "}
+                    <strong>{attributeStats.totalCharacters}</strong>
+                  </p>
+                  <div className={styles.attributeGrid}>
+                    {attributeStats.attributes.map((attribute) => (
+                      <AttributeChartCard
+                        key={attribute.attributeName}
+                        attribute={attribute}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </main>
+      )}
     </Layout>
   );
 }

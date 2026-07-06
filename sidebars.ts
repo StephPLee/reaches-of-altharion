@@ -9,7 +9,7 @@ const sidebars: SidebarsConfig = {
       label: "Player Information",
       collapsible: true,
       collapsed: false,
-      items: ["getting-set-up", "faq", "sourcebooks", "banned-content", "transformations"],
+      items: ["faq", "sourcebooks", "banned-content", "transformations"],
     },
     {
       type: "category",
@@ -19,6 +19,19 @@ const sidebars: SidebarsConfig = {
       items: ["dm-rules", "homebrew-guidelines"],
     },
     "rp-rules",
+    {
+      type: "category",
+      label: "The World of Altharion",
+      collapsible: true,
+      collapsed: false,
+      items: [
+        {
+          type: "link",
+          label: "World Map",
+          href: "/?view=world",
+        },
+      ],
+    },
     {
       type: "category",
       label: "Homebrew",

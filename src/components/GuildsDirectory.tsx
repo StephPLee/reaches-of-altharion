@@ -273,9 +273,7 @@ export default function GuildsDirectory() {
       try {
         setGuildRostersLoading(true);
         setGuildRostersError("");
-        const response = await fetch(
-          `${authApiBaseUrl}/api/guilds/rosters`,
-        );
+        const response = await fetch(`${authApiBaseUrl}/api/guilds/rosters`);
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
           throw new Error(payload.error || "Failed to load guild rosters.");
@@ -1039,10 +1037,7 @@ export default function GuildsDirectory() {
             ) : null}
           </div>
         </div>
-        <p className={styles.searchHint}>
-          Search filters by guild name, summary, upgrades, requirements, and
-          rewards.
-        </p>
+
         <p className={styles.count}>
           Showing {visibleGuilds.length} of {guilds.length} guilds.
         </p>

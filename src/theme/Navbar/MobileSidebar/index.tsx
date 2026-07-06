@@ -16,13 +16,16 @@ const NAV_GROUPS = [
     links: [
       { label: "Home", to: "/?view=map" },
       { label: "RP Rules", to: "/docs/rp-rules" },
-      { label: "The World of Altharion", to: "/?view=world" },
     ],
+  },
+  {
+    title: "The World of Altharion",
+    links: [{ label: "World Map", to: "/?view=world" }],
   },
   {
     title: "Player Information",
     links: [
-      { label: "Character Creation", to: "/docs/getting-set-up" },
+      { label: "Character Creation", to: "/character-creation" },
       { label: "Sourcebooks", to: "/docs/sourcebooks" },
       { label: "Banned Content", to: "/docs/banned-content" },
       { label: "Transformations", to: "/docs/transformations" },

@@ -347,7 +347,9 @@ function getAuthApiBaseUrl(siteConfig): string {
     : "";
 }
 
-function createEmptyForm(listType: "allowed" | "not_allowed"): SourcebookFormState {
+function createEmptyForm(
+  listType: "allowed" | "not_allowed",
+): SourcebookFormState {
   return {
     listType,
     title: "",
@@ -379,8 +381,6 @@ function SourcebookTable({
         <tr>
           <th>Title</th>
           <th>Publisher</th>
-          <th>Type</th>
-          <th>Edition</th>
           {showBannedContentLinks ? <th>Banned Content</th> : null}
           {isStaff ? <th>Actions</th> : null}
         </tr>
@@ -390,8 +390,6 @@ function SourcebookTable({
           <tr key={book.id ?? `${book.title}-${book.publisher}`}>
             <td>{book.title}</td>
             <td>{book.publisher}</td>
-            <td>{book.type}</td>
-            <td>{book.edition}</td>
             {showBannedContentLinks ? (
               <td>
                 {book.id && (book.bannedContentCount ?? 0) > 0 ? (
@@ -436,16 +434,21 @@ export default function SourcebooksTables() {
   const { siteConfig } = useDocusaurusContext();
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
   const [search, setSearch] = useState("");
-  const [allowedBooks, setAllowedBooks] = useState<SourcebookRow[]>(ALLOWED_BOOKS);
+  const [allowedBooks, setAllowedBooks] =
+    useState<SourcebookRow[]>(ALLOWED_BOOKS);
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [formOpenFor, setFormOpenFor] = useState<"allowed" | "not_allowed" | null>(null);
+  const [formOpenFor, setFormOpenFor] = useState<
+    "allowed" | "not_allowed" | null
+  >(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
-  const [form, setForm] = useState<SourcebookFormState>(createEmptyForm("allowed"));
+  const [form, setForm] = useState<SourcebookFormState>(
+    createEmptyForm("allowed"),
+  );
   const normalizedSearch = search.trim().toLowerCase();
   const isStaff = Boolean(currentUser?.isStaff);
 
@@ -478,7 +481,9 @@ export default function SourcebooksTables() {
         const payload = await response.json();
 
         if (!cancelled) {
-          setAllowedBooks(Array.isArray(payload.allowed) ? payload.allowed : []);
+          setAllowedBooks(
+            Array.isArray(payload.allowed) ? payload.allowed : [],
+          );
         }
       } catch {
         if (!cancelled) {
@@ -778,24 +783,6 @@ export default function SourcebooksTables() {
 
   return (
     <>
-      <div className={styles.searchPanel}>
-        <label className={styles.searchLabel} htmlFor="sourcebooks-search">
-          Search sourcebooks
-        </label>
-        <input
-          id="sourcebooks-search"
-          className={styles.searchInput}
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by title, publisher, type, or edition"
-        />
-        <p className={styles.searchHint}>
-          The search filters the allowed reference list.
-        </p>
-        {loading ? <p className={styles.searchHint}>Loading sourcebooks...</p> : null}
-      </div>
-
       <div className={styles.section}>
         <h2>Allowed Reference List</h2>
         <p>
@@ -819,6 +806,22 @@ export default function SourcebooksTables() {
           </div>
         ) : null}
         {renderStaffForm("allowed")}
+        <div className={styles.searchPanel}>
+          <label className={styles.searchLabel} htmlFor="sourcebooks-search">
+            Search sourcebooks
+          </label>
+          <input
+            id="sourcebooks-search"
+            className={styles.searchInput}
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by title, publisher, type, or edition"
+          />
+          {loading ? (
+            <p className={styles.searchHint}>Loading sourcebooks...</p>
+          ) : null}
+        </div>
         {filteredAllowed.length > 0 ? (
           <SourcebookTable
             books={filteredAllowed}

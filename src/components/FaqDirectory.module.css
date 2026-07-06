@@ -1,6 +1,8 @@
 .shell {
   display: grid;
   gap: 1rem;
+  max-width: 56rem;
+  margin: 0 auto;
 }
 
 .category {
@@ -143,13 +145,14 @@
 }
 
 .categoryHeader {
-  align-items: start;
+  align-items: flex-end;
   margin-bottom: 0.7rem;
 }
 
 .category .categoryTitle {
-  margin: 0;
-  padding-top: 0 !important;
+  flex: 1 1 auto;
+  margin: 0 !important;
+  padding-top: 1.4rem !important;
   border-top: 0 !important;
   line-height: 1.12;
 }
@@ -171,7 +174,10 @@
 
 .answer p,
 .description p {
-  margin: 0;
+  width: 100%;
+  max-width: none !important;
+  margin: 0 !important;
+  text-align: left;
 }
 
 .answer table {

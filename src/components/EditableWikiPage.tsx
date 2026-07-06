@@ -1,13 +1,15 @@
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent, ReactElement, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
+import PageLoader from "./PageLoader";
 import styles from "./EditableWikiPage.module.css";
 
 type EditableWikiPageProps = {
   slug: string;
   title: string;
   fallbackMarkdown: string;
+  onTableOfContentsChange?: (headings: MarkdownHeading[]) => void;
 };
 
 type SessionUser = {
@@ -24,6 +26,7 @@ type IconName =
   | "italic"
   | "code"
   | "link"
+  | "image"
   | "list"
   | "orderedList"
   | "table";
@@ -42,7 +45,7 @@ function isSafeHref(value: string) {
 function renderInlineMarkdown(value: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   const pattern =
-    /(`([^`]+)`)|(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|\[([^\]]+)\]\(([^)]+)\)/g;
+    /(!\[([^\]]*)\]\(([^)]+)\))|(`([^`]+)`)|(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|\[([^\]]+)\]\(([^)]+)\)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -51,19 +54,29 @@ function renderInlineMarkdown(value: string): ReactNode[] {
       nodes.push(value.slice(lastIndex, match.index));
     }
 
-    if (match[2]) {
-      nodes.push(<code key={`${match.index}-code`}>{match[2]}</code>);
-    } else if (match[4]) {
-      nodes.push(<strong key={`${match.index}-strong`}>{match[4]}</strong>);
-    } else if (match[6]) {
-      nodes.push(<em key={`${match.index}-em`}>{match[6]}</em>);
-    } else if (match[7] && match[8]) {
+    if (match[2] !== undefined && match[3]) {
+      nodes.push(
+        <img
+          key={`${match.index}-image`}
+          className={styles.markdownImage}
+          src={isSafeHref(match[3]) ? match[3] : ""}
+          alt={match[2]}
+          loading="lazy"
+        />,
+      );
+    } else if (match[5]) {
+      nodes.push(<code key={`${match.index}-code`}>{match[5]}</code>);
+    } else if (match[7]) {
+      nodes.push(<strong key={`${match.index}-strong`}>{match[7]}</strong>);
+    } else if (match[9]) {
+      nodes.push(<em key={`${match.index}-em`}>{match[9]}</em>);
+    } else if (match[10] && match[11]) {
       nodes.push(
         <a
           key={`${match.index}-link`}
-          href={isSafeHref(match[8]) ? match[8] : "#"}
+          href={isSafeHref(match[11]) ? match[11] : "#"}
         >
-          {match[7]}
+          {match[10]}
         </a>,
       );
     }
@@ -89,6 +102,15 @@ function isTableDivider(line: string) {
   return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
 }
 
+function isParagraphBlock(node: ReactNode): node is ReactElement {
+  return (
+    typeof node === "object" &&
+    node !== null &&
+    "type" in node &&
+    (node as ReactElement).type === "p"
+  );
+}
+
 function parseTableRow(line: string) {
   return line
     .trim()
@@ -98,9 +120,28 @@ function parseTableRow(line: string) {
     .map((cell) => cell.trim());
 }
 
-function renderMarkdown(markdown: string) {
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+export type MarkdownHeading = {
+  id: string;
+  text: string;
+  level: number;
+};
+
+function renderMarkdown(markdown: string): {
+  blocks: ReactNode[];
+  headings: MarkdownHeading[];
+} {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
+  const headings: MarkdownHeading[] = [];
+  const usedIds = new Map<string, number>();
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -134,15 +175,38 @@ function renderMarkdown(markdown: string) {
     const heading = trimmed.match(/^(#{1,4})\s+(.+)$/);
     if (heading) {
       const level = heading[1].length;
-      const content = renderInlineMarkdown(heading[2]);
+      const headingText = heading[2];
+      const content = renderInlineMarkdown(headingText);
+      const baseId = slugify(headingText) || `section-${index}`;
+      const seenCount = usedIds.get(baseId) ?? 0;
+      usedIds.set(baseId, seenCount + 1);
+      const id = seenCount > 0 ? `${baseId}-${seenCount}` : baseId;
+      headings.push({ id, text: headingText, level });
+
       if (level === 1) {
-        blocks.push(<h1 key={`h-${index}`}>{content}</h1>);
+        blocks.push(
+          <h1 id={id} key={`h-${index}`}>
+            {content}
+          </h1>,
+        );
       } else if (level === 2) {
-        blocks.push(<h2 key={`h-${index}`}>{content}</h2>);
+        blocks.push(
+          <h2 id={id} key={`h-${index}`}>
+            {content}
+          </h2>,
+        );
       } else if (level === 3) {
-        blocks.push(<h3 key={`h-${index}`}>{content}</h3>);
+        blocks.push(
+          <h3 id={id} key={`h-${index}`}>
+            {content}
+          </h3>,
+        );
       } else {
-        blocks.push(<h4 key={`h-${index}`}>{content}</h4>);
+        blocks.push(
+          <h4 id={id} key={`h-${index}`}>
+            {content}
+          </h4>,
+        );
       }
       continue;
     }
@@ -198,6 +262,21 @@ function renderMarkdown(markdown: string) {
       continue;
     }
 
+    if (/^>\s?/.test(trimmed)) {
+      const quoteLines: string[] = [];
+      while (index < lines.length && /^>\s?/.test(lines[index].trim())) {
+        quoteLines.push(lines[index].trim().replace(/^>\s?/, ""));
+        index += 1;
+      }
+      index -= 1;
+      blocks.push(
+        <blockquote key={`blockquote-${index}`}>
+          <p>{renderInlineMarkdownWithBreaks(quoteLines)}</p>
+        </blockquote>,
+      );
+      continue;
+    }
+
     if (/^\d+\.\s+/.test(trimmed)) {
       const items: string[] = [];
       while (index < lines.length && /^\d+\.\s+/.test(lines[index].trim())) {
@@ -215,15 +294,63 @@ function renderMarkdown(markdown: string) {
       continue;
     }
 
+    const standaloneImage = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (standaloneImage) {
+      const [, alt, src] = standaloneImage;
+      let caption: string | null = null;
+      const nextLine = lines[index + 1];
+      if (nextLine && nextLine.trim()) {
+        const captionMatch = nextLine.trim().match(/^\*([^*]+)\*$/);
+        if (captionMatch) {
+          caption = captionMatch[1];
+          index += 1;
+        }
+      }
+
+      const figure = (
+        <figure key={`figure-${index}`} className={styles.mediaFigure}>
+          <img
+            className={styles.mediaImage}
+            src={isSafeHref(src) ? src : ""}
+            alt={alt}
+            loading="lazy"
+          />
+          {caption ? (
+            <figcaption className={styles.mediaCaption}>{caption}</figcaption>
+          ) : null}
+        </figure>
+      );
+
+      const textBlocks: ReactNode[] = [];
+      while (blocks.length > 0 && isParagraphBlock(blocks[blocks.length - 1])) {
+        textBlocks.unshift(blocks.pop());
+      }
+
+      if (textBlocks.length > 0) {
+        blocks.push(
+          <div key={`media-${index}`} className={styles.mediaRow}>
+            <div className={styles.mediaText}>{textBlocks}</div>
+            {figure}
+          </div>,
+        );
+      } else {
+        blocks.push(figure);
+      }
+
+      continue;
+    }
+
     const paragraphLines = [trimmed];
     while (
       lines[index + 1] &&
       lines[index + 1].trim() &&
       !/^(#{1,4})\s+/.test(lines[index + 1].trim()) &&
       !/^[-*]\s+/.test(lines[index + 1].trim()) &&
+      !/^>\s?/.test(lines[index + 1].trim()) &&
       !/^\d+\.\s+/.test(lines[index + 1].trim()) &&
       !lines[index + 1].trim().startsWith("|") &&
       !lines[index + 1].trim().startsWith("```") &&
+      !/^!\[/.test(lines[index + 1].trim()) &&
       !/^---+$/.test(lines[index + 1].trim())
     ) {
       index += 1;
@@ -235,7 +362,7 @@ function renderMarkdown(markdown: string) {
     );
   }
 
-  return blocks;
+  return { blocks, headings };
 }
 
 function insertMarkdown(
@@ -280,6 +407,13 @@ function ToolbarIcon({ name }: { name: IconName }) {
       <>
         <path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
         <path d="M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1" />
+      </>
+    ),
+    image: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <circle cx="8.5" cy="10.5" r="1.5" />
+        <path d="m21 15-5-5L5 19" />
       </>
     ),
     list: (
@@ -332,6 +466,7 @@ export default function EditableWikiPage({
   slug,
   title,
   fallbackMarkdown,
+  onTableOfContentsChange,
 }: EditableWikiPageProps): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
@@ -342,6 +477,7 @@ export default function EditableWikiPage({
   });
   const [draftTitle, setDraftTitle] = useState(title);
   const [draftMarkdown, setDraftMarkdown] = useState(fallbackMarkdown.trim());
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -369,6 +505,10 @@ export default function EditableWikiPage({
         }
       } catch {
         // Static fallback content remains available when the API is offline.
+      } finally {
+        if (!cancelled) {
+          setIsPageLoading(false);
+        }
       }
     }
 
@@ -406,14 +546,22 @@ export default function EditableWikiPage({
     };
   }, [authApiBaseUrl]);
 
-  const renderedMarkdown = useMemo(
+  const { blocks: renderedMarkdown, headings } = useMemo(
     () => renderMarkdown(page.markdown),
     [page.markdown],
   );
-  const renderedPreview = useMemo(
+  const { blocks: renderedPreview } = useMemo(
     () => renderMarkdown(draftMarkdown),
     [draftMarkdown],
   );
+  const tableOfContents = useMemo(
+    () => headings.filter((entry) => entry.level === 2),
+    [headings],
+  );
+
+  useEffect(() => {
+    onTableOfContentsChange?.(tableOfContents);
+  }, [tableOfContents, onTableOfContentsChange]);
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -679,6 +827,9 @@ export default function EditableWikiPage({
             <button className={styles.toolbarButton} type="button" onClick={formatLink} title="Link" aria-label="Link">
               <ToolbarIcon name="link" />
             </button>
+            <button className={styles.toolbarButton} type="button" onClick={() => insert("\n![Image description](/img/guilds/guild-slug/image-name.png)\n")} title="Image" aria-label="Image">
+              <ToolbarIcon name="image" />
+            </button>
             <button className={styles.toolbarButton} type="button" onClick={() => formatLines("- ", "List item")} title="Bulleted list" aria-label="Bulleted list">
               <ToolbarIcon name="list" />
             </button>
@@ -723,6 +874,8 @@ export default function EditableWikiPage({
             {renderedPreview}
           </section>
         </form>
+      ) : isPageLoading ? (
+        <PageLoader label="Loading page" />
       ) : (
         <div className={styles.content}>{renderedMarkdown}</div>
       )}

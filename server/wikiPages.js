@@ -5,6 +5,18 @@ const WIKI_PAGE_SLUGS = new Set([
   "dm-rules",
   "homebrew-guidelines",
   "rp-rules",
+  "world-guild-lore-golden-quill",
+  "world-guild-lore-iron-vanguard",
+  "world-guild-lore-black-hand",
+  "world-guild-lore-dread-legion",
+  "world-guild-lore-dawnwardens",
+  "world-guild-lore-verdant-accord",
+  "world-guild-lore-dragons-den-of-drama",
+  "world-guild-lore-crucible-of-creation",
+  "world-guild-lore-the-argent-mark",
+  "world-guild-lore-the-ashen-veil",
+  "world-guild-lore-wayfarers-respite",
+  "world-guild-lore-eclipsed-choir",
 ]);
 
 function isAllowedWikiPageSlug(slug) {

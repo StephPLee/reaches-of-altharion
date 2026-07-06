@@ -25,7 +25,7 @@
 
 .cornerLogoImage {
     width: auto;
-    height: 2.7rem;
+    height: 5.4rem;
     display: block;
 }
 
@@ -174,23 +174,18 @@
     min-width: 9.5rem;
     min-width: 6.5rem;
     padding: 0.2rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid rgba(224, 232, 255, 0.35);
-    background: rgba(10, 14, 45, 0.8);
-    color: #eff2ff;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(190, 176, 138, 0.4);
+    background: rgba(9, 11, 24, 0.72);
+    color: rgba(210, 192, 145, 0.92);
     text-align: center;
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.7rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     font-weight: 700;
-    text-shadow:
-        0 1px 1px rgba(3, 6, 18, 0.95),
-        0 0 10px rgba(6, 10, 30, 0.7),
-        0 0 20px rgba(16, 29, 73, 0.45);
-    box-shadow:
-        0 0 0 1px rgba(138, 156, 231, 0.12) inset,
-        0 6px 12px rgba(3, 6, 20, 0.42);
+    text-shadow: 0 1px 1px rgba(3, 6, 18, 0.85);
+    box-shadow: 0 6px 12px rgba(3, 6, 20, 0.42);
     z-index: 2;
     pointer-events: none;
 }
@@ -472,6 +467,7 @@
 
 .heroTitle {
     margin: 0;
+    color: rgba(210, 192, 145, 0.92);
     font-size: clamp(2.4rem, 6vw, 5.4rem);
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -492,25 +488,28 @@
     align-items: center;
     justify-content: center;
     padding: 0.9rem 1.6rem;
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(190, 176, 138, 0.3);
     border-radius: 0.65rem;
-    background: rgba(14, 16, 48, 0.5);
-    color: #f9f4ff;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.9);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.85rem;
     font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     text-decoration: none;
     cursor: pointer;
     transition:
         background-color 0.2s ease,
         border-color 0.2s ease,
-        transform 0.2s ease;
+        color 0.2s ease;
 }
 
 .heroButton:hover {
-    background: rgba(31, 26, 76, 0.72);
-    border-color: rgba(255, 255, 255, 0.62);
-    color: #ffffff;
+    background: rgba(8, 9, 19, 0.8);
+    border-color: rgba(210, 192, 145, 0.62);
+    color: #f5e9c8;
     text-decoration: none;
-    transform: translateY(-1px);
 }
 
 .mobileMapNav {
@@ -625,15 +624,10 @@
         width: min(100%, 34rem);
         margin: 0 auto;
         padding: 0.7rem 0.7rem 0;
-        border: 1px solid rgba(196, 215, 255, 0.14);
+        border: 1px solid rgba(190, 176, 138, 0.22);
         border-bottom: 0;
         border-radius: 1rem 1rem 0 0;
-        background:
-            linear-gradient(
-                180deg,
-                rgba(12, 19, 45, 0.58) 0%,
-                rgba(12, 19, 45, 0.48) 100%
-            );
+        background: rgba(9, 11, 24, 0.6);
     }
 
     .heroBanner:not(.isMapMode) .worldScene,
@@ -664,19 +658,13 @@
         margin: 0 auto;
         padding: 1rem 1rem 0.95rem;
         overflow-y: auto;
-        border: 1px solid rgba(196, 215, 255, 0.15);
+        border: 1px solid rgba(190, 176, 138, 0.22);
         border-top: 0;
         border-radius: 0 0 1rem 1rem;
-        background:
-            linear-gradient(
-                180deg,
-                rgba(12, 19, 45, 0.48) 0%,
-                rgba(12, 19, 45, 0.72) 100%
-            );
-        color: #edf1ff;
-        box-shadow: 0 14px 28px rgba(2, 4, 12, 0.26);
+        background: rgba(9, 11, 24, 0.72);
+        color: rgba(215, 222, 242, 0.86);
         scrollbar-width: thin;
-        scrollbar-color: rgba(222, 231, 255, 0.62) rgba(7, 11, 38, 0.3);
+        scrollbar-color: rgba(210, 192, 145, 0.55) rgba(8, 9, 19, 0.3);
     }
 
     .mobileServerSummary::-webkit-scrollbar {
@@ -684,19 +672,23 @@
     }
 
     .mobileServerSummary::-webkit-scrollbar-track {
-        background: rgba(7, 11, 38, 0.3);
+        background: rgba(8, 9, 19, 0.3);
         border-radius: 999px;
     }
 
     .mobileServerSummary::-webkit-scrollbar-thumb {
         border: 2px solid transparent;
         border-radius: 999px;
-        background: rgba(222, 231, 255, 0.56);
+        background: linear-gradient(
+            180deg,
+            rgba(210, 192, 145, 0.65) 0%,
+            rgba(202, 168, 255, 0.42) 100%
+        );
         background-clip: padding-box;
     }
 
     .mobileServerSummary p {
-        color: rgba(235, 239, 255, 0.88);
+        color: rgba(215, 222, 242, 0.86);
         font-size: 0.92rem;
         line-height: 1.55;
     }

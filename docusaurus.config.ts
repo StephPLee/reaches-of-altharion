@@ -8,7 +8,7 @@ import "dotenv/config";
 const config: Config = {
   title: "Reaches of Altharion",
   tagline: "D&D 5.5e Westmarch Server",
-  favicon: "img/altharion_logo_white.ico",
+  favicon: "img/A logo gold.ico",
   headTags: [
     {
       tagName: "link",
@@ -96,7 +96,7 @@ const config: Config = {
       "classic",
       {
         docs: {
-          sidebarPath: "./sidebars.ts",
+          sidebarPath: false,
           breadcrumbs: false,
         },
         blog: false,
@@ -150,7 +150,7 @@ const config: Config = {
       title: "Reaches of Altharion",
       logo: {
         alt: "Reaches of Altharion Logo",
-        src: "img/altharion_logo_white.png",
+        src: "img/A%20logo%20gold.png",
         href: "/?view=map",
       },
       items: [
@@ -160,7 +160,7 @@ const config: Config = {
           position: "left",
           items: [
             {
-              to: "/docs/getting-set-up",
+              to: "/character-creation",
               label: "Character Creation",
             },
             {
@@ -274,9 +274,14 @@ const config: Config = {
           ],
         },
         {
-          to: "/?view=world",
           label: "The World of Altharion",
           position: "left",
+          items: [
+            {
+              to: "/?view=world",
+              label: "World Map",
+            },
+          ],
         },
       ],
     },
