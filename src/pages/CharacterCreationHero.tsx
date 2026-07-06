@@ -57,8 +57,7 @@ const BASICS = [
   {
     icon: TrendingUp,
     title: "Leveling",
-    detail:
-      "Start anywhere from level 1 to level 4. XP is tracked automatically.",
+    detail: "Start at level 4. XP is tracked automatically.",
   },
   {
     icon: Layers,
