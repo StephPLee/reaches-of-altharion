@@ -147,14 +147,14 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     hoverSummary:
       "The newly discovered Isle of Abysmere, a dangerous frontier known to adventurers as The New World.",
     worldHoverSummary:
-      "A newly discovered frontier island centered on a colossal Cauldara descending into layered caverns. Abysmere is rich with possibility, but its hostile wilds and ruthless inhabitants have already earned it a lethal reputation.",
+      "A newly discovered frontier island centered on a colossal Caldera descending into layered caverns. Abysmere is rich with possibility, but its hostile wilds and ruthless inhabitants have already earned it a lethal reputation.",
     islandName: "Abysmere",
     regionType: "The New World",
     description:
-      "Known officially as the Isle of Abysmere, though more commonly referred to by adventurers as The New World, this newly discovered land opens an entirely new frontier for exploration among those exploring Altharion.\n\nAt the heart of Abysmere lies a colossal Cauldara: a vast opening descending deep into the island itself, leading into layered caverns and regions stretching far below the surface.\n\nAbysmere has already earned a reputation for its extreme conditions and unusually high fatality rates. The deeper reaches remain largely untamed, ruled not by civilization, but by hostile flora, dangerous fauna, and people who are often no less dangerous than either. Some inhabitants have already begun exploiting newly arrived adventurers for their own gain.\n\nThose seeking fortune should remember: the Abyss rarely gives without taking something in return.",
+      "Known officially as the Isle of Abysmere, though more commonly referred to by adventurers as The New World, this newly discovered land opens an entirely new frontier for exploration among those exploring Altharion.\n\nAt the heart of Abysmere lies a colossal Caldera: a vast opening descending deep into the island itself, leading into layered caverns and regions stretching far below the surface.\n\nAbysmere has already earned a reputation for its extreme conditions and unusually high fatality rates. The deeper reaches remain largely untamed, ruled not by civilization, but by hostile flora, dangerous fauna, and people who are often no less dangerous than either. Some inhabitants have already begun exploiting newly arrived adventurers for their own gain.\n\nThose seeking fortune should remember: the Abyss rarely gives without taking something in return.",
     landmarks: [
       {
-        name: "The Cauldara",
+        name: "The Caldera",
         x: 54,
         y: 43,
         description:
