@@ -179,16 +179,14 @@ const COMMAND_DEFINITIONS = [
         .addIntegerOption((option) =>
           option
             .setName("amount")
-            .setDescription("Damage dealt.")
-            .setRequired(true)
+            .setDescription("Damage dealt. Defaults to 1.")
             .setMinValue(1)
             .setMaxValue(Number.MAX_SAFE_INTEGER),
         )
         .addIntegerOption((option) =>
           option
             .setName("quest-level")
-            .setDescription("Quest level used to scale boss damage.")
-            .setRequired(true)
+            .setDescription("Optional quest level used to scale boss damage.")
             .setMinValue(4)
             .setMaxValue(20),
         )

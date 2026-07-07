@@ -112,6 +112,10 @@ function parseSubmissionContent(content, embeds = []) {
 }
 
 function getBossDamageQuestMultiplier(questLevel) {
+  if (questLevel === null || questLevel === undefined) {
+    return 1n;
+  }
+
   if (questLevel >= 18 && questLevel <= 20) {
     return 1n;
   }
@@ -1777,10 +1781,10 @@ async function handleInteraction(interaction) {
       return;
     }
 
-    const baseAmount = BigInt(interaction.options.getInteger("amount", true));
+    const baseAmount = BigInt(interaction.options.getInteger("amount") ?? 1);
     const questLevel = isHeal
       ? null
-      : interaction.options.getInteger("quest-level", true);
+      : interaction.options.getInteger("quest-level");
     const questMultiplier = isHeal
       ? 1n
       : getBossDamageQuestMultiplier(questLevel);
@@ -1795,6 +1799,10 @@ async function handleInteraction(interaction) {
     }
 
     const amount = baseAmount * questMultiplier;
+    const damageBreakdown =
+      !isHeal && questLevel
+        ? ` (${formatBossHp(baseAmount)} x ${questMultiplier.toString()} for quest level ${questLevel})`
+        : "";
 
     try {
       await interaction.deferReply({ ephemeral: isHeal });
@@ -1824,10 +1832,10 @@ async function handleInteraction(interaction) {
       const updateMessage = isCountUpBoss
         ? isHeal
           ? `Removed ${formatBossHp(amount)} progress from **${boss.name}**. Progress: ${formatBossHp(boss.currentHp)} / ${targetText}.`
-          : `The Voice of Altharion calls the strike true: **${boss.name}** gains **${formatBossHp(amount)} progress** (${formatBossHp(baseAmount)} x ${questMultiplier.toString()} for quest level ${questLevel}). Progress: ${formatBossHp(boss.currentHp)} / ${targetText}.`
+          : `The Voice of Altharion calls the strike true: **${boss.name}** gains **${formatBossHp(amount)} progress**${damageBreakdown}. Progress: ${formatBossHp(boss.currentHp)} / ${targetText}.`
         : isHeal
           ? `Restored ${formatBossHp(amount)} HP to **${boss.name}**. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`
-          : `The Voice of Altharion calls the strike true: **${boss.name}** suffers **${formatBossHp(amount)} damage** (${formatBossHp(baseAmount)} x ${questMultiplier.toString()} for quest level ${questLevel}). Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`;
+          : `The Voice of Altharion calls the strike true: **${boss.name}** suffers **${formatBossHp(amount)} damage**${damageBreakdown}. Current HP: ${formatBossHp(boss.currentHp)}/${formatBossHp(boss.maxHp)}.`;
 
       await interaction.editReply(updateMessage);
     } catch (error) {
