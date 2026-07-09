@@ -35,9 +35,6 @@ type AuthUser = {
   canSubmitRewards?: boolean;
 };
 
-const CALENDAR_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSmE9dY_gzDg786mddTLn-RU_FzDWEr-OaRkSOo6oZBEHpbfY1QFc0SkI1fbzhDYTB5u1Mn7Z3YvAzK/pub?gid=0&single=true&output=csv";
-
 const MOBILE_NAV_GROUPS: NavGroup[] = [
   {
     title: null,
@@ -124,82 +121,11 @@ function getAuthErrorMessage(code: string | null) {
   }
 }
 
-function normalizeHeader(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "_");
-}
-
-function parseCsv(text: string) {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentValue = "";
-  let inQuotes = false;
-
-  for (let index = 0; index < text.length; index += 1) {
-    const character = text[index];
-    const nextCharacter = text[index + 1];
-
-    if (character === '"') {
-      if (inQuotes && nextCharacter === '"') {
-        currentValue += '"';
-        index += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (character === "," && !inQuotes) {
-      currentRow.push(currentValue);
-      currentValue = "";
-      continue;
-    }
-
-    if ((character === "\n" || character === "\r") && !inQuotes) {
-      if (character === "\r" && nextCharacter === "\n") {
-        index += 1;
-      }
-
-      currentRow.push(currentValue);
-      rows.push(currentRow);
-      currentRow = [];
-      currentValue = "";
-      continue;
-    }
-
-    currentValue += character;
-  }
-
-  if (currentValue !== "" || currentRow.length > 0) {
-    currentRow.push(currentValue);
-    rows.push(currentRow);
-  }
-
-  return rows.filter((row) => row.some((value) => value.trim() !== ""));
-}
-
-function buildPreviewEvents(csvText: string) {
-  const [headerRow, ...dataRows] = parseCsv(csvText);
-
-  if (!headerRow) {
-    return [];
-  }
-
-  const headerIndex = new Map(
-    headerRow.map((header, index) => [normalizeHeader(header), index]),
-  );
-
-  const getValue = (row: string[], name: string) =>
-    row[headerIndex.get(name) ?? -1]?.trim() ?? "";
+function buildPreviewEvents(events: CalendarPreviewEvent[]) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  return dataRows
-    .map((row) => ({
-      title: getValue(row, "title"),
-      startDate: getValue(row, "start_date"),
-      endDate: getValue(row, "end_date"),
-      category: getValue(row, "category"),
-    }))
+  return events
     .filter((event) => event.title && event.startDate && event.endDate)
     .filter((event) => new Date(`${event.endDate}T00:00:00`) >= today)
     .sort(
@@ -287,6 +213,8 @@ function MobileMenuButton({
 }
 
 function CalendarPreviewLink({ isActive }: { isActive: boolean }): ReactNode {
+  const { siteConfig } = useDocusaurusContext();
+  const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
   const [events, setEvents] = useState<CalendarPreviewEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -299,14 +227,16 @@ function CalendarPreviewLink({ isActive }: { isActive: boolean }): ReactNode {
         setIsLoading(true);
         setHasError(false);
 
-        const response = await fetch(CALENDAR_CSV_URL);
+        const response = await fetch(`${authApiBaseUrl}/api/calendar`);
 
         if (!response.ok) {
           throw new Error(`Failed to load calendar feed (${response.status}).`);
         }
 
-        const csvText = await response.text();
-        const parsedEvents = buildPreviewEvents(csvText);
+        const payload = await response.json();
+        const parsedEvents = buildPreviewEvents(
+          Array.isArray(payload.events) ? payload.events : [],
+        );
 
         if (!cancelled) {
           setEvents(parsedEvents);
@@ -327,7 +257,7 @@ function CalendarPreviewLink({ isActive }: { isActive: boolean }): ReactNode {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authApiBaseUrl]);
 
   return (
     <div className="navbar__item dropdown dropdown--hoverable custom-calendar-nav-item">
@@ -341,7 +271,9 @@ function CalendarPreviewLink({ isActive }: { isActive: boolean }): ReactNode {
       </Link>
       <div className="custom-calendar-preview" role="presentation">
         <div className="custom-calendar-preview__panel">
-          <p className="custom-calendar-preview__eyebrow">Upcoming Events</p>
+          <p className="custom-calendar-preview__eyebrow">
+            Current & Upcoming Events
+          </p>
           {isLoading ? (
             <p className="custom-calendar-preview__status">Loading...</p>
           ) : null}
@@ -352,7 +284,7 @@ function CalendarPreviewLink({ isActive }: { isActive: boolean }): ReactNode {
           ) : null}
           {!isLoading && !hasError && events.length === 0 ? (
             <p className="custom-calendar-preview__status">
-              No upcoming events listed.
+              No current or upcoming events listed.
             </p>
           ) : null}
           {!isLoading && !hasError && events.length > 0 ? (
