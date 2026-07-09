@@ -567,35 +567,45 @@
 }
 
 .searchResultButtonSelected {
-    border-color: rgba(202, 168, 255, 0.42);
-    background: rgba(36, 31, 68, 0.88);
+    border-color: rgba(202, 168, 255, 0.65);
+    background: rgba(72, 54, 126, 0.4);
+    box-shadow: inset 2px 0 0 rgba(202, 168, 255, 0.85);
     color: #fff7ff;
+    font-weight: 700;
+}
+
+.searchResultButtonSelected::after {
+    content: "Selected";
+    float: right;
+    color: rgba(202, 168, 255, 0.85);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .selectionChips {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.55rem;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.55em;
     margin-top: 0.75rem;
+    overflow: hidden;
+    font-size: 0.95rem;
 }
 
 .selectionChip {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.5rem 0.8rem;
-    border: 1px solid rgba(202, 168, 255, 0.28);
-    border-radius: 0.4rem;
-    background: rgba(24, 21, 52, 0.68);
-    color: #f0e5ff;
+    padding: 0.5em 0.8em;
+    border: 1px solid rgba(190, 176, 138, 0.3);
+    border-radius: 0.5em;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 1em;
+    background: rgba(9, 11, 24, 0.6);
+    color: rgba(210, 192, 145, 0.9);
     font-family: inherit;
-    cursor: pointer;
-}
-
-.selectionChip:hover,
-.selectionChip:focus-visible {
-    border-color: rgba(224, 232, 255, 0.34);
-    background: rgba(37, 31, 76, 0.92);
 }
 
 .badgeRow {
