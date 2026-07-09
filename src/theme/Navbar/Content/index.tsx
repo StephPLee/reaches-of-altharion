@@ -17,6 +17,7 @@ import NavbarLogo from "@theme/Navbar/Logo";
 
 type NavGroup = {
   title: string | null;
+  to?: string;
   links: Array<{ label: string; to: string }>;
 };
 
@@ -50,6 +51,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "Player Information",
+    to: "/player-information",
     links: [
       { label: "Character Creation", to: "/character-creation" },
       { label: "FAQ", to: "/docs/faq" },
@@ -61,6 +63,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "DM Information",
+    to: "/dm-information",
     links: [
       { label: "DM Rules", to: "/docs/dm-rules" },
       { label: "Homebrew Guidelines", to: "/docs/homebrew-guidelines" },
@@ -68,6 +71,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "Homebrew",
+    to: "/homebrew",
     links: [
       { label: "Starting Graces", to: "/docs/homebrew/starting-graces" },
       { label: "Boons", to: "/docs/homebrew/boons" },
@@ -81,6 +85,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "Tools",
+    to: "/tools",
     links: [
       { label: "Stat Rolls", to: "/stat-rolls" },
       { label: "Avrae Commands", to: "/avrae" },
@@ -751,9 +756,19 @@ export default function NavbarContent(): ReactNode {
                       className="custom-mobile-menu-group"
                     >
                       {group.title ? (
-                        <p className="custom-mobile-menu-group__title">
-                          {group.title}
-                        </p>
+                        group.to ? (
+                          <Link
+                            to={group.to}
+                            className="custom-mobile-menu-group__title custom-mobile-menu-group__title--link"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            {group.title}
+                          </Link>
+                        ) : (
+                          <p className="custom-mobile-menu-group__title">
+                            {group.title}
+                          </p>
+                        )
                       ) : null}
                       <div className="custom-mobile-menu-group__links">
                         {group.links.map((link) => {

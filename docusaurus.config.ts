@@ -156,6 +156,7 @@ const config: Config = {
       items: [
         { to: "/?view=map", label: "Home", position: "left" },
         {
+          to: "/player-information",
           label: "Player Information",
           position: "left",
           items: [
@@ -186,6 +187,7 @@ const config: Config = {
           ],
         },
         {
+          to: "/dm-information",
           label: "DM Information",
           position: "left",
           items: [
@@ -205,6 +207,7 @@ const config: Config = {
           position: "left",
         },
         {
+          to: "/homebrew",
           label: "Homebrew",
           position: "left",
           items: [
@@ -252,6 +255,7 @@ const config: Config = {
           position: "left",
         },
         {
+          to: "/tools",
           label: "Tools",
           position: "left",
           items: [
