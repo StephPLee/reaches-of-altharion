@@ -52,7 +52,7 @@ async function listPublishedCalendarEvents() {
       updated_at
     FROM calendar_events
     WHERE is_published = true
-    ORDER BY start_date ASC, end_date ASC, id ASC
+    ORDER BY start_date DESC, end_date DESC, id DESC
     `,
   );
 
