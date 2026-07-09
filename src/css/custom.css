@@ -974,12 +974,24 @@
 }
 
 .custom-mobile-menu-group__title {
+    display: block;
     margin: 0 0 0.25rem;
     color: rgba(210, 192, 145, 0.75);
     font-family: "Cinzel", "Garamond", "Times New Roman", serif;
     font-size: 0.8rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.custom-mobile-menu-group__title--link {
+    text-decoration: none;
+    transition: color 0.18s ease;
+}
+
+.custom-mobile-menu-group__title--link:hover,
+.custom-mobile-menu-group__title--link:focus-visible {
+    color: #f5e9c8;
+    text-decoration: none;
 }
 
 .custom-mobile-menu-group__links {
