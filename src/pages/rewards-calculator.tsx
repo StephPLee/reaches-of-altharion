@@ -304,6 +304,63 @@ function formatCharacterOption(character: WestMarchesCharacter) {
   return character.name.trim();
 }
 
+const MIN_PARTY_CHIP_FONT_SCALE = 0.62;
+
+function PartyChipsRow({
+  characterIds,
+  getLabel,
+}: {
+  characterIds: string[];
+  getLabel: (characterId: string) => string;
+}): ReactNode {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [fontSize, setFontSize] = useState("");
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    function fit() {
+      if (!container) {
+        return;
+      }
+      container.style.fontSize = "";
+      const baseFontSize = parseFloat(getComputedStyle(container).fontSize);
+      const available = container.clientWidth;
+      const needed = container.scrollWidth;
+      if (available > 0 && needed > available) {
+        const scale = Math.max(
+          MIN_PARTY_CHIP_FONT_SCALE,
+          (available / needed) * 0.97,
+        );
+        setFontSize(`${baseFontSize * scale}px`);
+      } else {
+        setFontSize("");
+      }
+    }
+
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [characterIds]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={styles.selectionChips}
+      style={fontSize ? { fontSize } : undefined}
+    >
+      {characterIds.map((characterId) => (
+        <span key={characterId} className={styles.selectionChip}>
+          {getLabel(characterId)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function RewardsCalculatorPage(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
@@ -346,6 +403,9 @@ export default function RewardsCalculatorPage(): ReactNode {
   const [playerReason, setPlayerReason] = useState("");
   const [dmReason, setDmReason] = useState("");
   const [rpReason, setRpReason] = useState("");
+  const [playerEventCurrencyOverride, setPlayerEventCurrencyOverride] =
+    useState("");
+  const [dmEventCurrencyOverride, setDmEventCurrencyOverride] = useState("");
   const [submittingTarget, setSubmittingTarget] = useState<RewardTarget | null>(
     null,
   );
@@ -676,6 +736,22 @@ export default function RewardsCalculatorPage(): ReactNode {
       ? dmSc
       : Math.floor(dmSc / 2)
     : 0;
+  const playerEventCurrencyAmount = hasEventCurrency
+    ? Math.max(
+        0,
+        playerEventCurrencyOverride.trim()
+          ? parseWholeNumber(playerEventCurrencyOverride, playerRf)
+          : playerRf,
+      )
+    : 0;
+  const dmEventCurrencyAmount = hasEventCurrency
+    ? Math.max(
+        0,
+        dmEventCurrencyOverride.trim()
+          ? parseWholeNumber(dmEventCurrencyOverride, dmRf)
+          : dmRf,
+      )
+    : 0;
 
   const rpXp = Math.round((rpDuration * rpRewardRow.xpPerHour) / 3);
   const rpGold = Math.round((rpDuration * rpRewardRow.goldPerHour) / 3);
@@ -734,6 +810,7 @@ export default function RewardsCalculatorPage(): ReactNode {
             gold: Math.round(playerGold),
             sc: playerSc,
             eventRelated: isEventRelated,
+            eventCurrencyAmount: playerEventCurrencyAmount,
             adventureId: selectedPlayerAdventure?.id || "",
             reason: playerReason.trim() || playerDefaultReason,
           }
@@ -744,6 +821,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               gold: Math.round(dmGold),
               sc: dmSc,
               eventRelated: isEventRelated,
+              eventCurrencyAmount: dmEventCurrencyAmount,
               adventureId: selectedPlayerAdventure?.id || "",
               reason: dmReason.trim() || dmDefaultReason,
             }
@@ -776,6 +854,7 @@ export default function RewardsCalculatorPage(): ReactNode {
             gold: targetConfig.gold,
             sc: targetConfig.sc,
             eventRelated: targetConfig.eventRelated,
+            eventCurrencyAmount: targetConfig.eventCurrencyAmount,
             adventureId: targetConfig.adventureId,
             reason: targetConfig.reason,
           }))
@@ -787,7 +866,10 @@ export default function RewardsCalculatorPage(): ReactNode {
               sc: targetConfig.sc,
               reason: targetConfig.reason,
               ...(target === "dm"
-                ? { eventRelated: targetConfig.eventRelated }
+                ? {
+                    eventRelated: targetConfig.eventRelated,
+                    eventCurrencyAmount: targetConfig.eventCurrencyAmount,
+                  }
                 : {}),
               ...(target === "dm"
                 ? { adventureId: targetConfig.adventureId }
@@ -878,6 +960,12 @@ export default function RewardsCalculatorPage(): ReactNode {
     reason: string,
     setReason: (value: string) => void,
     defaultReason: string,
+    eventCurrencyOverride?: {
+      name: string;
+      value: string;
+      setValue: (value: string) => void;
+      automaticAmount: number;
+    },
   ) {
     const singleCharacterId = target === "dm" ? dmCharacterId : rpCharacterId;
     const setSingleCharacterId =
@@ -1007,13 +1095,10 @@ export default function RewardsCalculatorPage(): ReactNode {
                   : null}
               </div>
               {selectedPlayerAdventure ? (
-                <div className={styles.selectionChips}>
-                  {selectedPlayerCharacterIds.map((characterId) => (
-                    <span key={characterId} className={styles.selectionChip}>
-                      {getCharacterLabel(characterId)}
-                    </span>
-                  ))}
-                </div>
+                <PartyChipsRow
+                  characterIds={selectedPlayerCharacterIds}
+                  getLabel={getCharacterLabel}
+                />
               ) : null}
             </div>
           ) : (
@@ -1046,6 +1131,25 @@ export default function RewardsCalculatorPage(): ReactNode {
               </div>
             </div>
           )}
+          {eventCurrencyOverride ? (
+            <div className={styles.field}>
+              <label htmlFor={`${target}-event-currency`}>
+                {eventCurrencyOverride.name}
+              </label>
+              <input
+                id={`${target}-event-currency`}
+                className={styles.input}
+                inputMode="numeric"
+                min="0"
+                type="number"
+                value={eventCurrencyOverride.value}
+                onChange={(event) =>
+                  eventCurrencyOverride.setValue(event.target.value)
+                }
+                placeholder={`Auto: ${formatReward(eventCurrencyOverride.automaticAmount)}`}
+              />
+            </div>
+          ) : null}
           <div className={styles.field}>
             <label htmlFor={`${target}-reason`}>Notes</label>
             <textarea
@@ -1207,7 +1311,7 @@ export default function RewardsCalculatorPage(): ReactNode {
                         {eventCurrencyName}
                       </span>
                       <span className={styles.rewardValue}>
-                        {formatReward(playerRf)}
+                        {formatReward(playerEventCurrencyAmount)}
                       </span>
                     </div>
                   ) : null}
@@ -1230,6 +1334,14 @@ export default function RewardsCalculatorPage(): ReactNode {
                       playerReason,
                       setPlayerReason,
                       playerDefaultReason,
+                      hasEventCurrency
+                        ? {
+                            name: eventCurrencyName,
+                            value: playerEventCurrencyOverride,
+                            setValue: setPlayerEventCurrencyOverride,
+                            automaticAmount: playerRf,
+                          }
+                        : undefined,
                     )
                   : null}
               </section>
@@ -1263,7 +1375,7 @@ export default function RewardsCalculatorPage(): ReactNode {
                         {eventCurrencyName}
                       </span>
                       <span className={styles.rewardValue}>
-                        {formatReward(dmRf)}
+                        {formatReward(dmEventCurrencyAmount)}
                       </span>
                     </div>
                   ) : null}
@@ -1293,6 +1405,14 @@ export default function RewardsCalculatorPage(): ReactNode {
                       dmReason,
                       setDmReason,
                       dmDefaultReason,
+                      hasEventCurrency
+                        ? {
+                            name: eventCurrencyName,
+                            value: dmEventCurrencyOverride,
+                            setValue: setDmEventCurrencyOverride,
+                            automaticAmount: dmRf,
+                          }
+                        : undefined,
                     )
                   : null}
               </section>

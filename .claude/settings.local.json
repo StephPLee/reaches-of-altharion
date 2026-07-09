@@ -103,7 +103,18 @@
       "Bash(nohup npm run start -- --port 3100)",
       "Bash(disown)",
       "Bash(curl -s --max-time 5 http://127.0.0.1:3100/)",
-      "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/landmarkpin.js\")"
+      "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/landmarkpin.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 3 http://127.0.0.1:3100/rewards-calculator)",
+      "Bash(grep -n \"fetch\\(\\\\`\" src/pages/rewards-calculator.tsx)",
+      "Bash(sed -i \"s/const dmHeading = page.locator\\('text=DM Rewards'\\);/const dmHeading = page.getByRole\\('heading', { name: 'DM Rewards' }\\);/\" \"C:/Users/Steph/AppData/Local/Temp/pwtest/dmreward.js\")",
+      "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/dmreward.js\")",
+      "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/dmreward-zoom2.js\")",
+      "Bash(curl -s -o /dev/null -w \"backend 3001: %{http_code}\\\\n\" --max-time 3 http://127.0.0.1:3001/health)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | Select-Object ProcessId, CommandLine | Where-Object { $_.CommandLine -match \"docusaurus|server/index.js|server:start\" } | Format-List)",
+      "Bash(taskkill //PID 49092 //F)",
+      "Bash(nohup npm run start)",
+      "Bash(nohup npm run server:start)",
+      "Bash(curl -s -w \"\\\\nSTATUS:%{http_code}\\\\n\" --max-time 5 http://127.0.0.1:3000/auth/logout -X POST -H \"Origin: http://127.0.0.1:3000\")"
     ]
   }
 }

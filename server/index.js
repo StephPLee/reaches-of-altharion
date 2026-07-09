@@ -1772,6 +1772,7 @@ async function normalizeWestMarchesRewardEntry(body) {
     experience,
     gold,
     sc,
+    eventCurrencyAmount,
     reason,
     discordId,
     eventRelated,
@@ -1785,18 +1786,32 @@ async function normalizeWestMarchesRewardEntry(body) {
   const normalizedExperience = parseOptionalWholeNumber(experience);
   const normalizedGold = parseOptionalWholeNumber(gold);
   const normalizedSc = parseOptionalWholeNumber(sc);
+  const hasEventCurrencyAmountOverride =
+    eventCurrencyAmount !== undefined &&
+    eventCurrencyAmount !== null &&
+    eventCurrencyAmount !== "";
+  const normalizedEventCurrencyAmount = hasEventCurrencyAmountOverride
+    ? parseOptionalWholeNumber(eventCurrencyAmount)
+    : null;
 
   if (
     normalizedExperience === null ||
     normalizedGold === null ||
-    normalizedSc === null
+    normalizedSc === null ||
+    (hasEventCurrencyAmountOverride && normalizedEventCurrencyAmount === null)
   ) {
     return {
-      error: "experience, gold, and sc must be whole numbers when provided.",
+      error:
+        "experience, gold, sc, and eventCurrencyAmount must be whole numbers when provided.",
     };
   }
 
-  if (normalizedExperience < 0 || normalizedGold < 0 || normalizedSc < 0) {
+  if (
+    normalizedExperience < 0 ||
+    normalizedGold < 0 ||
+    normalizedSc < 0 ||
+    (hasEventCurrencyAmountOverride && normalizedEventCurrencyAmount < 0)
+  ) {
     return { error: "Reward values cannot be negative." };
   }
 
@@ -1830,9 +1845,11 @@ async function normalizeWestMarchesRewardEntry(body) {
 
     const eventCurrency = await getEventCurrencyMapping();
     if (eventCurrency?.id) {
-      currencies[eventCurrency.id] = eventRelated
-        ? normalizedSc
-        : Math.floor(normalizedSc / 2);
+      currencies[eventCurrency.id] = hasEventCurrencyAmountOverride
+        ? normalizedEventCurrencyAmount
+        : eventRelated
+          ? normalizedSc
+          : Math.floor(normalizedSc / 2);
     }
   }
 
@@ -1854,8 +1871,16 @@ async function normalizeWestMarchesRewardEntry(body) {
 }
 
 async function normalizeWestMarchesRewardBatchPayload(body) {
-  const { characterIds, experience, gold, sc, reason, eventRelated, adventureId } =
-    body ?? {};
+  const {
+    characterIds,
+    experience,
+    gold,
+    sc,
+    eventCurrencyAmount,
+    reason,
+    eventRelated,
+    adventureId,
+  } = body ?? {};
 
   if (
     !Array.isArray(characterIds) ||
@@ -1875,6 +1900,7 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
     experience,
     gold,
     sc,
+    eventCurrencyAmount,
     reason,
     eventRelated,
     adventureId,
@@ -2648,9 +2674,10 @@ app.get(
     }
 
     try {
-      const [currencies, characters] = await Promise.all([
+      const [currencies, characters, eventCurrency] = await Promise.all([
         listCurrencies(),
         listAllCharacters(),
+        getEventCurrencyMapping(),
       ]);
 
       res.json({
@@ -2658,6 +2685,7 @@ app.get(
         currencyMappings: {
           gold: westMarchesGoldCurrencyId || null,
           sc: westMarchesScCurrencyId || null,
+          event: eventCurrency,
         },
         currencies,
         charactersSample: characters.slice(0, 25),

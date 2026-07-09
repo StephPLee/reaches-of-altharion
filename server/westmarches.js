@@ -1,6 +1,7 @@
 const {
   westMarchesApiBaseUrl,
   westMarchesApiKey,
+  westMarchesEventCurrencyId,
   westMarchesEventCurrencyName,
 } = require("./config");
 const ATTRIBUTE_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -64,6 +65,12 @@ function extractAttributeOptions(attributeName, optionValue) {
 function normalizeAttributeName(attributeName) {
   return typeof attributeName === "string"
     ? attributeName.trim().toLowerCase()
+    : "";
+}
+
+function normalizeCurrencyName(currencyName) {
+  return typeof currencyName === "string"
+    ? currencyName.trim().replace(/\s+/g, " ")
     : "";
 }
 
@@ -160,12 +167,16 @@ async function listMarketplaces() {
 }
 
 async function getEventCurrencyMapping() {
+  const currencyId =
+    typeof westMarchesEventCurrencyId === "string"
+      ? westMarchesEventCurrencyId.trim()
+      : "";
   const currencyName =
     typeof westMarchesEventCurrencyName === "string"
-      ? westMarchesEventCurrencyName.trim()
+      ? normalizeCurrencyName(westMarchesEventCurrencyName)
       : "";
 
-  if (!currencyName) {
+  if (!currencyId && !currencyName) {
     return null;
   }
 
@@ -176,21 +187,39 @@ async function getEventCurrencyMapping() {
 
   const currencies = await listCurrencies();
   const match =
-    currencies.find(
-      (currency) =>
-        typeof currency?.name === "string" &&
-        currency.name.trim().localeCompare(currencyName, undefined, {
-          sensitivity: "accent",
-        }) === 0,
-    ) || null;
+    (currencyId
+      ? currencies.find((currency) => String(currency?.id || "") === currencyId)
+      : null) ||
+    (currencyName
+      ? currencies.find(
+          (currency) =>
+            typeof currency?.name === "string" &&
+            normalizeCurrencyName(currency.name).localeCompare(
+              currencyName,
+              undefined,
+              {
+                sensitivity: "accent",
+              },
+            ) === 0,
+        )
+      : null) ||
+    null;
 
   eventCurrencyCache = {
     value: match
       ? {
-          id: match.id,
-          name: match.name.trim(),
+          id: String(match.id),
+          name:
+            typeof match.name === "string" && match.name.trim()
+              ? match.name.trim()
+              : currencyName || "Event Currency",
         }
-      : null,
+      : currencyId
+        ? {
+            id: currencyId,
+            name: currencyName || "Event Currency",
+          }
+        : null,
     expiresAt: now + ATTRIBUTE_STATS_CACHE_TTL_MS,
   };
 
