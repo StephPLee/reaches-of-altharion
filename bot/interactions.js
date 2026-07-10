@@ -2114,18 +2114,43 @@ async function handleInteraction(interaction) {
     if (submissionUrl) {
       await interaction.deferReply({ ephemeral: true });
       const idMatch = submissionUrl.match(/channels\/\d+\/(\d+)\/(\d+)/);
-      if (idMatch) {
-        const channel = await interaction.client.channels.fetch(idMatch[1]).catch(() => null);
-        const message = channel?.messages
-          ? await channel.messages.fetch(idMatch[2]).catch(() => null)
-          : null;
-        if (message) {
-          const parsed = parseSubmissionContent(message.content, message.embeds);
-          pendingApprovals.set(interaction.user.id, { ...parsed, submissionUrl });
+      let prefillStatus = "";
+      if (!idMatch) {
+        prefillStatus = "I could not read the submission link because it is not a valid Discord message link. The form will open without auto-filled information.";
+        console.warn("Could not prefill /approve: invalid submission link", { approverId: interaction.user.id, submissionUrl });
+      } else {
+        const [, channelId, messageId] = idMatch;
+        let channel;
+        try {
+          channel = await interaction.client.channels.fetch(channelId);
+        } catch (error) {
+          console.error("Could not prefill /approve: failed to fetch submission channel", { approverId: interaction.user.id, channelId, messageId, error });
+          prefillStatus = "I could not access the submission channel. It may have been deleted, or I may be missing **View Channel** permission. The form will open without auto-filled information.";
+        }
+        if (channel && !channel.messages) {
+          console.warn("Could not prefill /approve: channel cannot provide messages", { approverId: interaction.user.id, channelId, messageId });
+          prefillStatus = "That link does not point to a channel where I can read messages. The form will open without auto-filled information.";
+        } else if (channel) {
+          try {
+            const message = await channel.messages.fetch(messageId);
+            const parsed = parseSubmissionContent(message.content, message.embeds);
+            pendingApprovals.set(interaction.user.id, { ...parsed, submissionUrl });
+            const missingFields = [!parsed.name && "homebrew name", !parsed.url && "homebrew link", !parsed.threadUrl && "workshop thread link"].filter(Boolean);
+            if (missingFields.length) {
+              prefillStatus = `I found the submission message, but could not extract the ${missingFields.join(", ")}. You can enter the missing information manually in the form.`;
+              console.warn("Partially prefilled /approve submission", { approverId: interaction.user.id, channelId, messageId, missingFields });
+            } else {
+              prefillStatus = "I found the submission and auto-filled its information.";
+            }
+          } catch (error) {
+            console.error("Could not prefill /approve: failed to fetch submission message", { approverId: interaction.user.id, channelId, messageId, error });
+            prefillStatus = "I could not access the submission message. It may have been deleted, or I may be missing **Read Message History** permission. The form will open without auto-filled information.";
+          }
         }
       }
+
       await interaction.editReply({
-        content: "Choose the type of homebrew to approve.",
+        content: `${prefillStatus}\n\nChoose the type of homebrew to approve.`,
         components: [buildApproveCategoryRow(interaction.user.id)],
       });
     } else {
