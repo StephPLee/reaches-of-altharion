@@ -168,20 +168,33 @@ async function fetchThreadChannel(client, threadInput) {
     throw new Error("invalid_thread");
   }
 
-  const channel = await client.channels.fetch(threadId);
+  const threadTypes = [
+    ChannelType.PublicThread,
+    ChannelType.PrivateThread,
+    ChannelType.AnnouncementThread,
+  ];
+  const candidateIds = [threadId];
 
-  if (
-    !channel ||
-    ![
-      ChannelType.PublicThread,
-      ChannelType.PrivateThread,
-      ChannelType.AnnouncementThread,
-    ].includes(channel.type)
-  ) {
-    throw new Error("not_thread");
+  // Discord forum starter-message links can use the parent forum as the
+  // channel ID and the forum post/thread as the message ID.
+  if (parsedThread.messageId && parsedThread.messageId !== threadId) {
+    candidateIds.push(parsedThread.messageId);
   }
 
-  return channel;
+  for (const candidateId of candidateIds) {
+    try {
+      const channel = await client.channels.fetch(candidateId);
+      if (channel && threadTypes.includes(channel.type)) {
+        return channel;
+      }
+    } catch (error) {
+      if (candidateIds.length === 1) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error("not_thread");
 }
 
 async function fetchSubmissionMessage(client, messageInput, fallbackChannel) {
