@@ -1772,7 +1772,6 @@ async function normalizeWestMarchesRewardEntry(body) {
     experience,
     gold,
     sc,
-    eventCurrencyAmount,
     reason,
     discordId,
     eventRelated,
@@ -1786,31 +1785,22 @@ async function normalizeWestMarchesRewardEntry(body) {
   const normalizedExperience = parseOptionalWholeNumber(experience);
   const normalizedGold = parseOptionalWholeNumber(gold);
   const normalizedSc = parseOptionalWholeNumber(sc);
-  const hasEventCurrencyAmountOverride =
-    eventCurrencyAmount !== undefined &&
-    eventCurrencyAmount !== null &&
-    eventCurrencyAmount !== "";
-  const normalizedEventCurrencyAmount = hasEventCurrencyAmountOverride
-    ? parseOptionalWholeNumber(eventCurrencyAmount)
-    : null;
 
   if (
     normalizedExperience === null ||
     normalizedGold === null ||
-    normalizedSc === null ||
-    (hasEventCurrencyAmountOverride && normalizedEventCurrencyAmount === null)
+    normalizedSc === null
   ) {
     return {
       error:
-        "experience, gold, sc, and eventCurrencyAmount must be whole numbers when provided.",
+        "experience, gold, and sc must be whole numbers when provided.",
     };
   }
 
   if (
     normalizedExperience < 0 ||
     normalizedGold < 0 ||
-    normalizedSc < 0 ||
-    (hasEventCurrencyAmountOverride && normalizedEventCurrencyAmount < 0)
+    normalizedSc < 0
   ) {
     return { error: "Reward values cannot be negative." };
   }
@@ -1842,14 +1832,12 @@ async function normalizeWestMarchesRewardEntry(body) {
       };
     }
     currencies[westMarchesScCurrencyId] = normalizedSc;
+  }
 
+  if (eventRelated) {
     const eventCurrency = await getEventCurrencyMapping();
     if (eventCurrency?.id) {
-      currencies[eventCurrency.id] = hasEventCurrencyAmountOverride
-        ? normalizedEventCurrencyAmount
-        : eventRelated
-          ? normalizedSc
-          : Math.floor(normalizedSc / 2);
+      currencies[eventCurrency.id] = 5;
     }
   }
 
@@ -1876,7 +1864,6 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
     experience,
     gold,
     sc,
-    eventCurrencyAmount,
     reason,
     eventRelated,
     adventureId,
@@ -1900,7 +1887,6 @@ async function normalizeWestMarchesRewardBatchPayload(body) {
     experience,
     gold,
     sc,
-    eventCurrencyAmount,
     reason,
     eventRelated,
     adventureId,
