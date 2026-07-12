@@ -401,19 +401,22 @@ function buildApproveModal(discordUserId, category, detailValue = "none", prefil
     .setMaxLength(usesMarkdown ? 4000 : 500);
   if (!usesMarkdown && prefill.url) contentInput.setValue(prefill.url.slice(0, 500));
 
+  const threadLinkReadable = Boolean(prefill.threadUrl);
+  const submissionLinkReadable = Boolean(prefill.submissionUrl);
+
   const threadInput = new TextInputBuilder()
     .setCustomId("discussion-thread")
-    .setLabel("Workshop thread link (optional)")
+    .setLabel(threadLinkReadable ? "Workshop thread link (optional)" : "Workshop thread link")
     .setStyle(TextInputStyle.Short)
-    .setRequired(false)
+    .setRequired(!threadLinkReadable)
     .setMaxLength(500);
   if (prefill.threadUrl) threadInput.setValue(prefill.threadUrl.slice(0, 500));
 
   const submissionInput = new TextInputBuilder()
     .setCustomId("discussion-message")
-    .setLabel("Submission message link (optional)")
+    .setLabel(submissionLinkReadable ? "Submission message link (optional)" : "Submission message link")
     .setStyle(TextInputStyle.Short)
-    .setRequired(false)
+    .setRequired(!submissionLinkReadable)
     .setMaxLength(500);
   if (prefill.submissionUrl) submissionInput.setValue(prefill.submissionUrl.slice(0, 500));
 
