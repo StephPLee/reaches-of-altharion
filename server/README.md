@@ -49,6 +49,8 @@
 ## Database
 
 Run [sql/001_auth_hardening.sql](C:/Users/Steph/reaches-of-altharion/sql/001_auth_hardening.sql) before using audit logging in non-dev environments.
+Run [sql/044_reward_events.sql](C:/Users/Steph/reaches-of-altharion/sql/044_reward_events.sql) before configuring database-driven event currency rules.
+Run [sql/045_reward_event_calendar_link.sql](C:/Users/Steph/reaches-of-altharion/sql/045_reward_event_calendar_link.sql) so reward events create and update linked calendar entries.
 
 ## Production notes
 
