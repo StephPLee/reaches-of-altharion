@@ -317,6 +317,34 @@
     background: rgba(72, 54, 126, 0.24);
 }
 
+.toggleRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 0.85rem;
+    background: rgba(8, 9, 19, 0.55);
+    color: #ece2ff;
+    cursor: pointer;
+}
+
+.toggleRow input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #cba8ff;
+}
+
+.toggleRow span {
+    color: rgba(210, 192, 145, 0.85);
+    font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .successMessage {
     margin: 1rem 0 0;
     color: #cfe8d0;

@@ -580,9 +580,6 @@ export default function AdminPage(): ReactNode {
         <div className={styles.shell}>
           <p className={styles.eyebrow}>Administrative Access</p>
           <Heading as="h1">Staff Panel</Heading>
-          <p className={styles.intro}>
-            Manage Discord-facing tools that need staff access.
-          </p>
 
           <section className={styles.panel}>
             {isLoading ? (
@@ -787,9 +784,14 @@ export default function AdminPage(): ReactNode {
                       <input id="reward-event-fixed" className={styles.input} type="number" min="0" value={eventFixedAmount} onChange={(event) => setEventFixedAmount(event.target.value)} />
                     </div>
                   )}
-                  <label className={styles.field}>
+                  <label className={styles.toggleRow} htmlFor="reward-event-enabled">
+                    <input
+                      id="reward-event-enabled"
+                      type="checkbox"
+                      checked={eventEnabled}
+                      onChange={(event) => setEventEnabled(event.target.checked)}
+                    />
                     <span>Enabled</span>
-                    <input type="checkbox" checked={eventEnabled} onChange={(event) => setEventEnabled(event.target.checked)} />
                   </label>
                   {eventMessage ? <p className={styles.successMessage}>{eventMessage}</p> : null}
                   {eventError ? <p className={styles.errorMessage}>{eventError}</p> : null}
