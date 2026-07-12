@@ -122,6 +122,9 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:3000/player-information)",
       "Bash(node --check bot/interactions.js)",
       "Bash(node --check bot/services/approval.js)"
+      "Bash(ls \"C:/Users/Steph/AppData/Local/Temp/pwtest/\" | grep -i admin)",
+      "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/admin.js\")",
+      "Bash(grep -n \"rewards/westmarches/rewards\\\\|app.post\\(\\\\s*$\" \"C:\\\\Users\\\\Steph\\\\reaches-of-altharion\\\\server\\\\index.js\")"
     ]
   }
 }
