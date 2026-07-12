@@ -1,6 +1,6 @@
 # CC Link Bot Setup
 
-This bot provides `/help`, `/faq`, `/characters`, `/sc-character`, `/cc-link`, `/magicitem`, `/approve`, `/approve-character`, `/homebrew-discussion`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/rp`, and manual boss fight commands in your Discord server.
+This bot provides `/help`, `/faq`, `/characters`, `/sc-character`, `/cc-link`, `/magicitem`, `/approve`, `/approve-character`, `/homebrew-discussion`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/rp`, `/sticky`, and manual boss fight commands in your Discord server.
 
 - `/help` lists the bot commands and what they do.
 - `/faq` shows the frequently asked questions from Postgres.
@@ -15,6 +15,7 @@ This bot provides `/help`, `/faq`, `/characters`, `/sc-character`, `/cc-link`, `
 - `/leave-guild` lets players remove one of their WestMarches.games characters from its guild roster.
 - `/post-guild-rosters` lets staff post or refresh the per-guild roster messages.
 - `/rp` tracks active roleplay time in the current channel or thread.
+- `/sticky set` and `/sticky remove` let staff pin a message that automatically reposts to the bottom of the current channel or thread whenever new messages come in.
 - `/boss-start` lets staff start a manual server boss fight.
 - `/boss-post` lets staff post a fresh public boss status message.
 - `/boss-damage` lets staff record manual damage against the active boss, scaled by quest level.
@@ -62,6 +63,7 @@ Run `sql/021_guild_roster_persistent_cooldowns.sql` so cooldowns survive a chara
 Run `sql/032_sc_reward_character_preferences.sql` to create the table that stores users' default SC reward characters.
 Run `sql/023_event_bosses.sql` to create the manual boss fight tables.
 Run `sql/024_rp_sessions.sql` to create the RP timer table.
+Run `sql/046_sticky_messages.sql` to create the sticky message table.
 
 ## 3) Environment Variables
 
@@ -123,6 +125,7 @@ When the bot starts, it auto-registers `/help`, `/faq`, `/characters`, `/sc-char
 - `/post-guild-rosters` posts or refreshes one plain-text Discord message per published guild. Each line is `Character Name <@discord-id>`, with a divider at the end of each guild message. Roster message IDs are stored in `guild_roster_messages`.
 - Characters can only join, leave, or change guild once every 7 days after their first bot-driven roster change. Cooldowns persist after leaving, so a character cannot leave and immediately join a different guild. Imported roster rows are not backfilled with a cooldown timestamp, so existing memberships are not blocked immediately.
 - `/rp start`, `/rp pause`, `/rp resume`, `/rp end`, and `/rp status` track one open RP timer per channel or thread. The starter or staff can pause, resume, or end it, and each command posts a public update where it was used.
+- `/sticky set` posts (or replaces) a sticky message in the current channel or thread and stores it in `sticky_messages`. Whenever a new message appears in a channel with an active sticky, the bot deletes and reposts the sticky a few seconds later so it settles at the bottom, without touching the message that triggered it or interfering with other commands. `/sticky remove` deletes the stored sticky and its posted message.
 - `/boss-start` deactivates any previous active boss, creates a new boss at full HP, or creates a count-up progress tracker starting at 0. Use `mode: count-up`; set `target: none` for an infinite target shown as `Progress: value / ∞`.
 - `/boss-post` posts a fresh public boss status embed and makes that new message the one refreshed by later boss HP updates.
 - `/boss-damage` and `/boss-heal` write entries to `event_boss_damage_log`, update `event_bosses.current_hp`, and refresh the stored public boss status message. `/boss-damage` multiplies the entered damage by quest level: 18-20 = 1x, 14-17 = 3x, 9-13 = 5x, and 4-8 = 10x. For count-up trackers, damage adds progress and healing removes progress for corrections. New damage log entries include the base damage, multiplier, and quest level.

@@ -251,6 +251,24 @@ const COMMAND_DEFINITIONS = [
     defaultMemberPermissions: null,
   },
   {
+    name: "sticky",
+    description: "Manage a sticky message that stays at the bottom of a channel or thread.",
+    help: "Staff-only. Set or remove a sticky message that automatically reposts to the bottom of the current channel or thread whenever new messages come in.",
+    requiresRole: true,
+    buildCommand: (command) =>
+      command
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("set")
+            .setDescription("Open a form to set or update the sticky message for this channel."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("remove")
+            .setDescription("Remove the sticky message from this channel."),
+        ),
+  },
+  {
     name: "post-discord-content",
     description: "Post or refresh mirrored site content to Discord channels.",
     help: "Staff-only. Post or refresh starting graces or character creation content from the site into their Discord channels.",

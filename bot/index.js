@@ -3,9 +3,14 @@ const config = require("./config");
 const { ActivityType } = require("discord.js");
 const { registerGuildCommands } = require("./commands");
 const { handleInteraction } = require("./interactions");
+const { handleMessageForSticky } = require("./services/stickyMessages");
 
 const bot = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 
 bot.once("clientReady", async () => {
@@ -33,6 +38,12 @@ bot.on("interactionCreate", async (interaction) => {
   } catch (error) {
     console.error("Unhandled interaction error:", error);
   }
+});
+
+bot.on("messageCreate", (message) => {
+  handleMessageForSticky(bot, message).catch((error) => {
+    console.error("Unhandled sticky message error:", error);
+  });
 });
 
 bot.on("error", (error) => {

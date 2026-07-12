@@ -84,6 +84,13 @@ const {
   postAllStartingGracesToDiscord,
   postWikiSectionsToDiscord,
 } = require("./services/discordContent");
+const {
+  buildStickyModal,
+  clearStickyMessage,
+  getStickyMessage,
+  postSticky,
+  setStickyMessage,
+} = require("./services/stickyMessages");
 
 const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
 const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
@@ -778,6 +785,53 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.isModalSubmit()) {
+    if (interaction.customId.startsWith("sticky-modal:")) {
+      const channelId = interaction.customId.slice("sticky-modal:".length);
+
+      if (!hasRequiredRole(interaction)) {
+        await interaction.reply({
+          content: "You do not have the required role to manage sticky messages.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const message = interaction.fields.getTextInputValue("sticky-content").trim();
+        if (!message) {
+          await interaction.editReply("The sticky message cannot be empty.");
+          return;
+        }
+
+        const sticky = await setStickyMessage({
+          channelId,
+          content: message,
+          createdByDiscordUserId: interaction.user.id,
+        });
+
+        const channel = await interaction.client.channels.fetch(channelId);
+        await postSticky(channel, sticky);
+        await interaction.editReply("Sticky message set for this channel.");
+      } catch (error) {
+        console.error("Failed to process /sticky modal:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(
+            "Something went wrong while setting the sticky message. Please try again.",
+          );
+        } else {
+          await interaction.reply({
+            content:
+              "Something went wrong while setting the sticky message. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
     if (!interaction.customId.startsWith("approve-modal:")) {
       return;
     }
@@ -1468,6 +1522,63 @@ async function handleInteraction(interaction) {
         await interaction.reply({
           content:
             "Something went wrong while posting the guild rosters. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "sticky") {
+    if (!hasRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "You do not have the required role to manage sticky messages.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "set") {
+      const existing = await getStickyMessage(interaction.channelId);
+      await interaction.showModal(
+        buildStickyModal(interaction.channelId, existing?.content ?? ""),
+      );
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const sticky = await getStickyMessage(interaction.channelId);
+      if (!sticky) {
+        await interaction.editReply("There is no sticky message in this channel.");
+        return;
+      }
+
+      await clearStickyMessage(interaction.channelId);
+
+      if (sticky.discord_message_id) {
+        try {
+          await interaction.channel.messages.delete(sticky.discord_message_id);
+        } catch {
+          // Already deleted or inaccessible; nothing to clean up.
+        }
+      }
+
+      await interaction.editReply("Sticky message removed from this channel.");
+    } catch (error) {
+      console.error("Failed to process /sticky:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while managing the sticky message. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while managing the sticky message. Please try again.",
           ephemeral: true,
         });
       }
