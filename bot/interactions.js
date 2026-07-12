@@ -94,7 +94,7 @@ function parseSubmissionContent(content, embeds = []) {
     ...embeds.map((e) => [e.description ?? "", ...e.fields.map((f) => `${f.name}: ${f.value}`)].join("\n")),
   ].join("\n");
 
-  const name = searchText.match(/\*\*Name of Homebrew:\*\*\s*(.+)/i)?.[1]?.trim() ?? "";
+  const name = searchText.match(/\*{0,2}Name of Homebrew:\*{0,2}\s*(.+)/i)?.[1]?.trim() ?? "";
 
   function extractUrl(fieldPattern) {
     const line = searchText.match(fieldPattern)?.[1] ?? "";
@@ -105,8 +105,8 @@ function parseSubmissionContent(content, embeds = []) {
     ).trim();
   }
 
-  const url = extractUrl(/\*\*Link to Homebrew:\*\*(.+)/i);
-  const threadUrl = extractUrl(/\*\*Link to Workshop Discussion:\*\*(.+)/i);
+  const url = extractUrl(/\*{0,2}Link to Homebrew:\*{0,2}(.+)/i);
+  const threadUrl = extractUrl(/\*{0,2}Link to Workshop Discussion:\*{0,2}(.+)/i);
 
   return { name, url, threadUrl };
 }
@@ -896,25 +896,6 @@ async function handleInteraction(interaction) {
         await interaction.editReply(
           `${approvalText}\n\nDiscussion: ${result.participantIds.length} participant(s), **${scReward} SC** awarded to ${matchedCharacters.length} character(s). Posting public receipt now.`,
         );
-
-        const header = [
-          `Homebrew discussion participants for **${result.thread.name}**:`,
-          `${result.participantIds.length} user${result.participantIds.length === 1 ? "" : "s"} found.`,
-          `Discussion posters: ${result.threadAuthorIds.length}. Submission voters: ${result.reactionUserIds.length}.`,
-          `Reward: **${scReward} SC** each.`,
-          `Awarded automatically: ${matchedCharacters.length}. No active character found: ${missingUserIds.length}.`,
-          result.threadOwnerId
-            ? `Thread creator: <@${result.threadOwnerId}> (excluded from reward).`
-            : "Thread creator could not be identified.",
-        ].join("\n");
-
-        await interaction.channel.send({
-          content: header,
-          allowedMentions: {
-            parse: [],
-            users: result.threadOwnerId ? [result.threadOwnerId] : [],
-          },
-        });
 
         if (result.participantIds.length === 0) {
           await interaction.channel.send({

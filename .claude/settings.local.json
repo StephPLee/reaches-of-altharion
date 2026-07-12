@@ -119,7 +119,9 @@
       "Bash(sed -i \"s/const featured = page.locator\\('a', { hasText: 'Character Creation' }\\).first\\(\\);/const featured = page.locator\\('a[class*=\\\\\"featuredCard\\\\\"]'\\).first\\(\\);/\" \"C:/Users/Steph/AppData/Local/Temp/pwtest/hover-glow.js\")",
       "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/hover-glow.js\")",
       "Bash(node \"C:/Users/Steph/AppData/Local/Temp/pwtest/card-hover.js\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:3000/player-information)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:3000/player-information)",
+      "Bash(node --check bot/interactions.js)",
+      "Bash(node --check bot/services/approval.js)"
     ]
   }
 }
