@@ -168,17 +168,6 @@ const {
   listCurrencies,
   listRecentAdventures,
 } = require("./westmarches");
-const {
-  calculateEventCurrency,
-  createRewardEvent,
-  getActiveRewardEvent,
-  getRewardEvent,
-  listFinalRewardParticipants,
-  listRewardEvents,
-  markFinalRewardsDistributed,
-  recordEventQuestParticipants,
-  updateRewardEvent,
-} = require("./rewardEvents");
 
 const app = express();
 const rateLimitBuckets = new Map();
@@ -1777,10 +1766,7 @@ function parseOptionalWholeNumber(value) {
   return Math.trunc(value);
 }
 
-async function normalizeWestMarchesRewardEntry(
-  body,
-  activeRewardEventOverride = undefined,
-) {
+async function normalizeWestMarchesRewardEntry(body) {
   const {
     characterId,
     experience,
@@ -1848,17 +1834,10 @@ async function normalizeWestMarchesRewardEntry(
     currencies[westMarchesScCurrencyId] = normalizedSc;
   }
 
-  const activeRewardEvent =
-    activeRewardEventOverride === undefined
-      ? await getActiveRewardEvent()
-      : activeRewardEventOverride;
-  if (activeRewardEvent) {
-    const eventAmount = calculateEventCurrency(activeRewardEvent, {
-      eventRelated: eventRelated === true,
-      sc: normalizedSc,
-    });
-    if (eventAmount > 0) {
-      currencies[activeRewardEvent.currencyId] = eventAmount;
+  if (eventRelated) {
+    const eventCurrency = await getEventCurrencyMapping();
+    if (eventCurrency?.id) {
+      currencies[eventCurrency.id] = 5;
     }
   }
 
@@ -1949,33 +1928,22 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
     }
 
     const rewards = [];
-    const activeRewardEvent = await getActiveRewardEvent();
-    const eventQuestCharacterIds = [];
     let adventureId = topLevelAdventureId;
 
     for (const rewardBody of body.rewards) {
-      const normalizedReward = await normalizeWestMarchesRewardEntry(
-        rewardBody,
-        activeRewardEvent,
-      );
+      const normalizedReward = await normalizeWestMarchesRewardEntry(rewardBody);
 
       if (normalizedReward.error) {
         return normalizedReward;
       }
 
       rewards.push(normalizedReward);
-      if (
-        rewardBody?.eventRelated === true &&
-        rewardBody?.rewardRole === "player"
-      ) {
-        eventQuestCharacterIds.push(normalizedReward.characterId);
-      }
       if (!adventureId && normalizedReward.adventureId) {
         adventureId = normalizedReward.adventureId;
       }
     }
 
-    return { rewards, adventureId, eventQuestCharacterIds };
+    return { rewards, adventureId };
   }
 
   const normalizedBatchPayload =
@@ -2299,17 +2267,14 @@ app.get(
   "/api/rewards/westmarches/status",
   requireTrustedOrigin,
   async (_req, res) => {
-    const activeEvent = await getActiveRewardEvent();
+    const eventCurrency = await getEventCurrencyMapping();
 
     res.json({
       configured: isWestMarchesConfigured(),
-      activeEvent,
       currencyMappings: {
         gold: westMarchesGoldCurrencyId || null,
         sc: westMarchesScCurrencyId || null,
-        event: activeEvent
-          ? { id: activeEvent.currencyId, name: activeEvent.currencyName }
-          : null,
+        event: eventCurrency,
       },
     });
   },
@@ -2685,222 +2650,6 @@ app.get(
   },
 );
 
-async function resolveRewardEventCurrencyInput(body) {
-  const requestedName =
-    typeof body?.currencyName === "string"
-      ? body.currencyName.trim().replace(/\s+/g, " ")
-      : "";
-  if (!requestedName) {
-    return { error: "Event currency name is required." };
-  }
-
-  const currencies = await listCurrencies();
-  const match = currencies.find(
-    (currency) =>
-      typeof currency?.name === "string" &&
-      currency.name
-        .trim()
-        .replace(/\s+/g, " ")
-        .localeCompare(requestedName, undefined, { sensitivity: "accent" }) === 0,
-  );
-  if (!match?.id) {
-    return {
-      error: `Could not find a West Marches currency named “${requestedName}”. Check the spelling and try again.`,
-    };
-  }
-
-  return {
-    ...body,
-    currencyId: String(match.id),
-    currencyName: match.name.trim(),
-  };
-}
-app.get(
-  "/api/admin/reward-events",
-  requireStaffSession,
-  async (_req, res) => {
-    try {
-      res.json({ events: await listRewardEvents() });
-    } catch (error) {
-      console.error("Failed to list reward events:", error);
-      res.status(500).json({ error: "Failed to load reward events." });
-    }
-  },
-);
-
-app.post(
-  "/api/admin/reward-events",
-  requireStaffSession,
-  async (req, res) => {
-    try {
-      const resolvedInput = await resolveRewardEventCurrencyInput(req.body);
-      if (resolvedInput.error) {
-        res.status(400).json(resolvedInput);
-        return;
-      }
-      const event = await createRewardEvent(
-        resolvedInput,
-        req.staffUser.discordUserId,
-        req.staffUser.id,
-      );
-      if (event.error) {
-        res.status(400).json(event);
-        return;
-      }
-      await recordAuditEvent({
-        action: "reward_event_create",
-        status: "success",
-        userId: req.staffUser.id,
-        discordUserId: req.staffUser.discordUserId,
-        metadata: { eventId: event.id, name: event.name },
-        ...getRequestMetadata(req),
-      });
-      res.status(201).json({ event });
-    } catch (error) {
-      console.error("Failed to create reward event:", error);
-      res.status(error.code === "event_overlap" ? 409 : 500).json({
-        error: error instanceof Error ? error.message : "Failed to create reward event.",
-      });
-    }
-  },
-);
-
-app.patch(
-  "/api/admin/reward-events/:eventId",
-  requireStaffSession,
-  async (req, res) => {
-    const eventId = Number.parseInt(req.params.eventId, 10);
-    if (!Number.isInteger(eventId) || eventId <= 0) {
-      res.status(400).json({ error: "Invalid reward event ID." });
-      return;
-    }
-    try {
-      const resolvedInput = await resolveRewardEventCurrencyInput(req.body);
-      if (resolvedInput.error) {
-        res.status(400).json(resolvedInput);
-        return;
-      }
-      const event = await updateRewardEvent(
-        eventId,
-        resolvedInput,
-        req.staffUser.id,
-      );
-      if (!event) {
-        res.status(404).json({ error: "Reward event not found." });
-        return;
-      }
-      if (event.error) {
-        res.status(400).json(event);
-        return;
-      }
-      await recordAuditEvent({
-        action: "reward_event_update",
-        status: "success",
-        userId: req.staffUser.id,
-        discordUserId: req.staffUser.discordUserId,
-        metadata: { eventId: event.id, name: event.name },
-        ...getRequestMetadata(req),
-      });
-      res.json({ event });
-    } catch (error) {
-      console.error("Failed to update reward event:", error);
-      res.status(error.code === "event_overlap" ? 409 : 500).json({
-        error: error instanceof Error ? error.message : "Failed to update reward event.",
-      });
-    }
-  },
-);
-
-app.get(
-  "/api/admin/reward-events/:eventId/final-preview",
-  requireStaffSession,
-  async (req, res) => {
-    const eventId = Number.parseInt(req.params.eventId, 10);
-    try {
-      const [event, participants, characters] = await Promise.all([
-        getRewardEvent(eventId),
-        listFinalRewardParticipants(eventId),
-        listAllCharacters(),
-      ]);
-      if (!event) {
-        res.status(404).json({ error: "Reward event not found." });
-        return;
-      }
-      const charactersById = new Map(
-        characters.map((character) => [character.id, character]),
-      );
-      res.json({
-        event,
-        participants: participants.map((participant) => ({
-          ...participant,
-          characterName:
-            charactersById.get(participant.characterId)?.name ||
-            participant.characterId,
-        })),
-      });
-    } catch (error) {
-      console.error("Failed to preview final event rewards:", error);
-      res.status(500).json({ error: "Failed to preview final event rewards." });
-    }
-  },
-);
-
-app.post(
-  "/api/admin/reward-events/:eventId/distribute-final",
-  requireStaffSession,
-  async (req, res) => {
-    const eventId = Number.parseInt(req.params.eventId, 10);
-    try {
-      const [event, participants] = await Promise.all([
-        getRewardEvent(eventId),
-        listFinalRewardParticipants(eventId),
-      ]);
-      if (!event) {
-        res.status(404).json({ error: "Reward event not found." });
-        return;
-      }
-      if (event.ruleType !== "final_participant_fixed") {
-        res.status(400).json({ error: "This event does not use a final participant payout." });
-        return;
-      }
-      if (new Date() < new Date(event.endsAt)) {
-        res.status(409).json({ error: "Final rewards cannot be distributed before the event ends." });
-        return;
-      }
-      const pending = participants.filter((participant) => !participant.rewarded);
-      if (pending.length === 0) {
-        res.json({ distributed: 0, message: "All recorded participants have already been rewarded." });
-        return;
-      }
-      const payload = {
-        rewards: pending.map((participant) => ({
-          characterId: participant.characterId,
-          currencies: { [event.currencyId]: event.fixedAmount },
-          reason: `${event.name}: final participant reward`.slice(0, 500),
-        })),
-      };
-      await distributeRewards(payload);
-      await markFinalRewardsDistributed(
-        event.id,
-        pending.map((participant) => participant.characterId),
-      );
-      await recordAuditEvent({
-        action: "reward_event_final_distribute",
-        status: "success",
-        userId: req.staffUser.id,
-        discordUserId: req.staffUser.discordUserId,
-        metadata: { eventId: event.id, characterIds: pending.map((entry) => entry.characterId), amount: event.fixedAmount },
-        ...getRequestMetadata(req),
-      });
-      res.json({ distributed: pending.length });
-    } catch (error) {
-      console.error("Failed to distribute final event rewards:", error);
-      res.status(error.status || 500).json({
-        error: error instanceof Error ? error.message : "Failed to distribute final event rewards.",
-      });
-    }
-  },
-);
 app.get(
   "/api/admin/westmarches/debug",
   requireStaffSession,
@@ -3035,24 +2784,6 @@ app.post(
     try {
       const rewards = await distributeRewards(normalizedPayload);
       const [reward] = rewards;
-
-      if (
-        normalizedPayload.adventureId &&
-        normalizedPayload.eventQuestCharacterIds?.length > 0
-      ) {
-        const activeEvent = await getActiveRewardEvent();
-        if (activeEvent) {
-          try {
-            await recordEventQuestParticipants(
-              activeEvent.id,
-              normalizedPayload.adventureId,
-              normalizedPayload.eventQuestCharacterIds,
-            );
-          } catch (participantError) {
-            console.error("Rewards succeeded but event participant tracking failed:", participantError);
-          }
-        }
-      }
 
       await recordAuditEvent({
         action: "westmarches_reward_distribute",

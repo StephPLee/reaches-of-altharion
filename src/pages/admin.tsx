@@ -36,21 +36,7 @@ type MarketplaceEntry = {
   errorMessage?: string | null;
 };
 
-type AdminSection = "marketplace" | "discord" | "events";
-
-type RewardEvent = {
-  id: number;
-  name: string;
-  currencyId: string;
-  currencyName: string;
-  startsAt: string;
-  endsAt: string;
-  ruleType: "final_participant_fixed" | "sc_percentage" | "event_quest_fixed";
-  fixedAmount: number;
-  nonEventScPercent: number;
-  eventScPercent: number;
-  enabled: boolean;
-};
+type AdminSection = "marketplace" | "discord";
 
 function getAuthApiBaseUrl(siteConfig): string {
   const configuredBaseUrl = siteConfig.customFields?.authApiBaseUrl;
@@ -90,21 +76,6 @@ export default function AdminPage(): ReactNode {
   const [isGeneratingMarketplace, setIsGeneratingMarketplace] = useState(false);
   const [isGeneratingConsumables, setIsGeneratingConsumables] = useState(false);
   const [isSchedulingMarketplace, setIsSchedulingMarketplace] = useState(false);
-  const [rewardEvents, setRewardEvents] = useState<RewardEvent[]>([]);
-  const [editingRewardEventId, setEditingRewardEventId] = useState<number | null>(null);
-  const [eventName, setEventName] = useState("");
-  const [eventCurrencyName, setEventCurrencyName] = useState("");
-  const [eventStartsAt, setEventStartsAt] = useState("");
-  const [eventEndsAt, setEventEndsAt] = useState("");
-  const [eventRuleType, setEventRuleType] = useState<RewardEvent["ruleType"]>("event_quest_fixed");
-  const [eventFixedAmount, setEventFixedAmount] = useState("5");
-  const [eventNonQuestPercent, setEventNonQuestPercent] = useState("50");
-  const [eventQuestPercent, setEventQuestPercent] = useState("100");
-  const [eventEnabled, setEventEnabled] = useState(true);
-  const [eventMessage, setEventMessage] = useState("");
-  const [eventError, setEventError] = useState("");
-  const [isSavingEvent, setIsSavingEvent] = useState(false);
-  const [finalPreview, setFinalPreview] = useState<{ eventId: number; participants: Array<{ characterId: string; characterName: string; rewarded: boolean }> } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -288,6 +259,18 @@ export default function AdminPage(): ReactNode {
 
 
 
+  async function handleLogout() {
+    try {
+      await fetch(`${authApiBaseUrl}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } finally {
+      setUser(null);
+      history.replace("/?view=map");
+    }
+  }
+
   async function handleAnnouncementSubmit() {
     if (!announcementText.trim()) {
       setAnnouncementMessage("");
@@ -456,124 +439,6 @@ export default function AdminPage(): ReactNode {
     }
   }
 
-  useEffect(() => {
-    if (!user?.isStaff || activeSection !== "events") return;
-    let cancelled = false;
-    fetch(`${authApiBaseUrl}/api/admin/reward-events`, { credentials: "include" })
-      .then(async (eventsResponse) => {
-        const eventsPayload = await eventsResponse.json();
-        if (!eventsResponse.ok) throw new Error(eventsPayload.error || "Failed to load events.");
-        if (!cancelled) setRewardEvents(eventsPayload.events || []);
-      })
-      .catch((error) => !cancelled && setEventError(error.message));
-    return () => { cancelled = true; };
-  }, [activeSection, authApiBaseUrl, user?.isStaff]);
-
-  function toLocalInput(value: string): string {
-    const date = new Date(value);
-    const offset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-  }
-
-  function editRewardEvent(event: RewardEvent) {
-    setEditingRewardEventId(event.id);
-    setEventName(event.name);
-    setEventCurrencyName(event.currencyName);
-    setEventStartsAt(toLocalInput(event.startsAt));
-    setEventEndsAt(toLocalInput(event.endsAt));
-    setEventRuleType(event.ruleType);
-    setEventFixedAmount(String(event.fixedAmount));
-    setEventNonQuestPercent(String(event.nonEventScPercent));
-    setEventQuestPercent(String(event.eventScPercent));
-    setEventEnabled(event.enabled);
-    setEventMessage("");
-    setEventError("");
-  }
-
-  function resetRewardEventForm() {
-    setEditingRewardEventId(null);
-    setEventName("");
-    setEventCurrencyName("");
-    setEventStartsAt("");
-    setEventEndsAt("");
-    setEventRuleType("event_quest_fixed");
-    setEventFixedAmount("5");
-    setEventNonQuestPercent("50");
-    setEventQuestPercent("100");
-    setEventEnabled(true);
-  }
-
-  async function saveRewardEvent() {
-    if (!eventCurrencyName.trim() || !eventStartsAt || !eventEndsAt) {
-      setEventError("Enter a currency name and event start/end times.");
-      return;
-    }
-    setIsSavingEvent(true);
-    setEventError("");
-    setEventMessage("");
-    try {
-      const response = await fetch(
-        `${authApiBaseUrl}/api/admin/reward-events${editingRewardEventId ? `/${editingRewardEventId}` : ""}`,
-        {
-          method: editingRewardEventId ? "PATCH" : "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: eventName,
-            currencyName: eventCurrencyName.trim(),
-            startsAt: new Date(eventStartsAt).toISOString(),
-            endsAt: new Date(eventEndsAt).toISOString(),
-            calendarStartDate: eventStartsAt.slice(0, 10),
-            calendarEndDate: eventEndsAt.slice(0, 10),
-            ruleType: eventRuleType,
-            fixedAmount: Number(eventFixedAmount),
-            nonEventScPercent: Number(eventNonQuestPercent),
-            eventScPercent: Number(eventQuestPercent),
-            enabled: eventEnabled,
-          }),
-        },
-      );
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Failed to save event.");
-      setRewardEvents((current) => {
-        const next = current.filter((entry) => entry.id !== payload.event.id);
-        return [payload.event, ...next].sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt));
-      });
-      setEventMessage(`Saved ${payload.event.name}.`);
-      resetRewardEventForm();
-    } catch (error) {
-      setEventError(error instanceof Error ? error.message : "Failed to save event.");
-    } finally {
-      setIsSavingEvent(false);
-    }
-  }
-
-  async function previewFinalRewards(eventId: number) {
-    setEventError("");
-    const response = await fetch(`${authApiBaseUrl}/api/admin/reward-events/${eventId}/final-preview`, { credentials: "include" });
-    const payload = await response.json();
-    if (!response.ok) {
-      setEventError(payload.error || "Failed to preview participants.");
-      return;
-    }
-    setFinalPreview({ eventId, participants: payload.participants || [] });
-  }
-
-  async function distributeFinalRewards(eventId: number) {
-    if (!window.confirm("Distribute the final event currency to every pending participant?")) return;
-    setEventError("");
-    const response = await fetch(`${authApiBaseUrl}/api/admin/reward-events/${eventId}/distribute-final`, {
-      method: "POST",
-      credentials: "include",
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      setEventError(payload.error || "Failed to distribute final rewards.");
-      return;
-    }
-    setEventMessage(`Distributed final rewards to ${payload.distributed} participant(s).`);
-    await previewFinalRewards(eventId);
-  }
   return (
     <Layout title="Staff Panel" description="Discord-authenticated admin area.">
       <main className={styles.page}>
@@ -605,6 +470,22 @@ export default function AdminPage(): ReactNode {
 
             {!isLoading && user ? (
               <>
+                <p className={styles.meta}>
+                  Staff role verified: {user.isStaff ? "yes" : "no"}.
+                </p>
+                <div className={styles.accountBar}>
+                  <p className={styles.accountText}>
+                    Signed in as {user.globalName || user.username}.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.button}
+                    onClick={handleLogout}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+
                 <nav className={styles.sectionNav} aria-label="Admin tools">
                   <button
                     type="button"
@@ -625,15 +506,6 @@ export default function AdminPage(): ReactNode {
                     onClick={() => setActiveSection("discord")}
                   >
                     Discord
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.sectionTab} ${
-                      activeSection === "events" ? styles.sectionTabActive : ""
-                    }`.trim()}
-                    onClick={() => setActiveSection("events")}
-                  >
-                    Schedule an Event
                   </button>
                 </nav>
 
@@ -734,94 +606,6 @@ export default function AdminPage(): ReactNode {
                 </section>
                 ) : null}
 
-                {activeSection === "events" ? (
-                <section className={styles.toolSection}>
-                  <Heading as="h2">Schedule an Event</Heading>
-                  <p className={styles.meta}>
-                    Schedule one enabled event at a time. Its currency and rule automatically control the rewards calculator during the configured dates.
-                  </p>
-                  <div className={styles.field}>
-                    <label htmlFor="reward-event-name">Event Name</label>
-                    <input id="reward-event-name" className={styles.input} value={eventName} onChange={(event) => setEventName(event.target.value)} />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="reward-event-currency">Event Currency</label>
-                    <input
-                      id="reward-event-currency"
-                      className={styles.input}
-                      value={eventCurrencyName}
-                      onChange={(event) => setEventCurrencyName(event.target.value)}
-                      placeholder="Enter the currency name exactly as it appears in West Marches"
-                    />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="reward-event-start">Starts</label>
-                    <input id="reward-event-start" className={styles.input} type="datetime-local" value={eventStartsAt} onChange={(event) => setEventStartsAt(event.target.value)} />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="reward-event-end">Ends</label>
-                    <input id="reward-event-end" className={styles.input} type="datetime-local" value={eventEndsAt} onChange={(event) => setEventEndsAt(event.target.value)} />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="reward-event-rule">Reward Rule</label>
-                    <select id="reward-event-rule" className={styles.input} value={eventRuleType} onChange={(event) => setEventRuleType(event.target.value as RewardEvent["ruleType"])}>
-                      <option value="event_quest_fixed">Fixed amount per event quest</option>
-                      <option value="sc_percentage">Percentage of SC</option>
-                      <option value="final_participant_fixed">Fixed amount to unique participants at event end</option>
-                    </select>
-                  </div>
-                  {eventRuleType === "sc_percentage" ? (
-                    <>
-                      <div className={styles.field}>
-                        <label htmlFor="reward-event-normal-percent">Non-event Quest (% of SC)</label>
-                        <input id="reward-event-normal-percent" className={styles.input} type="number" min="0" value={eventNonQuestPercent} onChange={(event) => setEventNonQuestPercent(event.target.value)} />
-                      </div>
-                      <div className={styles.field}>
-                        <label htmlFor="reward-event-quest-percent">Event Quest (% of SC)</label>
-                        <input id="reward-event-quest-percent" className={styles.input} type="number" min="0" value={eventQuestPercent} onChange={(event) => setEventQuestPercent(event.target.value)} />
-                      </div>
-                    </>
-                  ) : (
-                    <div className={styles.field}>
-                      <label htmlFor="reward-event-fixed">{eventRuleType === "final_participant_fixed" ? "Final Amount per Unique Participant" : "Amount per Event Quest"}</label>
-                      <input id="reward-event-fixed" className={styles.input} type="number" min="0" value={eventFixedAmount} onChange={(event) => setEventFixedAmount(event.target.value)} />
-                    </div>
-                  )}
-                  <label className={styles.field}>
-                    <span>Enabled</span>
-                    <input type="checkbox" checked={eventEnabled} onChange={(event) => setEventEnabled(event.target.checked)} />
-                  </label>
-                  {eventMessage ? <p className={styles.successMessage}>{eventMessage}</p> : null}
-                  {eventError ? <p className={styles.errorMessage}>{eventError}</p> : null}
-                  <div className={styles.actions}>
-                    <button type="button" className={styles.button} onClick={saveRewardEvent} disabled={isSavingEvent}>{isSavingEvent ? "Saving..." : editingRewardEventId ? "Update Event" : "Create Event"}</button>
-                    {editingRewardEventId ? <button type="button" className={styles.button} onClick={resetRewardEventForm}>Cancel Edit</button> : null}
-                  </div>
-                  <div className={styles.marketplaceHistory}>
-                    <Heading as="h3">Configured Events</Heading>
-                    {rewardEvents.length === 0 ? <p className={styles.meta}>No reward events configured.</p> : null}
-                    {rewardEvents.map((event) => (
-                      <div key={event.id} className={styles.historyItem}>
-                        <div>
-                          <strong>{event.name}</strong>
-                          <p className={styles.meta}>{new Date(event.startsAt).toLocaleString()} – {new Date(event.endsAt).toLocaleString()} · {event.currencyName} · {event.enabled ? "enabled" : "disabled"}</p>
-                        </div>
-                        <div className={styles.actions}>
-                          <button type="button" className={styles.button} onClick={() => editRewardEvent(event)}>Edit</button>
-                          {event.ruleType === "final_participant_fixed" ? <button type="button" className={styles.button} onClick={() => previewFinalRewards(event.id)}>Preview Final Payout</button> : null}
-                        </div>
-                        {finalPreview?.eventId === event.id ? (
-                          <div>
-                            <p className={styles.meta}>{finalPreview.participants.filter((entry) => !entry.rewarded).length} pending unique participant(s), {finalPreview.participants.filter((entry) => entry.rewarded).length} already rewarded.</p>
-                            <p className={styles.meta}>{finalPreview.participants.map((entry) => `${entry.characterName}${entry.rewarded ? " (rewarded)" : ""}`).join(", ") || "No participants recorded yet."}</p>
-                            <button type="button" className={styles.button} onClick={() => distributeFinalRewards(event.id)} disabled={finalPreview.participants.every((entry) => entry.rewarded)}>Distribute Pending Final Rewards</button>
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-                ) : null}
                 {activeSection === "marketplace" ? (
                 <section className={styles.toolSection}>
                   <Heading as="h2">Weekly Marketplace</Heading>
