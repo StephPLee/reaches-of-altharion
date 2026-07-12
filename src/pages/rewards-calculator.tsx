@@ -56,8 +56,23 @@ type WestMarchesAdventure = {
   participantCount: number;
 };
 
+type RewardEvent = {
+  id: number;
+  name: string;
+  currencyId: string;
+  currencyName: string;
+  startsAt: string;
+  endsAt: string;
+  ruleType: "final_participant_fixed" | "sc_percentage" | "event_quest_fixed";
+  fixedAmount: number;
+  nonEventScPercent: number;
+  eventScPercent: number;
+  enabled: boolean;
+};
+
 type WestMarchesStatus = {
   configured: boolean;
+  activeEvent: RewardEvent | null;
   currencyMappings: {
     gold: string | null;
     sc: string | null;
@@ -721,12 +736,29 @@ export default function RewardsCalculatorPage(): ReactNode {
   const dmXp = baseDmXp;
   const dmGold = baseDmGold;
   const dmSc = baseDmSc;
-  const eventCurrencyAmount = hasEventCurrency && isEventRelated ? 5 : 0;
+  const activeEvent = westMarchesStatus?.activeEvent || null;
+  function getEventCurrencyAmount(sc: number): number {
+    if (!activeEvent) return 0;
+    if (activeEvent.ruleType === "event_quest_fixed") {
+      return isEventRelated ? activeEvent.fixedAmount : 0;
+    }
+    if (activeEvent.ruleType === "sc_percentage") {
+      const percent = isEventRelated
+        ? activeEvent.eventScPercent
+        : activeEvent.nonEventScPercent;
+      return Math.floor((sc * percent) / 100);
+    }
+    return 0;
+  }
+  const playerEventCurrencyAmount = getEventCurrencyAmount(playerSc);
+  const dmEventCurrencyAmount = getEventCurrencyAmount(dmSc);
 
   const rpXp = Math.round((rpDuration * rpRewardRow.xpPerHour) / 3);
   const rpGold = Math.round((rpDuration * rpRewardRow.goldPerHour) / 3);
 
-  const eventReasonText = isEventRelated ? ", event reward +5" : "";
+  const eventReasonText = activeEvent
+    ? `, ${activeEvent.name}${isEventRelated ? " event quest" : ""}`
+    : "";
   const dmScReasonText = dmScMultiplier > 1 ? ", below level 10 DM SC x2" : "";
   const playerDefaultReason = `Quest rewards: ${safeHours}h ${safeMinutes}m, level ${safeQuestLevel}, ${safePlayers} player${safePlayers === 1 ? "" : "s"}${eventReasonText}`;
   const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}${dmScReasonText}${eventReasonText}`;
@@ -822,6 +854,7 @@ export default function RewardsCalculatorPage(): ReactNode {
             gold: targetConfig.gold,
             sc: targetConfig.sc,
             eventRelated: targetConfig.eventRelated,
+            rewardRole: "player",
             adventureId: targetConfig.adventureId,
             reason: targetConfig.reason,
           }))
@@ -835,6 +868,7 @@ export default function RewardsCalculatorPage(): ReactNode {
               ...(target === "dm"
                 ? {
                     eventRelated: targetConfig.eventRelated,
+                    rewardRole: "dm",
                   }
                 : {}),
               ...(target === "dm"
@@ -1194,7 +1228,7 @@ export default function RewardsCalculatorPage(): ReactNode {
                     <span>
                       Event quest
                       <small>
-                        Awards 5 {eventCurrencyName} to each player and the DM.
+                        Mark this adventure as an event quest.
                       </small>
                     </span>
                   </label>
@@ -1252,14 +1286,16 @@ export default function RewardsCalculatorPage(): ReactNode {
                         {eventCurrencyName}
                       </span>
                       <span className={styles.rewardValue}>
-                        {formatReward(eventCurrencyAmount)}
+                        {formatReward(playerEventCurrencyAmount)}
                       </span>
                     </div>
                   ) : null}
                 </div>
                 {hasEventCurrency ? (
                   <p className={styles.muted}>
-                    Event quests award 5 {eventCurrencyName} to each player.
+                    {activeEvent?.ruleType === "final_participant_fixed"
+                      ? `Event-quest participants receive ${activeEvent.fixedAmount} ${eventCurrencyName} at the final payout.`
+                      : `${playerEventCurrencyAmount} ${eventCurrencyName} under the active ${activeEvent?.name} rule.`}
                   </p>
                 ) : null}
                 {user?.canSubmitRewards
@@ -1302,14 +1338,16 @@ export default function RewardsCalculatorPage(): ReactNode {
                         {eventCurrencyName}
                       </span>
                       <span className={styles.rewardValue}>
-                        {formatReward(eventCurrencyAmount)}
+                        {formatReward(dmEventCurrencyAmount)}
                       </span>
                     </div>
                   ) : null}
                 </div>
                 {hasEventCurrency ? (
                   <p className={styles.muted}>
-                    Event quests award 5 {eventCurrencyName} to the DM.
+                    {activeEvent?.ruleType === "final_participant_fixed"
+                      ? `Event-quest participants receive ${activeEvent.fixedAmount} ${eventCurrencyName} at the final payout.`
+                      : `${dmEventCurrencyAmount} ${eventCurrencyName} under the active ${activeEvent?.name} rule.`}
                   </p>
                 ) : null}
                 <p className={styles.muted}>
