@@ -8,7 +8,6 @@ const pool = require("../db");
 
 const BUMP_DEBOUNCE_MS = 3000;
 const pendingBumps = new Map(); // discordChannelId → Timeout
-const recentlyPostedMessageIds = new Set(); // discordMessageId, to avoid re-triggering on our own repost
 
 function formatStickyContent(content) {
   return `__**Stickied Message:**__\n\n${content}`;
@@ -78,9 +77,6 @@ async function postSticky(channel, sticky) {
     allowedMentions: { parse: [] },
   });
 
-  recentlyPostedMessageIds.add(posted.id);
-  setTimeout(() => recentlyPostedMessageIds.delete(posted.id), 10_000);
-
   await setStickyMessageId(channel.id, posted.id);
   return posted;
 }
@@ -109,10 +105,14 @@ function scheduleBump(client, channelId) {
 
 async function handleMessageForSticky(client, message) {
   if (!message.guildId) return;
-  if (recentlyPostedMessageIds.has(message.id)) return;
 
   const sticky = await getStickyMessage(message.channelId);
   if (!sticky) return;
+
+  const isOwnStickyRepost =
+    message.author?.id === client.user.id &&
+    message.content === formatStickyContent(sticky.content);
+  if (isOwnStickyRepost) return;
 
   scheduleBump(client, message.channelId);
 }
