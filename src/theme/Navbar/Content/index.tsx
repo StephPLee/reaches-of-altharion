@@ -47,7 +47,12 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "The World of Altharion",
-    links: [{ label: "World Map", to: "/?view=world" }],
+    to: "/world-of-altharion",
+    links: [
+      { label: "World Map", to: "/?view=world" },
+      { label: "World Wiki", to: "/world-wiki" },
+      { label: "Timeline", to: "/world-timeline" },
+    ],
   },
   {
     title: "Player Information",

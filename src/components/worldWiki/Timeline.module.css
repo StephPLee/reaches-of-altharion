@@ -1,0 +1,300 @@
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.eventForm {
+  max-width: 40rem;
+  margin: 0 auto 2rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 1rem;
+  background: rgba(9, 11, 24, 0.55);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Horizontal drag-scrollable rail */
+.scrollArea {
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+  touch-action: pan-x;
+  margin: 2rem -1.5rem 0;
+  padding: 0 1.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(210, 192, 145, 0.4) transparent;
+}
+
+.scrollArea:active {
+  cursor: grabbing;
+}
+
+.scrollArea::-webkit-scrollbar {
+  height: 8px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  background: rgba(210, 192, 145, 0.35);
+  border-radius: 999px;
+}
+
+.track {
+  --timeline-card-width: 15.5rem;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 0.5rem 1rem 2rem;
+  width: max-content;
+  min-width: 100%;
+  user-select: none;
+}
+
+.eraRow,
+.dotRow,
+.cardRow {
+  display: flex;
+  gap: 1.75rem;
+}
+
+.eraCell,
+.dotCell,
+.cardCell {
+  flex: 0 0 var(--timeline-card-width);
+  width: var(--timeline-card-width);
+  display: flex;
+  justify-content: center;
+}
+
+.eraCell {
+  color: rgba(210, 192, 145, 0.85);
+  font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.dotRow {
+  position: relative;
+  height: 0.85rem;
+  align-items: center;
+}
+
+.dotRow::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(210, 192, 145, 0.55) 4%,
+    rgba(210, 192, 145, 0.55) 96%,
+    transparent
+  );
+}
+
+.dotCell {
+  position: relative;
+}
+
+.dot {
+  position: relative;
+  z-index: 1;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: #f5e9c8;
+  box-shadow:
+    0 0 0 3px rgba(8, 9, 19, 0.9),
+    0 0 12px rgba(210, 192, 145, 0.6);
+}
+
+.cardRow {
+  align-items: flex-start;
+}
+
+/* Flip cards */
+.card {
+  position: relative;
+  width: 100%;
+  height: 19rem;
+  perspective: 1200px;
+}
+
+.cardInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.cardFlipped {
+  transform: rotateY(180deg);
+}
+
+.cardFace {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid rgba(190, 176, 138, 0.4);
+  border-radius: 1rem;
+  background: rgba(9, 11, 24, 0.7);
+  backface-visibility: hidden;
+}
+
+.cardFront {
+  display: flex;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+
+.cardFrontOverlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.5rem 0.9rem 0.8rem;
+  background: linear-gradient(180deg, transparent, rgba(6, 7, 16, 0.92));
+}
+
+.cardFrontTitle {
+  margin: 0;
+  color: #f5e9c8;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.cardPlaceholder {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  text-align: center;
+  background: linear-gradient(160deg, rgba(58, 46, 20, 0.55), rgba(9, 11, 24, 0.85));
+}
+
+.cardPlaceholderTitle {
+  margin: 0;
+  color: #f0e5ff;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.cardBack {
+  display: flex;
+  flex-direction: column;
+  padding: 1.1rem;
+  overflow-y: auto;
+  transform: rotateY(180deg);
+}
+
+.cardBackEra {
+  margin: 0 0 0.35rem;
+  color: rgba(210, 192, 145, 0.85);
+  font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cardBackTitle {
+  margin: 0 0 0.6rem;
+  color: #f0e5ff;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.cardBackDescription {
+  margin: 0 0 0.75rem;
+  color: rgba(215, 222, 242, 0.85);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.cardBackLink {
+  margin-top: auto;
+  color: rgba(202, 168, 255, 0.9);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cardBackLink:hover,
+.cardBackLink:focus-visible {
+  color: #e4d1ff;
+}
+
+.cardBackActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.flipButton {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  z-index: 2;
+  display: inline-flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(210, 192, 145, 0.4);
+  border-radius: 999px;
+  background: rgba(6, 7, 16, 0.75);
+  color: #f5e9c8;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+}
+
+.flipButton:hover,
+.flipButton:focus-visible {
+  border-color: rgba(210, 192, 145, 0.7);
+  background: rgba(6, 7, 16, 0.92);
+  outline: none;
+}
+
+@media (max-width: 600px) {
+  .track {
+    --timeline-card-width: 12.5rem;
+  }
+}

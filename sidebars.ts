@@ -30,6 +30,16 @@ const sidebars: SidebarsConfig = {
           label: "World Map",
           href: "/?view=world",
         },
+        {
+          type: "link",
+          label: "World Wiki",
+          href: "/world-wiki",
+        },
+        {
+          type: "link",
+          label: "Timeline",
+          href: "/world-timeline",
+        },
       ],
     },
     {

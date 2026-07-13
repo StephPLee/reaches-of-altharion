@@ -1,4 +1,7 @@
 const express = require("express");
+const multer = require("multer");
+const path = require("node:path");
+const fs = require("node:fs");
 const { serialize, parse } = require("cookie");
 const crypto = require("node:crypto");
 const {
@@ -104,6 +107,26 @@ const {
   upsertWikiPage,
 } = require("./wikiPages");
 const {
+  listCategories: listWorldWikiCategories,
+  createCategory: createWorldWikiCategory,
+  updateCategory: updateWorldWikiCategory,
+  deleteCategory: deleteWorldWikiCategory,
+  listPages: listWorldWikiPages,
+  getPageBySlug: getWorldWikiPageBySlug,
+  createPage: createWorldWikiPage,
+  updatePage: updateWorldWikiPage,
+  deletePage: deleteWorldWikiPage,
+  listImages: listWorldWikiImages,
+  recordImage: recordWorldWikiImage,
+  deleteImageRecord: deleteWorldWikiImageRecord,
+} = require("./worldWiki");
+const {
+  listTimelineEvents,
+  createTimelineEvent,
+  updateTimelineEvent,
+  deleteTimelineEvent,
+} = require("./timeline");
+const {
   createBannedContentEntry,
   deleteBannedContentEntry,
   listBannedContentEntries,
@@ -202,6 +225,31 @@ app.use((req, res, next) => {
   }
 
   next();
+});
+
+const worldWikiUploadsDir = path.join(__dirname, "..", "uploads", "world-wiki");
+fs.mkdirSync(worldWikiUploadsDir, { recursive: true });
+app.use("/uploads/world-wiki", express.static(worldWikiUploadsDir));
+
+const WORLD_WIKI_IMAGE_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+
+const worldWikiImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: worldWikiUploadsDir,
+    filename: (_req, file, cb) => {
+      const extension = path.extname(file.originalname).toLowerCase();
+      cb(null, `${crypto.randomUUID()}${extension}`);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    cb(null, WORLD_WIKI_IMAGE_MIME_TYPES.has(file.mimetype));
+  },
 });
 
 function getSessionTokenFromRequest(req) {
@@ -1190,6 +1238,15 @@ app.use(
   adminRateLimiter,
   requireStaffSession,
 );
+
+async function getViewerRoles(req) {
+  try {
+    const user = await getSessionUser(getSessionTokenFromRequest(req));
+    return { isStaff: Boolean(user?.isStaff), isDm: Boolean(user?.isDm) };
+  } catch {
+    return { isStaff: false, isDm: false };
+  }
+}
 
 async function listFaqRows() {
   const result = await pool.query(
@@ -5338,6 +5395,573 @@ app.get("/api/me", sessionRateLimiter, async (req, res) => {
     res.status(500).json({ error: "Failed to load session." });
   }
 });
+
+function normalizeWorldWikiAttributes(attributes) {
+  if (attributes === undefined) {
+    return [];
+  }
+  if (!Array.isArray(attributes) || attributes.length > 30) {
+    return { error: "attributes must be an array of at most 30 key/value pairs." };
+  }
+
+  const normalized = [];
+  for (const entry of attributes) {
+    const key = typeof entry?.key === "string" ? entry.key.trim().slice(0, 100) : "";
+    const value = typeof entry?.value === "string" ? entry.value.trim().slice(0, 500) : "";
+    if (!key) {
+      return { error: "Each attribute requires a key." };
+    }
+    normalized.push({ key, value });
+  }
+
+  return normalized;
+}
+
+function normalizeWorldWikiPagePayload(body) {
+  const { title, markdown, categoryId, coverImagePath, attributes, isDraft, gmOnly } =
+    body ?? {};
+
+  if (typeof title !== "string" || !title.trim()) {
+    return { error: "title is required." };
+  }
+  if (typeof markdown !== "string") {
+    return { error: "markdown is required." };
+  }
+  if (markdown.length > 200000) {
+    return { error: "markdown must be 200000 characters or fewer." };
+  }
+
+  const normalizedAttributes = normalizeWorldWikiAttributes(attributes);
+  if (!Array.isArray(normalizedAttributes)) {
+    return normalizedAttributes;
+  }
+
+  const normalizedCategoryId =
+    categoryId === null || categoryId === undefined || categoryId === ""
+      ? null
+      : Number(categoryId);
+  if (normalizedCategoryId !== null && !Number.isInteger(normalizedCategoryId)) {
+    return { error: "Invalid categoryId." };
+  }
+
+  return {
+    title,
+    markdown,
+    categoryId: normalizedCategoryId,
+    coverImagePath: typeof coverImagePath === "string" ? coverImagePath.slice(0, 500) : null,
+    attributes: normalizedAttributes,
+    isDraft: Boolean(isDraft),
+    gmOnly: Boolean(gmOnly),
+  };
+}
+
+app.get("/api/world-wiki/categories", async (_req, res) => {
+  try {
+    const categories = await listWorldWikiCategories();
+    res.json({ categories });
+  } catch (categoryError) {
+    console.error("Failed to load world wiki categories:", categoryError);
+    res.status(500).json({ error: "Failed to load categories." });
+  }
+});
+
+app.get("/api/world-wiki/pages", async (req, res) => {
+  const { isStaff, isDm } = await getViewerRoles(req);
+  const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+
+  try {
+    const pages = await listWorldWikiPages({
+      includeDrafts: isStaff,
+      includeGmOnly: isStaff || isDm,
+      search,
+    });
+    res.json({ pages });
+  } catch (pagesError) {
+    console.error("Failed to load world wiki pages:", pagesError);
+    res.status(500).json({ error: "Failed to load wiki pages." });
+  }
+});
+
+app.get("/api/world-wiki/pages/:slug", async (req, res) => {
+  const slug = typeof req.params.slug === "string" ? req.params.slug.trim() : "";
+
+  try {
+    const page = await getWorldWikiPageBySlug(slug);
+    if (!page) {
+      res.status(404).json({ error: "Wiki page not found." });
+      return;
+    }
+
+    const { isStaff, isDm } = await getViewerRoles(req);
+    const canViewDraft = !page.isDraft || isStaff;
+    const canViewGmOnly = !page.gmOnly || isStaff || isDm;
+
+    if (!canViewDraft || !canViewGmOnly) {
+      res.status(404).json({ error: "Wiki page not found." });
+      return;
+    }
+
+    res.json({ page });
+  } catch (pageError) {
+    console.error("Failed to load world wiki page:", pageError);
+    res.status(500).json({ error: "Failed to load wiki page." });
+  }
+});
+
+app.get(
+  "/api/admin/world-wiki/pages",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (_req, res) => {
+    try {
+      const pages = await listWorldWikiPages({ includeDrafts: true, includeGmOnly: true });
+      res.json({ pages });
+    } catch (pagesError) {
+      console.error("Failed to load admin world wiki pages:", pagesError);
+      res.status(500).json({ error: "Failed to load wiki pages." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/world-wiki/pages",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const normalizedPayload = normalizeWorldWikiPagePayload(req.body);
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const page = await createWorldWikiPage({
+        ...normalizedPayload,
+        createdByUserId: req.staffUser.id,
+      });
+
+      await recordAuditEvent({
+        action: "world_wiki_page_create",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { slug: page.slug, title: page.title },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ page });
+    } catch (pageError) {
+      console.error("Failed to create world wiki page:", pageError);
+      res.status(500).json({ error: "Failed to create wiki page." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/world-wiki/pages/:slug",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const slug = typeof req.params.slug === "string" ? req.params.slug.trim() : "";
+    const normalizedPayload = normalizeWorldWikiPagePayload(req.body);
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const page = await updateWorldWikiPage({
+        slug,
+        ...normalizedPayload,
+        updatedByUserId: req.staffUser.id,
+      });
+
+      if (!page) {
+        res.status(404).json({ error: "Wiki page not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "world_wiki_page_update",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { slug: page.slug },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ page });
+    } catch (pageError) {
+      console.error("Failed to update world wiki page:", pageError);
+      res.status(500).json({ error: "Failed to update wiki page." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/world-wiki/pages/:slug",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const slug = typeof req.params.slug === "string" ? req.params.slug.trim() : "";
+
+    try {
+      const deleted = await deleteWorldWikiPage(slug);
+      if (!deleted) {
+        res.status(404).json({ error: "Wiki page not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "world_wiki_page_delete",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { slug },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(204).end();
+    } catch (pageError) {
+      console.error("Failed to delete world wiki page:", pageError);
+      res.status(500).json({ error: "Failed to delete wiki page." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/world-wiki/categories",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const { name, sortOrder } = req.body ?? {};
+    if (typeof name !== "string" || !name.trim()) {
+      res.status(400).json({ error: "name is required." });
+      return;
+    }
+
+    try {
+      const category = await createWorldWikiCategory({
+        name,
+        sortOrder: Number(sortOrder),
+      });
+      res.status(201).json({ category });
+    } catch (categoryError) {
+      console.error("Failed to create world wiki category:", categoryError);
+      res.status(500).json({ error: "Failed to create category." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/world-wiki/categories/:categoryId",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const categoryId = Number(req.params.categoryId);
+    const { name, sortOrder } = req.body ?? {};
+
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      res.status(400).json({ error: "Invalid category id." });
+      return;
+    }
+
+    try {
+      const category = await updateWorldWikiCategory({
+        categoryId,
+        name: typeof name === "string" && name.trim() ? name : null,
+        sortOrder: Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : null,
+      });
+
+      if (!category) {
+        res.status(404).json({ error: "Category not found." });
+        return;
+      }
+
+      res.json({ category });
+    } catch (categoryError) {
+      console.error("Failed to update world wiki category:", categoryError);
+      res.status(500).json({ error: "Failed to update category." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/world-wiki/categories/:categoryId",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const categoryId = Number(req.params.categoryId);
+
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      res.status(400).json({ error: "Invalid category id." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteWorldWikiCategory(categoryId);
+      if (!deleted) {
+        res.status(404).json({ error: "Category not found." });
+        return;
+      }
+      res.status(204).end();
+    } catch (categoryError) {
+      console.error("Failed to delete world wiki category:", categoryError);
+      res.status(500).json({ error: "Failed to delete category." });
+    }
+  },
+);
+
+app.get(
+  "/api/admin/world-wiki/images",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (_req, res) => {
+    try {
+      const images = await listWorldWikiImages();
+      res.json({ images });
+    } catch (imageError) {
+      console.error("Failed to load world wiki images:", imageError);
+      res.status(500).json({ error: "Failed to load images." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/world-wiki/images",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  worldWikiImageUpload.single("image"),
+  async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "A valid image file (png, jpeg, webp, gif) up to 8MB is required." });
+      return;
+    }
+
+    try {
+      const image = await recordWorldWikiImage({
+        fileName: req.file.filename,
+        originalName: req.file.originalname,
+        uploadedByUserId: req.staffUser.id,
+      });
+
+      await recordAuditEvent({
+        action: "world_wiki_image_upload",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { fileName: image.fileName },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ image });
+    } catch (imageError) {
+      console.error("Failed to save world wiki image upload:", imageError);
+      fs.unlink(req.file.path, () => {});
+      res.status(500).json({ error: "Failed to save uploaded image." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/world-wiki/images/:fileName",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const fileName = typeof req.params.fileName === "string" ? req.params.fileName : "";
+    const safeFileName = path.basename(fileName);
+
+    if (!safeFileName || safeFileName !== fileName) {
+      res.status(400).json({ error: "Invalid file name." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteWorldWikiImageRecord(safeFileName);
+      if (!deleted) {
+        res.status(404).json({ error: "Image not found." });
+        return;
+      }
+
+      fs.unlink(path.join(worldWikiUploadsDir, safeFileName), () => {});
+      res.status(204).end();
+    } catch (imageError) {
+      console.error("Failed to delete world wiki image:", imageError);
+      res.status(500).json({ error: "Failed to delete image." });
+    }
+  },
+);
+
+function normalizeTimelineEventPayload(body) {
+  const { title, description, eraLabel, sortValue, category, linkedWikiSlug, imagePath, isDraft } =
+    body ?? {};
+
+  if (typeof title !== "string" || !title.trim()) {
+    return { error: "title is required." };
+  }
+  if (typeof eraLabel !== "string" || !eraLabel.trim()) {
+    return { error: "eraLabel is required." };
+  }
+  const normalizedSortValue = Number(sortValue);
+  if (!Number.isFinite(normalizedSortValue)) {
+    return { error: "sortValue must be a number." };
+  }
+  if (description !== undefined && typeof description !== "string") {
+    return { error: "description must be a string." };
+  }
+
+  return {
+    title,
+    description: description || "",
+    eraLabel,
+    sortValue: normalizedSortValue,
+    category: typeof category === "string" && category.trim() ? category.trim().slice(0, 80) : null,
+    linkedWikiSlug:
+      typeof linkedWikiSlug === "string" && linkedWikiSlug.trim() ? linkedWikiSlug.trim() : null,
+    imagePath: typeof imagePath === "string" && imagePath.trim() ? imagePath.trim().slice(0, 500) : null,
+    isDraft: Boolean(isDraft),
+  };
+}
+
+app.get("/api/timeline/events", async (req, res) => {
+  const { isStaff } = await getViewerRoles(req);
+
+  try {
+    const events = await listTimelineEvents({ includeDrafts: isStaff });
+    res.json({ events });
+  } catch (timelineError) {
+    console.error("Failed to load timeline events:", timelineError);
+    res.status(500).json({ error: "Failed to load timeline events." });
+  }
+});
+
+app.post(
+  "/api/admin/timeline/events",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const normalizedPayload = normalizeTimelineEventPayload(req.body);
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const event = await createTimelineEvent({
+        ...normalizedPayload,
+        createdByUserId: req.staffUser.id,
+      });
+
+      await recordAuditEvent({
+        action: "timeline_event_create",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { eventId: event.id, title: event.title },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ event });
+    } catch (timelineError) {
+      console.error("Failed to create timeline event:", timelineError);
+      res.status(500).json({ error: "Failed to create timeline event." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/timeline/events/:eventId",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const eventId = Number(req.params.eventId);
+    if (!Number.isInteger(eventId) || eventId <= 0) {
+      res.status(400).json({ error: "Invalid event id." });
+      return;
+    }
+
+    const normalizedPayload = normalizeTimelineEventPayload(req.body);
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const event = await updateTimelineEvent({
+        eventId,
+        ...normalizedPayload,
+        updatedByUserId: req.staffUser.id,
+      });
+
+      if (!event) {
+        res.status(404).json({ error: "Timeline event not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "timeline_event_update",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { eventId },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ event });
+    } catch (timelineError) {
+      console.error("Failed to update timeline event:", timelineError);
+      res.status(500).json({ error: "Failed to update timeline event." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/timeline/events/:eventId",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const eventId = Number(req.params.eventId);
+    if (!Number.isInteger(eventId) || eventId <= 0) {
+      res.status(400).json({ error: "Invalid event id." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteTimelineEvent(eventId);
+      if (!deleted) {
+        res.status(404).json({ error: "Timeline event not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "timeline_event_delete",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { eventId },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(204).end();
+    } catch (timelineError) {
+      console.error("Failed to delete timeline event:", timelineError);
+      res.status(500).json({ error: "Failed to delete timeline event." });
+    }
+  },
+);
 
 app.listen(port, () => {
   console.log(`Auth server listening on http://localhost:${port}`);
