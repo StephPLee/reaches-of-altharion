@@ -1,5 +1,7 @@
 const { pool } = require("./db");
 
+const SORT_VALUE_STEP = 10;
+
 function mapEventRow(row) {
   return row
     ? {
@@ -11,6 +13,7 @@ function mapEventRow(row) {
         category: row.category,
         linkedWikiSlug: row.linked_wiki_slug,
         imagePath: row.image_path,
+        isChapterMarker: row.is_chapter_marker,
         isDraft: row.is_draft,
         updatedAt: row.updated_at,
       }
@@ -22,7 +25,7 @@ async function listTimelineEvents({ includeDrafts = false } = {}) {
   const result = await pool.query(
     `
     SELECT id, title, description, era_label, sort_value, category,
-           linked_wiki_slug, image_path, is_draft, updated_at
+           linked_wiki_slug, image_path, is_chapter_marker, is_draft, updated_at
     FROM timeline_events
     ${whereClause}
     ORDER BY sort_value ASC, id ASC
@@ -35,10 +38,10 @@ async function createTimelineEvent({
   title,
   description,
   eraLabel,
-  sortValue,
   category,
   linkedWikiSlug,
   imagePath,
+  isChapterMarker,
   isDraft,
   createdByUserId,
 }) {
@@ -46,20 +49,24 @@ async function createTimelineEvent({
     `
     INSERT INTO timeline_events (
       title, description, era_label, sort_value, category,
-      linked_wiki_slug, image_path, is_draft, created_by_user_id, updated_by_user_id
+      linked_wiki_slug, image_path, is_chapter_marker, is_draft, created_by_user_id, updated_by_user_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+    VALUES (
+      $1, $2, $3,
+      COALESCE((SELECT MAX(sort_value) FROM timeline_events), 0) + ${SORT_VALUE_STEP},
+      $4, $5, $6, $7, $8, $9, $9
+    )
     RETURNING id, title, description, era_label, sort_value, category,
-              linked_wiki_slug, image_path, is_draft, updated_at
+              linked_wiki_slug, image_path, is_chapter_marker, is_draft, updated_at
     `,
     [
       title.trim().slice(0, 200),
       description || "",
       eraLabel.trim().slice(0, 120),
-      sortValue,
       category || null,
       linkedWikiSlug || null,
       imagePath || null,
+      Boolean(isChapterMarker),
       Boolean(isDraft),
       createdByUserId || null,
     ],
@@ -72,10 +79,10 @@ async function updateTimelineEvent({
   title,
   description,
   eraLabel,
-  sortValue,
   category,
   linkedWikiSlug,
   imagePath,
+  isChapterMarker,
   isDraft,
   updatedByUserId,
 }) {
@@ -86,31 +93,56 @@ async function updateTimelineEvent({
       title = $2,
       description = $3,
       era_label = $4,
-      sort_value = $5,
-      category = $6,
-      linked_wiki_slug = $7,
-      image_path = $8,
+      category = $5,
+      linked_wiki_slug = $6,
+      image_path = $7,
+      is_chapter_marker = $8,
       is_draft = $9,
       updated_by_user_id = $10,
       updated_at = NOW()
     WHERE id = $1
     RETURNING id, title, description, era_label, sort_value, category,
-              linked_wiki_slug, image_path, is_draft, updated_at
+              linked_wiki_slug, image_path, is_chapter_marker, is_draft, updated_at
     `,
     [
       eventId,
       title.trim().slice(0, 200),
       description || "",
       eraLabel.trim().slice(0, 120),
-      sortValue,
       category || null,
       linkedWikiSlug || null,
       imagePath || null,
+      Boolean(isChapterMarker),
       Boolean(isDraft),
       updatedByUserId || null,
     ],
   );
   return mapEventRow(result.rows[0]);
+}
+
+async function reorderTimelineEvents(orderedEventIds, updatedByUserId) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (let index = 0; index < orderedEventIds.length; index += 1) {
+      await client.query(
+        `
+        UPDATE timeline_events
+        SET sort_value = $2, updated_by_user_id = $3, updated_at = NOW()
+        WHERE id = $1
+        `,
+        [orderedEventIds[index], (index + 1) * SORT_VALUE_STEP, updatedByUserId || null],
+      );
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  return listTimelineEvents({ includeDrafts: true });
 }
 
 async function deleteTimelineEvent(eventId) {
@@ -122,5 +154,6 @@ module.exports = {
   listTimelineEvents,
   createTimelineEvent,
   updateTimelineEvent,
+  reorderTimelineEvents,
   deleteTimelineEvent,
 };

@@ -173,7 +173,9 @@
       "Bash(node scripts/_final-visual-check.mjs)",
       "Bash(cp /tmp/session_token.txt scripts/_session_token.txt)",
       "Bash(cat /tmp/session_token.txt)",
-      "Bash(rm -f scripts/_debug-timeline-crop.mjs scripts/_debug-timeline-crop2.mjs scripts/_verify-timeline-image.mjs scripts/_screenshot-timeline-v2.mjs scripts/_final-visual-check.mjs scripts/_session_token.txt /tmp/session_token.txt)"
+      "Bash(rm -f scripts/_debug-timeline-crop.mjs scripts/_debug-timeline-crop2.mjs scripts/_verify-timeline-image.mjs scripts/_screenshot-timeline-v2.mjs scripts/_final-visual-check.mjs scripts/_session_token.txt /tmp/session_token.txt)",
+      "Bash(echo \"backend started with PID $!\")",
+      "Bash(echo \"frontend started with PID $!\")"
     ]
   }
 }

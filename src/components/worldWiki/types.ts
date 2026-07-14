@@ -38,6 +38,7 @@ export type TimelineEvent = {
   category: string | null;
   linkedWikiSlug: string | null;
   imagePath: string | null;
+  isChapterMarker: boolean;
   isDraft: boolean;
   updatedAt: string;
 };

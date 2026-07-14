@@ -9,8 +9,11 @@ import {
   renderMarkdown,
   ToolbarIcon,
 } from "../wikiMarkdown";
+import PageLoader from "../PageLoader";
 import ImageCropDialog from "./ImageCropDialog";
+import ToastStack from "./ToastStack";
 import { uploadWorldWikiImage } from "./uploadImage";
+import { useToasts } from "./useToasts";
 import styles from "./WorldWiki.module.css";
 import {
   getAuthApiBaseUrl,
@@ -58,7 +61,7 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
   const [categories, setCategories] = useState<WorldWikiCategory[]>([]);
   const [page, setPage] = useState<WorldWikiPage | null>(isCreateMode ? EMPTY_PAGE : null);
   const [isEditing, setIsEditing] = useState(isCreateMode);
-  const [isLoading, setIsLoading] = useState(!isCreateMode);
+  const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   const [draftTitle, setDraftTitle] = useState("");
@@ -72,8 +75,7 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const { toasts, showToast, dismissToast } = useToasts();
 
   function loadDraftFromPage(sourcePage: WorldWikiPage) {
     setDraftTitle(sourcePage.title);
@@ -278,13 +280,12 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
     setPendingCoverFile(null);
     try {
       setIsUploadingCover(true);
-      setError("");
       const url = await uploadWorldWikiImage(authApiBaseUrl, blob);
       if (url) {
         setDraftCoverImagePath(url);
       }
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Failed to upload image.");
+      showToast("error", uploadError instanceof Error ? uploadError.message : "Failed to upload image.");
     } finally {
       setIsUploadingCover(false);
     }
@@ -298,13 +299,12 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
     }
 
     try {
-      setError("");
       const url = await uploadWorldWikiImage(authApiBaseUrl, file, file.name);
       if (url) {
         insert(`\n![Image](${url})\n`);
       }
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Failed to upload image.");
+      showToast("error", uploadError instanceof Error ? uploadError.message : "Failed to upload image.");
     }
   }
 
@@ -328,8 +328,6 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
     if (page) {
       loadDraftFromPage(page);
     }
-    setError("");
-    setMessage("");
     setIsEditing(true);
   }
 
@@ -342,12 +340,11 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
       loadDraftFromPage(page);
     }
     setIsEditing(false);
-    setError("");
   }
 
   async function handleSave() {
     if (!draftTitle.trim()) {
-      setError("Title is required.");
+      showToast("error", "Title is required.");
       return;
     }
 
@@ -363,8 +360,6 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
 
     try {
       setIsSaving(true);
-      setError("");
-      setMessage("");
 
       const response = await fetch(
         isCreateMode
@@ -386,13 +381,13 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
       setPage(responsePayload.page);
       loadDraftFromPage(responsePayload.page);
       setIsEditing(false);
-      setMessage("Page saved.");
+      showToast("success", "Page saved.");
 
       if (isCreateMode) {
         history.replace(`/world-wiki?slug=${encodeURIComponent(responsePayload.page.slug)}`);
       }
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save page.");
+      showToast("error", saveError instanceof Error ? saveError.message : "Failed to save page.");
     } finally {
       setIsSaving(false);
     }
@@ -417,17 +412,23 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
       }
       history.push("/world-wiki");
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete page.");
+      showToast("error", deleteError instanceof Error ? deleteError.message : "Failed to delete page.");
     }
   }
 
-  if (isCreateMode && !isLoading && !currentUser?.isStaff) {
+  if (isLoading) {
+    return <PageLoader label="Loading wiki page" />;
+  }
+
+  if (isCreateMode && !currentUser?.isStaff) {
     return (
       <div className={styles.page}>
-        <Link to="/world-wiki" className={styles.backLink}>
-          &larr; Back to World Wiki
-        </Link>
-        <p className={styles.error}>Only staff can create new wiki pages.</p>
+        <div className={styles.panel}>
+          <Link to="/world-wiki" className={styles.backLink}>
+            &larr; Back to World Wiki
+          </Link>
+          <p className={styles.error}>Only staff can create new wiki pages.</p>
+        </div>
       </div>
     );
   }
@@ -435,24 +436,23 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
   if (notFound) {
     return (
       <div className={styles.page}>
-        <Link to="/world-wiki" className={styles.backLink}>
-          &larr; Back to World Wiki
-        </Link>
-        <p className={styles.error}>That wiki page could not be found.</p>
+        <div className={styles.panel}>
+          <Link to="/world-wiki" className={styles.backLink}>
+            &larr; Back to World Wiki
+          </Link>
+          <p className={styles.error}>That wiki page could not be found.</p>
+        </div>
       </div>
     );
   }
 
-  if (isLoading || !page) {
-    return (
-      <div className={styles.page}>
-        <p className={styles.heroSubtitle}>Loading wiki page...</p>
-      </div>
-    );
+  if (!page) {
+    return <PageLoader label="Loading wiki page" />;
   }
 
   return (
     <>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       {pendingCoverFile ? (
         <ImageCropDialog
           file={pendingCoverFile}
@@ -461,15 +461,13 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
         />
       ) : null}
       <div className={styles.page}>
+      <div className={styles.panel}>
       <Link to="/world-wiki" className={styles.backLink}>
         &larr; Back to World Wiki
       </Link>
 
       <div className={styles.statusRow}>
-        <div>
-          {message ? <p className={styles.message}>{message}</p> : null}
-          {error ? <p className={styles.error}>{error}</p> : null}
-        </div>
+        <div />
         {currentUser?.isStaff && !isEditing ? (
           <div className={styles.actions}>
             <button type="button" className={styles.button} onClick={beginEditing}>
@@ -754,6 +752,7 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
           </aside>
         </div>
       )}
+      </div>
       </div>
     </>
   );

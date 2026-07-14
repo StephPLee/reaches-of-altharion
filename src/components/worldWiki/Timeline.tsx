@@ -2,21 +2,38 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
+import ChapterMarker from "./ChapterMarker";
+import PageLoader from "../PageLoader";
 import ImageCropDialog from "./ImageCropDialog";
+import ReorderEventsDialog from "./ReorderEventsDialog";
 import TimelineEventCard from "./TimelineEventCard";
+import ToastStack from "./ToastStack";
 import { uploadWorldWikiImage } from "./uploadImage";
+import { useToasts } from "./useToasts";
 import wikiStyles from "./WorldWiki.module.css";
 import styles from "./Timeline.module.css";
 import { getAuthApiBaseUrl, type SessionUser, type TimelineEvent, type WorldWikiPage } from "./types";
+
+// The world's history is told through these island illustrations appearing
+// one by one; each is a unique irregular shape, so chapter markers render
+// them at their natural aspect ratio instead of cropping them into a card.
+const CHAPTER_MARKER_IMAGES = [
+  { label: "Thaloryn", path: "/img/Thaloryn.png" },
+  { label: "Iskralith", path: "/img/Iskralith.png" },
+  { label: "Solcrata", path: "/img/Solcrata.png" },
+  { label: "Tenebryn", path: "/img/Tenebryn.png" },
+  { label: "Verdalis", path: "/img/Verdalis.png" },
+  { label: "Abysmere", path: "/img/Abysmere.png" },
+];
 
 const EMPTY_FORM = {
   title: "",
   description: "",
   eraLabel: "",
-  sortValue: "0",
   category: "",
   linkedWikiSlug: "",
   imagePath: null as string | null,
+  isChapterMarker: false,
   isDraft: false,
 };
 
@@ -36,8 +53,9 @@ export default function Timeline(): ReactNode {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const { toasts, showToast, dismissToast } = useToasts();
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number; moved: boolean } | null>(
@@ -174,8 +192,6 @@ export default function Timeline(): ReactNode {
     setForm(EMPTY_FORM);
     setEditingEventId(null);
     setIsFormOpen(true);
-    setError("");
-    setMessage("");
   }
 
   function openEditForm(event: TimelineEvent) {
@@ -183,16 +199,14 @@ export default function Timeline(): ReactNode {
       title: event.title,
       description: event.description,
       eraLabel: event.eraLabel,
-      sortValue: String(event.sortValue),
       category: event.category || "",
       linkedWikiSlug: event.linkedWikiSlug || "",
       imagePath: event.imagePath,
+      isChapterMarker: event.isChapterMarker,
       isDraft: event.isDraft,
     });
     setEditingEventId(event.id);
     setIsFormOpen(true);
-    setError("");
-    setMessage("");
   }
 
   function closeForm() {
@@ -214,13 +228,12 @@ export default function Timeline(): ReactNode {
     setPendingImageFile(null);
     try {
       setIsUploadingImage(true);
-      setError("");
       const url = await uploadWorldWikiImage(authApiBaseUrl, blob);
       if (url) {
         setForm((current) => ({ ...current, imagePath: url }));
       }
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Failed to upload image.");
+      showToast("error", uploadError instanceof Error ? uploadError.message : "Failed to upload image.");
     } finally {
       setIsUploadingImage(false);
     }
@@ -228,12 +241,7 @@ export default function Timeline(): ReactNode {
 
   async function handleSaveEvent() {
     if (!form.title.trim() || !form.eraLabel.trim()) {
-      setError("Title and era label are required.");
-      return;
-    }
-    const sortValueNumber = Number(form.sortValue);
-    if (!Number.isFinite(sortValueNumber)) {
-      setError("Sort value must be a number.");
+      showToast("error", "Title and era label are required.");
       return;
     }
 
@@ -241,16 +249,15 @@ export default function Timeline(): ReactNode {
       title: form.title.trim(),
       description: form.description,
       eraLabel: form.eraLabel.trim(),
-      sortValue: sortValueNumber,
       category: form.category.trim() || null,
       linkedWikiSlug: form.linkedWikiSlug || null,
       imagePath: form.imagePath,
+      isChapterMarker: form.isChapterMarker,
       isDraft: form.isDraft,
     };
 
     try {
       setIsSaving(true);
-      setError("");
       const response = await fetch(
         editingEventId
           ? `${authApiBaseUrl}/api/admin/timeline/events/${editingEventId}`
@@ -267,11 +274,11 @@ export default function Timeline(): ReactNode {
         throw new Error(responsePayload.error || "Failed to save event.");
       }
 
-      setMessage(editingEventId ? "Event updated." : "Event created.");
+      showToast("success", editingEventId ? "Event updated." : "Event created.");
       closeForm();
       await loadEvents();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save event.");
+      showToast("error", saveError instanceof Error ? saveError.message : "Failed to save event.");
     } finally {
       setIsSaving(false);
     }
@@ -293,12 +300,41 @@ export default function Timeline(): ReactNode {
       }
       await loadEvents();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete event.");
+      showToast("error", deleteError instanceof Error ? deleteError.message : "Failed to delete event.");
     }
+  }
+
+  async function handleSaveReorder(orderedEventIds: number[]) {
+    try {
+      setIsReordering(true);
+      const response = await fetch(`${authApiBaseUrl}/api/admin/timeline/events/reorder`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventIds: orderedEventIds }),
+      });
+      const responsePayload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(responsePayload.error || "Failed to reorder events.");
+      }
+
+      showToast("success", "Order updated.");
+      setIsReorderDialogOpen(false);
+      await loadEvents();
+    } catch (reorderError) {
+      showToast("error", reorderError instanceof Error ? reorderError.message : "Failed to reorder events.");
+    } finally {
+      setIsReordering(false);
+    }
+  }
+
+  if (isLoading) {
+    return <PageLoader label="Loading timeline" />;
   }
 
   return (
     <div className={wikiStyles.page}>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       {pendingImageFile ? (
         <ImageCropDialog
           file={pendingImageFile}
@@ -306,7 +342,16 @@ export default function Timeline(): ReactNode {
           onCropped={handleImageCropped}
         />
       ) : null}
+      {isReorderDialogOpen ? (
+        <ReorderEventsDialog
+          events={events}
+          isSaving={isReordering}
+          onCancel={() => setIsReorderDialogOpen(false)}
+          onSave={handleSaveReorder}
+        />
+      ) : null}
 
+      <div className={wikiStyles.panel}>
       <header className={wikiStyles.hero}>
         <h1 className={wikiStyles.heroTitle}>Timeline of Altharion</h1>
         <p className={wikiStyles.heroSubtitle}>
@@ -329,17 +374,29 @@ export default function Timeline(): ReactNode {
           ))}
         </select>
         {currentUser?.isStaff ? (
-          <button type="button" className={wikiStyles.button} onClick={isFormOpen ? closeForm : openAddForm}>
-            {isFormOpen ? "Close" : "Add Event"}
-          </button>
+          <>
+            <button type="button" className={wikiStyles.button} onClick={isFormOpen ? closeForm : openAddForm}>
+              {isFormOpen ? "Close" : "Add Event"}
+            </button>
+            <button
+              type="button"
+              className={wikiStyles.button}
+              onClick={() => setIsReorderDialogOpen(true)}
+              disabled={events.length < 2}
+            >
+              Reorder Events
+            </button>
+          </>
         ) : null}
       </div>
 
-      {message ? <p className={wikiStyles.message} style={{ textAlign: "center" }}>{message}</p> : null}
-      {error ? <p className={wikiStyles.error} style={{ textAlign: "center" }}>{error}</p> : null}
-
       {isFormOpen && currentUser?.isStaff ? (
         <div className={styles.eventForm}>
+          {!editingEventId ? (
+            <p className={wikiStyles.heroSubtitle} style={{ margin: 0 }}>
+              New events are added to the end of the timeline — use "Reorder Events" to move them.
+            </p>
+          ) : null}
           <label className={wikiStyles.field}>
             <span className={wikiStyles.fieldLabel}>Title</span>
             <input
@@ -348,26 +405,15 @@ export default function Timeline(): ReactNode {
               onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
             />
           </label>
-          <div className={styles.formRow}>
-            <label className={wikiStyles.field}>
-              <span className={wikiStyles.fieldLabel}>Era Label</span>
-              <input
-                className={wikiStyles.input}
-                value={form.eraLabel}
-                onChange={(event) => setForm((current) => ({ ...current, eraLabel: event.target.value }))}
-                placeholder="e.g. Age of Sundering, Year 214"
-              />
-            </label>
-            <label className={wikiStyles.field}>
-              <span className={wikiStyles.fieldLabel}>Sort Value</span>
-              <input
-                className={wikiStyles.input}
-                type="number"
-                value={form.sortValue}
-                onChange={(event) => setForm((current) => ({ ...current, sortValue: event.target.value }))}
-              />
-            </label>
-          </div>
+          <label className={wikiStyles.field}>
+            <span className={wikiStyles.fieldLabel}>Era Label</span>
+            <input
+              className={wikiStyles.input}
+              value={form.eraLabel}
+              onChange={(event) => setForm((current) => ({ ...current, eraLabel: event.target.value }))}
+              placeholder="e.g. Age of Sundering, Year 214"
+            />
+          </label>
           <div className={styles.formRow}>
             <label className={wikiStyles.field}>
               <span className={wikiStyles.fieldLabel}>Category (optional)</span>
@@ -393,38 +439,77 @@ export default function Timeline(): ReactNode {
               </select>
             </label>
           </div>
-          <div className={wikiStyles.field}>
-            <span className={wikiStyles.fieldLabel}>Image (optional)</span>
-            {form.imagePath ? (
-              <img src={form.imagePath} alt="" className={wikiStyles.imageUploadPreview} />
-            ) : null}
-            <div className={wikiStyles.actions}>
-              <button
-                type="button"
-                className={wikiStyles.button}
-                onClick={() => imageInputRef.current?.click()}
-                disabled={isUploadingImage}
+          <label className={wikiStyles.toggleRow}>
+            <input
+              type="checkbox"
+              checked={form.isChapterMarker}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  isChapterMarker: event.target.checked,
+                  imagePath: event.target.checked ? CHAPTER_MARKER_IMAGES[0].path : null,
+                }))
+              }
+            />
+            <span>Chapter marker (show a full island illustration instead of a card)</span>
+          </label>
+
+          {form.isChapterMarker ? (
+            <label className={wikiStyles.field}>
+              <span className={wikiStyles.fieldLabel}>Island</span>
+              <select
+                className={wikiStyles.select}
+                value={form.imagePath ?? ""}
+                onChange={(event) => setForm((current) => ({ ...current, imagePath: event.target.value }))}
               >
-                {isUploadingImage ? "Uploading..." : form.imagePath ? "Replace Image" : "Add Image"}
-              </button>
+                {CHAPTER_MARKER_IMAGES.map((island) => (
+                  <option key={island.path} value={island.path}>
+                    {island.label}
+                  </option>
+                ))}
+              </select>
               {form.imagePath ? (
+                <img
+                  src={form.imagePath}
+                  alt=""
+                  style={{ display: "block", height: "10rem", width: "auto", maxWidth: "none", margin: "0.5rem auto 0" }}
+                />
+              ) : null}
+            </label>
+          ) : (
+            <div className={wikiStyles.field}>
+              <span className={wikiStyles.fieldLabel}>Image (optional)</span>
+              {form.imagePath ? (
+                <img src={form.imagePath} alt="" className={wikiStyles.imageUploadPreview} />
+              ) : null}
+              <div className={wikiStyles.actions}>
                 <button
                   type="button"
                   className={wikiStyles.button}
-                  onClick={() => setForm((current) => ({ ...current, imagePath: null }))}
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={isUploadingImage}
                 >
-                  Remove Image
+                  {isUploadingImage ? "Uploading..." : form.imagePath ? "Replace Image" : "Add Image"}
                 </button>
-              ) : null}
+                {form.imagePath ? (
+                  <button
+                    type="button"
+                    className={wikiStyles.button}
+                    onClick={() => setForm((current) => ({ ...current, imagePath: null }))}
+                  >
+                    Remove Image
+                  </button>
+                ) : null}
+              </div>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                style={{ display: "none" }}
+                onChange={handleImageSelected}
+              />
             </div>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              style={{ display: "none" }}
-              onChange={handleImageSelected}
-            />
-          </div>
+          )}
           <label className={wikiStyles.field}>
             <span className={wikiStyles.fieldLabel}>Description</span>
             <textarea
@@ -458,13 +543,11 @@ export default function Timeline(): ReactNode {
         </div>
       ) : null}
 
-      {isLoading ? <p className={wikiStyles.heroSubtitle} style={{ textAlign: "center" }}>Loading timeline...</p> : null}
-
-      {!isLoading && visibleEvents.length === 0 ? (
+      {visibleEvents.length === 0 ? (
         <div className={wikiStyles.emptyState}>No timeline events yet.</div>
       ) : null}
 
-      {!isLoading && visibleEvents.length > 0 ? (
+      {visibleEvents.length > 0 ? (
         <div
           ref={scrollRef}
           className={styles.scrollArea}
@@ -474,36 +557,35 @@ export default function Timeline(): ReactNode {
           onPointerCancel={handleScrollPointerUp}
         >
           <div className={styles.track}>
-            <div className={styles.eraRow}>
-              {visibleEvents.map((event) => (
-                <div key={event.id} className={styles.eraCell}>
-                  {event.eraLabel}
-                </div>
-              ))}
-            </div>
-            <div className={styles.dotRow}>
-              {visibleEvents.map((event) => (
-                <div key={event.id} className={styles.dotCell}>
-                  <span className={styles.dot} aria-hidden="true" />
-                </div>
-              ))}
-            </div>
-            <div className={styles.cardRow}>
-              {visibleEvents.map((event) => (
-                <div key={event.id} className={styles.cardCell}>
-                  <TimelineEventCard
+            <div className={styles.trackLine} aria-hidden="true" />
+            {visibleEvents.map((event) => (
+              <div key={event.id} className={styles.column}>
+                {event.isChapterMarker && event.imagePath ? (
+                  <ChapterMarker
                     event={event}
-                    linkedWikiTitle={wikiTitleForSlug(event.linkedWikiSlug)}
                     isStaff={Boolean(currentUser?.isStaff)}
                     onEdit={() => openEditForm(event)}
                     onDelete={() => handleDeleteEvent(event.id)}
                   />
-                </div>
-              ))}
-            </div>
+                ) : (
+                  <div className={styles.cardSlot}>
+                    <TimelineEventCard
+                      event={event}
+                      linkedWikiTitle={wikiTitleForSlug(event.linkedWikiSlug)}
+                      isStaff={Boolean(currentUser?.isStaff)}
+                      onEdit={() => openEditForm(event)}
+                      onDelete={() => handleDeleteEvent(event.id)}
+                    />
+                  </div>
+                )}
+                <span className={styles.dot} aria-hidden="true" />
+                <p className={styles.columnEra}>{event.eraLabel}</p>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
+      </div>
     </div>
   );
 }

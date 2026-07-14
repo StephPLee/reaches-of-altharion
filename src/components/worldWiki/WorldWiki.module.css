@@ -11,18 +11,25 @@
   background-attachment: fixed;
 }
 
+.panel {
+  padding: 2rem 2.2rem;
+  border: 1px solid rgba(190, 176, 138, 0.1);
+  border-radius: 1rem;
+  background: rgba(8, 9, 19, 0.5);
+}
+
 .hero {
   margin-bottom: 1.75rem;
   text-align: center;
 }
 
 .heroTitle {
-  margin: 0 0 0.5rem;
+  margin: 0 0 1.2rem;
   font-variant: small-caps;
   font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
-  font-size: clamp(2rem, 4vw, 2.75rem);
-  letter-spacing: 0.02em;
-  color: rgba(210, 192, 145, 0.92);
+  font-size: clamp(2.25rem, 4vw, 3rem);
+  letter-spacing: 0.03em;
+  color: rgba(210, 192, 145, 0.9);
 }
 
 .heroSubtitle {

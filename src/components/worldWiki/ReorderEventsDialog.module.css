@@ -1,0 +1,62 @@
+.wideDialog {
+  width: min(100%, 34rem);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 60vh;
+  margin: 1rem 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(190, 176, 138, 0.28);
+  border-radius: 0.7rem;
+  background: rgba(9, 11, 24, 0.7);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.item:active {
+  cursor: grabbing;
+  border-color: rgba(210, 192, 145, 0.55);
+  background: rgba(9, 11, 24, 0.92);
+}
+
+.gripIcon {
+  flex: 0 0 auto;
+  color: rgba(210, 192, 145, 0.6);
+}
+
+.itemText {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.itemEra {
+  margin: 0;
+  color: rgba(210, 192, 145, 0.8);
+  font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.itemTitle {
+  margin: 0;
+  color: #f0e5ff;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

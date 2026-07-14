@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
+import dialogStyles from "./Dialog.module.css";
 import styles from "./ImageCropDialog.module.css";
 import wikiStyles from "./WorldWiki.module.css";
 
@@ -223,9 +224,9 @@ export default function ImageCropDialog({
   }
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Crop image">
-      <div className={styles.dialog}>
-        <h2 className={styles.title}>Crop Image</h2>
+    <div className={dialogStyles.overlay} role="dialog" aria-modal="true" aria-label="Crop image">
+      <div className={dialogStyles.dialog}>
+        <h2 className={dialogStyles.title}>Crop Image</h2>
         <div
           ref={viewportRef}
           className={styles.viewport}
@@ -252,8 +253,8 @@ export default function ImageCropDialog({
             />
           ) : null}
         </div>
-        <p className={styles.hint}>Drag to reposition, scroll to zoom. The square area will be used as the cover image.</p>
-        <div className={styles.actions}>
+        <p className={dialogStyles.hint}>Drag to reposition, scroll to zoom. The square area will be used as the cover image.</p>
+        <div className={dialogStyles.actions}>
           <button type="button" className={wikiStyles.button} onClick={onCancel}>
             Cancel
           </button>

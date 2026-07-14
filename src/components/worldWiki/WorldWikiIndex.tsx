@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
+import PageLoader from "../PageLoader";
+import ToastStack from "./ToastStack";
+import { useToasts } from "./useToasts";
 import styles from "./WorldWiki.module.css";
 import {
   getAuthApiBaseUrl,
@@ -23,7 +26,7 @@ export default function WorldWikiIndex(): ReactNode {
   const [isLoading, setIsLoading] = useState(true);
   const [isManagingCategories, setIsManagingCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [categoryError, setCategoryError] = useState("");
+  const { toasts, showToast, dismissToast } = useToasts();
 
   async function loadData() {
     const [pagesResponse, categoriesResponse] = await Promise.all([
@@ -105,7 +108,6 @@ export default function WorldWikiIndex(): ReactNode {
     }
 
     try {
-      setCategoryError("");
       const response = await fetch(`${authApiBaseUrl}/api/admin/world-wiki/categories`, {
         method: "POST",
         credentials: "include",
@@ -119,7 +121,7 @@ export default function WorldWikiIndex(): ReactNode {
       setNewCategoryName("");
       await loadData();
     } catch (error) {
-      setCategoryError(error instanceof Error ? error.message : "Failed to create category.");
+      showToast("error", error instanceof Error ? error.message : "Failed to create category.");
     }
   }
 
@@ -129,7 +131,6 @@ export default function WorldWikiIndex(): ReactNode {
     }
 
     try {
-      setCategoryError("");
       const response = await fetch(
         `${authApiBaseUrl}/api/admin/world-wiki/categories/${categoryId}`,
         { method: "DELETE", credentials: "include" },
@@ -140,12 +141,18 @@ export default function WorldWikiIndex(): ReactNode {
       }
       await loadData();
     } catch (error) {
-      setCategoryError(error instanceof Error ? error.message : "Failed to delete category.");
+      showToast("error", error instanceof Error ? error.message : "Failed to delete category.");
     }
+  }
+
+  if (isLoading) {
+    return <PageLoader label="Loading World Wiki" />;
   }
 
   return (
     <div className={styles.page}>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      <div className={styles.panel}>
       <header className={styles.hero}>
         <h1 className={styles.heroTitle}>World Wiki</h1>
         <p className={styles.heroSubtitle}>
@@ -220,13 +227,10 @@ export default function WorldWikiIndex(): ReactNode {
               Add
             </button>
           </div>
-          {categoryError ? <p className={styles.error}>{categoryError}</p> : null}
         </div>
       ) : null}
 
-      {isLoading ? <p className={styles.heroSubtitle}>Loading wiki pages...</p> : null}
-
-      {!isLoading && groupedPages.length === 0 ? (
+      {groupedPages.length === 0 ? (
         <div className={styles.emptyState}>No wiki pages match your search yet.</div>
       ) : null}
 
@@ -255,6 +259,7 @@ export default function WorldWikiIndex(): ReactNode {
           </div>
         </section>
       ))}
+      </div>
     </div>
   );
 }

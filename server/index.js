@@ -124,6 +124,7 @@ const {
   listTimelineEvents,
   createTimelineEvent,
   updateTimelineEvent,
+  reorderTimelineEvents,
   deleteTimelineEvent,
 } = require("./timeline");
 const {
@@ -5803,7 +5804,7 @@ app.delete(
 );
 
 function normalizeTimelineEventPayload(body) {
-  const { title, description, eraLabel, sortValue, category, linkedWikiSlug, imagePath, isDraft } =
+  const { title, description, eraLabel, category, linkedWikiSlug, imagePath, isChapterMarker, isDraft } =
     body ?? {};
 
   if (typeof title !== "string" || !title.trim()) {
@@ -5811,10 +5812,6 @@ function normalizeTimelineEventPayload(body) {
   }
   if (typeof eraLabel !== "string" || !eraLabel.trim()) {
     return { error: "eraLabel is required." };
-  }
-  const normalizedSortValue = Number(sortValue);
-  if (!Number.isFinite(normalizedSortValue)) {
-    return { error: "sortValue must be a number." };
   }
   if (description !== undefined && typeof description !== "string") {
     return { error: "description must be a string." };
@@ -5824,11 +5821,11 @@ function normalizeTimelineEventPayload(body) {
     title,
     description: description || "",
     eraLabel,
-    sortValue: normalizedSortValue,
     category: typeof category === "string" && category.trim() ? category.trim().slice(0, 80) : null,
     linkedWikiSlug:
       typeof linkedWikiSlug === "string" && linkedWikiSlug.trim() ? linkedWikiSlug.trim() : null,
     imagePath: typeof imagePath === "string" && imagePath.trim() ? imagePath.trim().slice(0, 500) : null,
+    isChapterMarker: Boolean(isChapterMarker),
     isDraft: Boolean(isDraft),
   };
 }
@@ -5876,6 +5873,43 @@ app.post(
     } catch (timelineError) {
       console.error("Failed to create timeline event:", timelineError);
       res.status(500).json({ error: "Failed to create timeline event." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/timeline/events/reorder",
+  requireTrustedOrigin,
+  adminRateLimiter,
+  requireStaffSession,
+  async (req, res) => {
+    const { eventIds } = req.body ?? {};
+
+    if (
+      !Array.isArray(eventIds) ||
+      eventIds.length === 0 ||
+      !eventIds.every((eventId) => Number.isInteger(eventId) && eventId > 0)
+    ) {
+      res.status(400).json({ error: "eventIds must be a non-empty array of event ids." });
+      return;
+    }
+
+    try {
+      const events = await reorderTimelineEvents(eventIds, req.staffUser.id);
+
+      await recordAuditEvent({
+        action: "timeline_events_reorder",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { eventIds },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ events });
+    } catch (timelineError) {
+      console.error("Failed to reorder timeline events:", timelineError);
+      res.status(500).json({ error: "Failed to reorder timeline events." });
     }
   },
 );
