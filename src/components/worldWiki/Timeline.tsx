@@ -46,6 +46,7 @@ export default function Timeline(): ReactNode {
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [isCompact, setIsCompact] = useState(false);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
@@ -373,6 +374,13 @@ export default function Timeline(): ReactNode {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          className={wikiStyles.button}
+          onClick={() => setIsCompact((current) => !current)}
+        >
+          {isCompact ? "Expand Timeline" : "Collapse Timeline"}
+        </button>
         {currentUser?.isStaff ? (
           <>
             <button type="button" className={wikiStyles.button} onClick={isFormOpen ? closeForm : openAddForm}>
@@ -556,11 +564,13 @@ export default function Timeline(): ReactNode {
           onPointerUp={handleScrollPointerUp}
           onPointerCancel={handleScrollPointerUp}
         >
-          <div className={styles.track}>
+          <div className={`${styles.track} ${isCompact ? styles.trackCompact : ""}`}>
             <div className={styles.trackLine} aria-hidden="true" />
             {visibleEvents.map((event) => (
               <div key={event.id} className={styles.column}>
-                {event.isChapterMarker && event.imagePath ? (
+                {isCompact ? (
+                  <p className={styles.compactTitle}>{event.title}</p>
+                ) : event.isChapterMarker && event.imagePath ? (
                   <ChapterMarker
                     event={event}
                     isStaff={Boolean(currentUser?.isStaff)}

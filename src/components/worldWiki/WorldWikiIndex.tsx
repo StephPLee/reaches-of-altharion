@@ -245,14 +245,11 @@ export default function WorldWikiIndex(): ReactNode {
                 className={styles.pageCard}
               >
                 <p className={styles.pageCardTitle}>{page.title}</p>
-                <p className={styles.pageCardMeta}>
-                  Updated {new Date(page.updatedAt).toLocaleDateString()}
-                </p>
                 {page.isDraft || page.gmOnly ? (
-                  <div className={styles.badgeRow}>
+                  <span className={styles.badgeRow}>
                     {page.isDraft ? <span className={`${styles.badge} ${styles.badgeDraft}`}>Draft</span> : null}
                     {page.gmOnly ? <span className={`${styles.badge} ${styles.badgeGmOnly}`}>GM Only</span> : null}
-                  </div>
+                  </span>
                 ) : null}
               </Link>
             ))}
