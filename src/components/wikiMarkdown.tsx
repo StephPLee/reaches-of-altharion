@@ -28,6 +28,40 @@ export function isSafeHref(value: string) {
   return /^(https?:\/\/|\/|#)/i.test(value);
 }
 
+export type ImageSize = "small" | "medium" | "large" | "full";
+export type ImageAlign = "left" | "right" | "center";
+
+const SIZE_CLASS_KEYS: Record<ImageSize, "mediaSizeSmall" | "mediaSizeMedium" | "mediaSizeLarge" | "mediaSizeFull"> = {
+  small: "mediaSizeSmall",
+  medium: "mediaSizeMedium",
+  large: "mediaSizeLarge",
+  full: "mediaSizeFull",
+};
+
+const ALIGN_CLASS_KEYS: Record<ImageAlign, "mediaAlignLeft" | "mediaAlignRight" | "mediaAlignCenter"> = {
+  left: "mediaAlignLeft",
+  right: "mediaAlignRight",
+  center: "mediaAlignCenter",
+};
+
+function parseImageOptions(raw: string | undefined): { size: ImageSize; align: ImageAlign } {
+  const options: { size: ImageSize; align: ImageAlign } = { size: "medium", align: "right" };
+  if (!raw) {
+    return options;
+  }
+
+  for (const token of raw.trim().split(/\s+/)) {
+    const [key, value] = token.split("=");
+    if (key === "size" && (value === "small" || value === "medium" || value === "large" || value === "full")) {
+      options.size = value;
+    } else if (key === "align" && (value === "left" || value === "right" || value === "center")) {
+      options.align = value;
+    }
+  }
+
+  return options;
+}
+
 function renderInlineMarkdown(value: string, imageClassName = ""): ReactNode[] {
   const nodes: ReactNode[] = [];
   const pattern =
@@ -91,15 +125,6 @@ function isTableDivider(line: string) {
   return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
 }
 
-function isParagraphBlock(node: ReactNode): node is ReactElement {
-  return (
-    typeof node === "object" &&
-    node !== null &&
-    "type" in node &&
-    (node as ReactElement).type === "p"
-  );
-}
-
 function parseTableRow(line: string) {
   return line
     .trim()
@@ -113,11 +138,19 @@ export function renderMarkdown(
   markdown: string,
   mediaClassNames?: {
     markdownImage?: string;
-    mediaRow?: string;
-    mediaText?: string;
     mediaFigure?: string;
     mediaImage?: string;
     mediaCaption?: string;
+    mediaStandalone?: string;
+    mediaSizeSmall?: string;
+    mediaSizeMedium?: string;
+    mediaSizeLarge?: string;
+    mediaSizeFull?: string;
+    mediaAlignLeft?: string;
+    mediaAlignRight?: string;
+    mediaAlignCenter?: string;
+    mediaFloatLeft?: string;
+    mediaFloatRight?: string;
   },
 ): {
   blocks: ReactNode[];
@@ -128,8 +161,16 @@ export function renderMarkdown(
     mediaFigure: "",
     mediaImage: "",
     mediaCaption: "",
-    mediaRow: "",
-    mediaText: "",
+    mediaStandalone: "",
+    mediaSizeSmall: "",
+    mediaSizeMedium: "",
+    mediaSizeLarge: "",
+    mediaSizeFull: "",
+    mediaAlignLeft: "",
+    mediaAlignRight: "",
+    mediaAlignCenter: "",
+    mediaFloatLeft: "",
+    mediaFloatRight: "",
     ...mediaClassNames,
   };
   const inline = (value: string) =>
@@ -292,9 +333,10 @@ export function renderMarkdown(
       continue;
     }
 
-    const standaloneImage = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    const standaloneImage = trimmed.match(/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$/);
     if (standaloneImage) {
-      const [, alt, src] = standaloneImage;
+      const [, alt, src, optionsRaw] = standaloneImage;
+      const { size, align } = parseImageOptions(optionsRaw);
       let caption: string | null = null;
       const nextLine = lines[index + 1];
       if (nextLine && nextLine.trim()) {
@@ -305,8 +347,24 @@ export function renderMarkdown(
         }
       }
 
+      // Left/right images float at a fixed width (like a standard wiki
+      // infobox image) so surrounding text always wraps up to their actual
+      // height and reclaims full width right after - no dead space, and no
+      // JS guessing about how much text to pair with them. Only two fixed
+      // slots exist (never a freely-dragged position), and section
+      // boundaries (headings, tables, hr, other standalone images) clear
+      // any float in progress, so a floated image can never bleed past the
+      // section it was placed in.
+      const isFloated = align !== "center" && size !== "full";
+      const figureClassName = [
+        classNames.mediaFigure,
+        classNames[SIZE_CLASS_KEYS[size]],
+        isFloated ? classNames[align === "left" ? "mediaFloatLeft" : "mediaFloatRight"] : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
       const figure = (
-        <figure key={`figure-${index}`} className={classNames.mediaFigure}>
+        <figure key={`figure-${index}`} className={figureClassName}>
           <img
             className={classNames.mediaImage}
             src={isSafeHref(src) ? src : ""}
@@ -319,22 +377,19 @@ export function renderMarkdown(
         </figure>
       );
 
-      const textBlocks: ReactNode[] = [];
-      while (blocks.length > 0 && isParagraphBlock(blocks[blocks.length - 1])) {
-        textBlocks.unshift(blocks.pop());
-      }
-
-      if (textBlocks.length > 0) {
-        blocks.push(
-          <div key={`media-${index}`} className={classNames.mediaRow}>
-            <div className={classNames.mediaText}>{textBlocks}</div>
-            {figure}
-          </div>,
-        );
-      } else {
+      if (isFloated) {
         blocks.push(figure);
+        continue;
       }
 
+      const standaloneClassName = [classNames.mediaStandalone, classNames[ALIGN_CLASS_KEYS[align]]]
+        .filter(Boolean)
+        .join(" ");
+      blocks.push(
+        <div key={`media-standalone-${index}`} className={standaloneClassName}>
+          {figure}
+        </div>,
+      );
       continue;
     }
 

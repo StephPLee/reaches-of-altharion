@@ -38,11 +38,19 @@ function getAuthApiBaseUrl(siteConfig): string {
 
 const MEDIA_CLASS_NAMES = {
   markdownImage: styles.markdownImage,
-  mediaRow: styles.mediaRow,
-  mediaText: styles.mediaText,
   mediaFigure: styles.mediaFigure,
   mediaImage: styles.mediaImage,
   mediaCaption: styles.mediaCaption,
+  mediaStandalone: styles.mediaStandalone,
+  mediaSizeSmall: styles.mediaSizeSmall,
+  mediaSizeMedium: styles.mediaSizeMedium,
+  mediaSizeLarge: styles.mediaSizeLarge,
+  mediaSizeFull: styles.mediaSizeFull,
+  mediaAlignLeft: styles.mediaAlignLeft,
+  mediaAlignRight: styles.mediaAlignRight,
+  mediaAlignCenter: styles.mediaAlignCenter,
+  mediaFloatLeft: styles.mediaFloatLeft,
+  mediaFloatRight: styles.mediaFloatRight,
 };
 
 export default function EditableWikiPage({

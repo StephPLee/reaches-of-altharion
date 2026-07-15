@@ -8,6 +8,8 @@ import {
   insertMarkdown,
   renderMarkdown,
   ToolbarIcon,
+  type ImageAlign,
+  type ImageSize,
 } from "../wikiMarkdown";
 import PageLoader from "../PageLoader";
 import ImageCropDialog from "./ImageCropDialog";
@@ -25,12 +27,33 @@ import {
 
 const MEDIA_CLASS_NAMES = {
   markdownImage: styles.markdownImage,
-  mediaRow: styles.mediaRow,
-  mediaText: styles.mediaText,
   mediaFigure: styles.mediaFigure,
   mediaImage: styles.mediaImage,
   mediaCaption: styles.mediaCaption,
+  mediaStandalone: styles.mediaStandalone,
+  mediaSizeSmall: styles.mediaSizeSmall,
+  mediaSizeMedium: styles.mediaSizeMedium,
+  mediaSizeLarge: styles.mediaSizeLarge,
+  mediaSizeFull: styles.mediaSizeFull,
+  mediaAlignLeft: styles.mediaAlignLeft,
+  mediaAlignRight: styles.mediaAlignRight,
+  mediaAlignCenter: styles.mediaAlignCenter,
+  mediaFloatLeft: styles.mediaFloatLeft,
+  mediaFloatRight: styles.mediaFloatRight,
 };
+
+const IMAGE_SIZE_OPTIONS: { value: ImageSize; label: string }[] = [
+  { value: "small", label: "Small" },
+  { value: "medium", label: "Medium" },
+  { value: "large", label: "Large" },
+  { value: "full", label: "Full width" },
+];
+
+const IMAGE_ALIGN_OPTIONS: { value: ImageAlign; label: string }[] = [
+  { value: "left", label: "Left of text" },
+  { value: "right", label: "Right of text" },
+  { value: "center", label: "Centered" },
+];
 
 type WorldWikiArticleProps = {
   slug: string | null;
@@ -75,6 +98,9 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
+  const [nextImageSize, setNextImageSize] = useState<ImageSize>("medium");
+  const [nextImageAlign, setNextImageAlign] = useState<ImageAlign>("right");
+  const [nextImageCaption, setNextImageCaption] = useState("");
   const { toasts, showToast, dismissToast } = useToasts();
 
   function loadDraftFromPage(sourcePage: WorldWikiPage) {
@@ -301,7 +327,10 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
     try {
       const url = await uploadWorldWikiImage(authApiBaseUrl, file, file.name);
       if (url) {
-        insert(`\n![Image](${url})\n`);
+        const caption = nextImageCaption.trim();
+        const captionLine = caption ? `*${caption}*\n` : "";
+        insert(`\n![Image](${url} "size=${nextImageSize} align=${nextImageAlign}")\n${captionLine}`);
+        setNextImageCaption("");
       }
     } catch (uploadError) {
       showToast("error", uploadError instanceof Error ? uploadError.message : "Failed to upload image.");
@@ -647,6 +676,42 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
             >
               <ToolbarIcon name="image" className={styles.toolbarIcon} />
             </button>
+            <select
+              className={styles.select}
+              value={nextImageSize}
+              onChange={(event) => setNextImageSize(event.target.value as ImageSize)}
+              aria-label="Next image size"
+              title="Size for the next inserted image"
+            >
+              {IMAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <select
+              className={styles.select}
+              value={nextImageAlign}
+              onChange={(event) => setNextImageAlign(event.target.value as ImageAlign)}
+              disabled={nextImageSize === "full"}
+              aria-label="Next image placement"
+              title="Placement for the next inserted image"
+            >
+              {IMAGE_ALIGN_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <input
+              className={styles.input}
+              value={nextImageCaption}
+              onChange={(event) => setNextImageCaption(event.target.value)}
+              placeholder="Credit (optional)"
+              aria-label="Credit for the next inserted image"
+              title="Shown as a caption under the next inserted image"
+              style={{ width: "9rem" }}
+            />
             <button className={styles.toolbarButton} type="button" onClick={() => formatLines("- ", "List item")} title="Bulleted list">
               <ToolbarIcon name="list" className={styles.toolbarIcon} />
             </button>

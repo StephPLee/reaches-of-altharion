@@ -1,6 +1,6 @@
 .page {
   width: 100%;
-  max-width: 72rem;
+  max-width: 78rem;
   margin: 0 auto;
   padding: 2.5rem 1.5rem 4rem;
   background:
@@ -288,7 +288,7 @@
 
 .articleLayout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
   gap: 1.75rem;
   align-items: start;
 }
@@ -522,6 +522,19 @@
   gap: 0.65rem;
 }
 
+/* Headings always clear a left/right-floated image, so a float from one
+   section can never bleed into the next. */
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.previewPanel h1,
+.previewPanel h2,
+.previewPanel h3,
+.previewPanel h4 {
+  clear: both;
+}
+
 .content h1,
 .previewPanel h1 {
   margin: 0 0 1.2rem;
@@ -585,9 +598,17 @@
 
 .content table,
 .previewPanel table {
+  clear: both;
   width: 100%;
   display: table;
   border-collapse: collapse;
+}
+
+.content::after,
+.previewPanel::after {
+  content: "";
+  display: table;
+  clear: both;
 }
 
 .content th,
@@ -605,18 +626,6 @@
   margin: 1rem 0;
   border: 1px solid rgba(190, 176, 138, 0.22);
   border-radius: 0.65rem;
-}
-
-.mediaRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem);
-  gap: 1.25rem;
-  align-items: start;
-  margin: 1rem 0;
-}
-
-.mediaText p:first-child {
-  margin-top: 0;
 }
 
 .mediaFigure {
@@ -638,8 +647,68 @@
   text-align: center;
 }
 
+/* Fixed size presets, applied to .mediaFigure whether it's floated
+   beside text or standing alone in a .mediaStandalone wrapper. */
+.mediaSizeSmall {
+  width: min(45%, 14rem);
+}
+
+.mediaSizeMedium {
+  width: min(55%, 18rem);
+}
+
+.mediaSizeLarge {
+  width: min(70%, 26rem);
+}
+
+.mediaSizeFull {
+  width: 100%;
+}
+
+/* Left/right images float at a fixed width, like a standard wiki infobox
+   image, so following text wraps around them up to their actual height
+   and reclaims full width right after - only two fixed slots exist, never
+   a freely-dragged position. */
+.mediaFloatLeft {
+  float: left;
+  margin: 0.3rem 1.5rem 1rem 0;
+}
+
+.mediaFloatRight {
+  float: right;
+  margin: 0.3rem 0 1rem 1.5rem;
+}
+
+/* A standalone image (centered or full-width) is placed with flexbox
+   justify-content rather than a float, so it always occupies its own
+   full-width row and never causes surrounding text to reflow. */
+.mediaStandalone {
+  display: flex;
+  clear: both;
+  margin: 1.25rem 0;
+}
+
+.mediaAlignLeft {
+  justify-content: flex-start;
+}
+
+.mediaAlignRight {
+  justify-content: flex-end;
+}
+
+.mediaAlignCenter {
+  justify-content: center;
+}
+
 @media (max-width: 720px) {
-  .mediaRow {
-    grid-template-columns: 1fr;
+  .mediaFloatLeft,
+  .mediaFloatRight {
+    float: none;
+    width: 100%;
+    margin: 1rem 0;
+  }
+
+  .mediaStandalone .mediaFigure {
+    width: 100%;
   }
 }
