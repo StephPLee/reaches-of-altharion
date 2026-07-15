@@ -10,6 +10,7 @@ import TimelineEventCard from "./TimelineEventCard";
 import ToastStack from "./ToastStack";
 import { uploadWorldWikiImage } from "./uploadImage";
 import { useToasts } from "./useToasts";
+import { resolveMediaUrl } from "../wikiMarkdown";
 import wikiStyles from "./WorldWiki.module.css";
 import styles from "./Timeline.module.css";
 import { getAuthApiBaseUrl, type SessionUser, type TimelineEvent, type WorldWikiPage } from "./types";
@@ -488,7 +489,11 @@ export default function Timeline(): ReactNode {
             <div className={wikiStyles.field}>
               <span className={wikiStyles.fieldLabel}>Image (optional)</span>
               {form.imagePath ? (
-                <img src={form.imagePath} alt="" className={wikiStyles.imageUploadPreview} />
+                <img
+                  src={resolveMediaUrl(authApiBaseUrl, form.imagePath)}
+                  alt=""
+                  className={wikiStyles.imageUploadPreview}
+                />
               ) : null}
               <div className={wikiStyles.actions}>
                 <button
@@ -574,6 +579,7 @@ export default function Timeline(): ReactNode {
                   <ChapterMarker
                     event={event}
                     isStaff={Boolean(currentUser?.isStaff)}
+                    authApiBaseUrl={authApiBaseUrl}
                     onEdit={() => openEditForm(event)}
                     onDelete={() => handleDeleteEvent(event.id)}
                   />
@@ -583,6 +589,7 @@ export default function Timeline(): ReactNode {
                       event={event}
                       linkedWikiTitle={wikiTitleForSlug(event.linkedWikiSlug)}
                       isStaff={Boolean(currentUser?.isStaff)}
+                      authApiBaseUrl={authApiBaseUrl}
                       onEdit={() => openEditForm(event)}
                       onDelete={() => handleDeleteEvent(event.id)}
                     />

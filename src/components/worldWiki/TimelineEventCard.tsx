@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "@docusaurus/Link";
 import { RotateCw } from "lucide-react";
 
+import { resolveMediaUrl } from "../wikiMarkdown";
 import styles from "./Timeline.module.css";
 import wikiStyles from "./WorldWiki.module.css";
 import type { TimelineEvent } from "./types";
@@ -11,6 +12,7 @@ type TimelineEventCardProps = {
   event: TimelineEvent;
   linkedWikiTitle: string | null;
   isStaff: boolean;
+  authApiBaseUrl: string;
   onEdit: () => void;
   onDelete: () => void;
 };
@@ -19,6 +21,7 @@ export default function TimelineEventCard({
   event,
   linkedWikiTitle,
   isStaff,
+  authApiBaseUrl,
   onEdit,
   onDelete,
 }: TimelineEventCardProps): ReactNode {
@@ -30,7 +33,11 @@ export default function TimelineEventCard({
         <div className={`${styles.cardFace} ${styles.cardFront}`}>
           {event.imagePath ? (
             <>
-              <img src={event.imagePath} alt={event.title} className={styles.cardImage} />
+              <img
+                src={resolveMediaUrl(authApiBaseUrl, event.imagePath)}
+                alt={event.title}
+                className={styles.cardImage}
+              />
               <div className={styles.cardFrontOverlay}>
                 <p className={styles.cardFrontTitle}>{event.title}</p>
               </div>

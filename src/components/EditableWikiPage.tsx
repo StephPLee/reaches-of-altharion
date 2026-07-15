@@ -138,12 +138,12 @@ export default function EditableWikiPage({
   }, [authApiBaseUrl]);
 
   const { blocks: renderedMarkdown, headings } = useMemo(
-    () => renderMarkdown(page.markdown, MEDIA_CLASS_NAMES),
-    [page.markdown],
+    () => renderMarkdown(page.markdown, MEDIA_CLASS_NAMES, authApiBaseUrl),
+    [page.markdown, authApiBaseUrl],
   );
   const { blocks: renderedPreview } = useMemo(
-    () => renderMarkdown(draftMarkdown, MEDIA_CLASS_NAMES),
-    [draftMarkdown],
+    () => renderMarkdown(draftMarkdown, MEDIA_CLASS_NAMES, authApiBaseUrl),
+    [draftMarkdown, authApiBaseUrl],
   );
   const tableOfContents = useMemo(
     () => headings.filter((entry) => entry.level === 2),
