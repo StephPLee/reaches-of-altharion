@@ -2,18 +2,26 @@ import type { ReactNode } from "react";
 import Link from "@docusaurus/Link";
 import { Pencil, Trash2 } from "lucide-react";
 
+import { resolveMediaUrl } from "../wikiMarkdown";
 import styles from "./Timeline.module.css";
 import type { TimelineEvent } from "./types";
 
 type ChapterMarkerProps = {
   event: TimelineEvent;
   isStaff: boolean;
+  authApiBaseUrl: string;
   onEdit: () => void;
   onDelete: () => void;
 };
 
-export default function ChapterMarker({ event, isStaff, onEdit, onDelete }: ChapterMarkerProps): ReactNode {
-  const image = <img src={event.imagePath ?? undefined} alt={event.title} className={styles.chapterImage} />;
+export default function ChapterMarker({ event, isStaff, authApiBaseUrl, onEdit, onDelete }: ChapterMarkerProps): ReactNode {
+  const image = (
+    <img
+      src={event.imagePath ? resolveMediaUrl(authApiBaseUrl, event.imagePath) : undefined}
+      alt={event.title}
+      className={styles.chapterImage}
+    />
+  );
 
   return (
     <div className={styles.chapterMarker}>

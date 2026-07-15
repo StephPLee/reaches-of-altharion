@@ -7,6 +7,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import {
   insertMarkdown,
   renderMarkdown,
+  resolveMediaUrl,
   ToolbarIcon,
   type ImageAlign,
   type ImageSize,
@@ -176,12 +177,12 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
   }, [authApiBaseUrl, slug, isCreateMode]);
 
   const { blocks: renderedMarkdown } = useMemo(
-    () => renderMarkdown(page?.markdown || "", MEDIA_CLASS_NAMES),
-    [page?.markdown],
+    () => renderMarkdown(page?.markdown || "", MEDIA_CLASS_NAMES, authApiBaseUrl),
+    [page?.markdown, authApiBaseUrl],
   );
   const { blocks: renderedPreview } = useMemo(
-    () => renderMarkdown(draftMarkdown, MEDIA_CLASS_NAMES),
-    [draftMarkdown],
+    () => renderMarkdown(draftMarkdown, MEDIA_CLASS_NAMES, authApiBaseUrl),
+    [draftMarkdown, authApiBaseUrl],
   );
 
   function insert(value: string) {
@@ -544,7 +545,7 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
             <span className={styles.fieldLabel}>Cover Image</span>
             {draftCoverImagePath ? (
               <img
-                src={draftCoverImagePath}
+                src={resolveMediaUrl(authApiBaseUrl, draftCoverImagePath)}
                 alt="Cover"
                 className={styles.imageUploadPreview}
               />
@@ -793,7 +794,11 @@ export default function WorldWikiArticle({ slug }: WorldWikiArticleProps): React
           </div>
           <aside className={styles.sidebar}>
             {page.coverImagePath ? (
-              <img src={page.coverImagePath} alt={page.title} className={styles.coverImage} />
+              <img
+                src={resolveMediaUrl(authApiBaseUrl, page.coverImagePath)}
+                alt={page.title}
+                className={styles.coverImage}
+              />
             ) : null}
             {page.category ? (
               <div>

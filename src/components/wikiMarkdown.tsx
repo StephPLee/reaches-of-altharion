@@ -28,6 +28,21 @@ export function isSafeHref(value: string) {
   return /^(https?:\/\/|\/|#)/i.test(value);
 }
 
+// Uploaded files are served from the API's own origin, which is only the
+// same as the site's origin in local dev (where a proxy makes them look
+// unified). In production the frontend and API can be on different
+// domains/hosts, so a stored path like "/uploads/world-wiki/x.png" must be
+// resolved against the API's base URL rather than used as-is - otherwise
+// the browser requests it from whatever domain the page itself loaded
+// from. Anything else (external URLs, static site assets like /img/...)
+// is left untouched.
+export function resolveMediaUrl(baseUrl: string, path: string): string {
+  if (!baseUrl || !path.startsWith("/uploads/")) {
+    return path;
+  }
+  return `${baseUrl}${path}`;
+}
+
 export type ImageSize = "small" | "medium" | "large" | "full";
 export type ImageAlign = "left" | "right" | "center";
 
@@ -62,7 +77,7 @@ function parseImageOptions(raw: string | undefined): { size: ImageSize; align: I
   return options;
 }
 
-function renderInlineMarkdown(value: string, imageClassName = ""): ReactNode[] {
+function renderInlineMarkdown(value: string, imageClassName = "", imageBaseUrl = ""): ReactNode[] {
   const nodes: ReactNode[] = [];
   const pattern =
     /(!\[([^\]]*)\]\(([^)]+)\))|(`([^`]+)`)|(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|\[([^\]]+)\]\(([^)]+)\)/g;
@@ -79,7 +94,7 @@ function renderInlineMarkdown(value: string, imageClassName = ""): ReactNode[] {
         <img
           key={`${match.index}-image`}
           className={imageClassName}
-          src={isSafeHref(match[3]) ? match[3] : ""}
+          src={isSafeHref(match[3]) ? resolveMediaUrl(imageBaseUrl, match[3]) : ""}
           alt={match[2]}
           loading="lazy"
         />,
@@ -114,10 +129,11 @@ function renderInlineMarkdown(value: string, imageClassName = ""): ReactNode[] {
 function renderInlineMarkdownWithBreaks(
   lines: string[],
   imageClassName = "",
+  imageBaseUrl = "",
 ): ReactNode[] {
   return lines.flatMap((line, index) => [
     ...(index > 0 ? [<br key={`br-${index}`} />] : []),
-    ...renderInlineMarkdown(line, imageClassName),
+    ...renderInlineMarkdown(line, imageClassName, imageBaseUrl),
   ]);
 }
 
@@ -152,6 +168,7 @@ export function renderMarkdown(
     mediaFloatLeft?: string;
     mediaFloatRight?: string;
   },
+  imageBaseUrl = "",
 ): {
   blocks: ReactNode[];
   headings: MarkdownHeading[];
@@ -174,9 +191,9 @@ export function renderMarkdown(
     ...mediaClassNames,
   };
   const inline = (value: string) =>
-    renderInlineMarkdown(value, classNames.markdownImage);
+    renderInlineMarkdown(value, classNames.markdownImage, imageBaseUrl);
   const inlineWithBreaks = (values: string[]) =>
-    renderInlineMarkdownWithBreaks(values, classNames.markdownImage);
+    renderInlineMarkdownWithBreaks(values, classNames.markdownImage, imageBaseUrl);
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
   const headings: MarkdownHeading[] = [];
@@ -367,7 +384,7 @@ export function renderMarkdown(
         <figure key={`figure-${index}`} className={figureClassName}>
           <img
             className={classNames.mediaImage}
-            src={isSafeHref(src) ? src : ""}
+            src={isSafeHref(src) ? resolveMediaUrl(imageBaseUrl, src) : ""}
             alt={alt}
             loading="lazy"
           />
