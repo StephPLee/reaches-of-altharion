@@ -51,6 +51,9 @@
 Run [sql/001_auth_hardening.sql](C:/Users/Steph/reaches-of-altharion/sql/001_auth_hardening.sql) before using audit logging in non-dev environments.
 Run [sql/044_reward_events.sql](C:/Users/Steph/reaches-of-altharion/sql/044_reward_events.sql) before configuring database-driven event currency rules.
 Run [sql/045_reward_event_calendar_link.sql](C:/Users/Steph/reaches-of-altharion/sql/045_reward_event_calendar_link.sql) so reward events create and update linked calendar entries.
+Run [sql/046_world_wiki.sql](C:/Users/Steph/reaches-of-altharion/sql/046_world_wiki.sql) before using the World Wiki or Timeline features. Uploaded wiki images are stored on disk under `uploads/world-wiki/` (not version controlled) and served at `/uploads/world-wiki/:fileName`.
+Run [sql/047_timeline_event_image.sql](C:/Users/Steph/reaches-of-altharion/sql/047_timeline_event_image.sql) to add the optional `image_path` column to `timeline_events`.
+Run [sql/048_timeline_chapter_marker.sql](C:/Users/Steph/reaches-of-altharion/sql/048_timeline_chapter_marker.sql) to add the `is_chapter_marker` column to `timeline_events`.
 
 ## Production notes
 

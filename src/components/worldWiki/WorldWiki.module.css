@@ -1,0 +1,714 @@
+.page {
+  width: 100%;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  background:
+    linear-gradient(rgba(8, 9, 19, 0.82), rgba(8, 9, 19, 0.88)),
+    url("/img/altharion-background.png");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.panel {
+  padding: 2rem 2.2rem;
+  border: 1px solid rgba(190, 176, 138, 0.1);
+  border-radius: 1rem;
+  background: rgba(8, 9, 19, 0.5);
+}
+
+.hero {
+  margin-bottom: 1.75rem;
+  text-align: center;
+}
+
+.heroTitle {
+  margin: 0 0 1.2rem;
+  font-variant: small-caps;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  font-size: clamp(2.25rem, 4vw, 3rem);
+  letter-spacing: 0.03em;
+  color: rgba(210, 192, 145, 0.9);
+}
+
+.heroSubtitle {
+  margin: 0;
+  color: rgba(215, 222, 242, 0.78);
+}
+
+.toolbarRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.searchInput,
+.categorySelect {
+  min-height: 2.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(190, 176, 138, 0.28);
+  border-radius: 0.75rem;
+  background: rgba(8, 9, 19, 0.7);
+  color: #ece2ff;
+  font: inherit;
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.searchInput::placeholder {
+  color: rgba(215, 222, 242, 0.45);
+}
+
+.searchInput:focus,
+.categorySelect:focus {
+  outline: none;
+  border-color: rgba(202, 168, 255, 0.5);
+  background: rgba(8, 9, 19, 0.85);
+  box-shadow: 0 0 0 1px rgba(202, 168, 255, 0.2);
+}
+
+.searchInput {
+  flex: 1 1 16rem;
+  min-width: 12rem;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid rgba(190, 176, 138, 0.4);
+  border-radius: 0.65rem;
+  background: rgba(9, 11, 24, 0.6);
+  color: rgba(210, 192, 145, 0.92);
+  font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.button:hover,
+.button:focus-visible {
+  color: #f5e9c8;
+  border-color: rgba(210, 192, 145, 0.68);
+  background: rgba(8, 9, 19, 0.8);
+  outline: none;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.buttonPrimary {
+  border-color: rgba(210, 192, 145, 0.7);
+  background: linear-gradient(180deg, rgba(58, 46, 20, 0.75), rgba(30, 24, 12, 0.75));
+  color: #f5e9c8;
+}
+
+.buttonDanger {
+  border-color: rgba(255, 181, 198, 0.4);
+  color: #ffb4c8;
+}
+
+.buttonDanger:hover,
+.buttonDanger:focus-visible {
+  border-color: rgba(255, 181, 198, 0.68);
+  background: rgba(58, 22, 34, 0.55);
+  color: #ffd6e0;
+}
+
+.categoryGroup {
+  margin-bottom: 2rem;
+}
+
+.categoryHeading {
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(190, 176, 138, 0.22);
+  color: rgba(210, 192, 145, 0.85);
+  font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pageGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.pageCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 0.7rem;
+  background: rgba(9, 11, 24, 0.55);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.pageCard:hover,
+.pageCard:focus-visible {
+  border-color: rgba(210, 192, 145, 0.55);
+  background: rgba(9, 11, 24, 0.78);
+  text-decoration: none;
+  color: inherit;
+}
+
+.pageCardTitle {
+  margin: 0;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f0e5ff;
+  white-space: nowrap;
+}
+
+.badgeRow {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badgeDraft {
+  background: rgba(255, 196, 90, 0.18);
+  color: #ffd68a;
+}
+
+.badgeGmOnly {
+  background: rgba(211, 189, 255, 0.2);
+  color: #e8dbff;
+}
+
+.emptyState {
+  padding: 2rem;
+  border: 1px dashed rgba(190, 176, 138, 0.3);
+  border-radius: 1rem;
+  text-align: center;
+  color: rgba(215, 222, 242, 0.7);
+}
+
+.categoryManager {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 1rem;
+  background: rgba(9, 11, 24, 0.55);
+}
+
+.categoryManagerRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.75rem;
+  border: 1px solid rgba(190, 176, 138, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 9, 19, 0.7);
+  color: #ece2ff;
+  font-size: 0.82rem;
+}
+
+.categoryChipRemove {
+  border: 0;
+  background: transparent;
+  color: #ffb4c8;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+/* Article view/edit */
+.articleShell {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.backLink {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: rgba(210, 192, 145, 0.85);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  color: #f5e9c8;
+}
+
+.statusRow {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.message {
+  margin: 0;
+  color: #b9f2cf;
+}
+
+.error {
+  margin: 0;
+  color: #ffd5df;
+}
+
+.articleLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
+  gap: 1.75rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .articleLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.articleMain {
+  min-width: 0;
+}
+
+.articleTitle {
+  margin: 0 0 0.5rem;
+  text-align: center;
+  font-variant: small-caps;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  font-size: clamp(1.75rem, 3.2vw, 2.4rem);
+  letter-spacing: 0.02em;
+  color: rgba(210, 192, 145, 0.9);
+}
+
+.coverImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid rgba(190, 176, 138, 0.4);
+  border-radius: 1rem;
+  box-shadow: 0 12px 28px rgba(2, 4, 12, 0.4);
+}
+
+.sidebar {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 1rem;
+  background: rgba(9, 11, 24, 0.55);
+}
+
+.sidebarHeading {
+  margin: 0;
+  font-family: "Cinzel", "Garamond", "Times New Roman", serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(210, 192, 145, 0.85);
+}
+
+.attributeList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.attributeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.attributeStatic {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.attributeKeyLabel {
+  color: rgba(210, 192, 145, 0.8);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.attributeValueLabel {
+  color: #ece2ff;
+}
+
+.attributeRemove {
+  border: 0;
+  background: transparent;
+  color: #ffb4c8;
+  cursor: pointer;
+  font: inherit;
+}
+
+.imageUploadPreview {
+  display: block;
+  width: 100%;
+  max-height: 16rem;
+  object-fit: cover;
+  border: 1px solid rgba(190, 176, 138, 0.28);
+  border-radius: 0.75rem;
+}
+
+/* Editor form */
+.editorForm {
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.35rem;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 1rem;
+  background: rgba(9, 11, 24, 0.55);
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fieldLabel {
+  color: #f0ebff;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  appearance: none;
+  border: 1px solid rgba(190, 176, 138, 0.28);
+  border-radius: 0.75rem;
+  background: rgba(8, 9, 19, 0.7);
+  color: #ece2ff;
+  font: inherit;
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.input,
+.select {
+  min-height: 2.9rem;
+  padding: 0.78rem 0.9rem;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: rgba(215, 222, 242, 0.45);
+}
+
+.textarea {
+  min-height: min(55vh, 38rem);
+  padding: 0.9rem;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  line-height: 1.55;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: rgba(202, 168, 255, 0.5);
+  background: rgba(8, 9, 19, 0.85);
+  box-shadow: 0 0 0 1px rgba(202, 168, 255, 0.2);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(215, 222, 242, 0.86);
+  cursor: pointer;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 0.85rem;
+  background: rgba(8, 9, 19, 0.7);
+  color: #ece2ff;
+  overflow-x: auto;
+}
+
+.toolbarButton {
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgba(210, 192, 145, 0.9);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.toolbarButton:hover,
+.toolbarButton:focus-visible {
+  background: rgba(190, 176, 138, 0.14);
+  color: #f5e9c8;
+  outline: none;
+}
+
+.toolbarIcon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.toolbarSeparator {
+  width: 1px;
+  height: 1.8rem;
+  margin: 0 0.35rem;
+  background: rgba(190, 176, 138, 0.22);
+}
+
+.previewPanel {
+  padding: 1.2rem;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 1rem;
+  background: rgba(9, 11, 24, 0.55);
+}
+
+.previewTitle {
+  margin-top: 0;
+  color: rgba(210, 192, 145, 0.9);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+/* Headings always clear a left/right-floated image, so a float from one
+   section can never bleed into the next. */
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.previewPanel h1,
+.previewPanel h2,
+.previewPanel h3,
+.previewPanel h4 {
+  clear: both;
+}
+
+.content h1,
+.previewPanel h1 {
+  margin: 0 0 1.2rem;
+  text-align: center;
+  font-variant: small-caps;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  letter-spacing: 0.03em;
+  color: rgba(210, 192, 145, 0.9);
+}
+
+.content h2,
+.previewPanel h2 {
+  position: relative;
+  margin-top: 2.8rem;
+  margin-bottom: 0.35rem;
+  padding-top: 1.4rem;
+  text-align: center;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  font-size: clamp(1.2rem, 1.9vw, 1.8rem);
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  color: #e4d1ff;
+}
+
+.content h2::before,
+.previewPanel h2::before {
+  content: "";
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  width: 6rem;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(190, 176, 138, 0.45), transparent);
+}
+
+.content h2::after,
+.previewPanel h2::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0.9rem;
+  height: 0.9rem;
+  transform: translateX(-50%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d2c091' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z'/%3E%3Cpath d='M20 3v4'/%3E%3Cpath d='M22 5h-4'/%3E%3Cpath d='M4 17v2'/%3E%3Cpath d='M5 18H3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.content h3,
+.previewPanel h3 {
+  margin-top: 1.35rem;
+  margin-bottom: 0.35rem;
+  font-family: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  font-size: clamp(1rem, 1.25vw, 1.28rem);
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  color: #f0ebff;
+}
+
+.content table,
+.previewPanel table {
+  clear: both;
+  width: 100%;
+  display: table;
+  border-collapse: collapse;
+}
+
+.content::after,
+.previewPanel::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.content th,
+.content td,
+.previewPanel th,
+.previewPanel td {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(190, 176, 138, 0.2);
+}
+
+.markdownImage {
+  display: block;
+  width: min(100%, 46rem);
+  height: auto;
+  margin: 1rem 0;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 0.65rem;
+}
+
+.mediaFigure {
+  margin: 0;
+}
+
+.mediaImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid rgba(190, 176, 138, 0.22);
+  border-radius: 0.65rem;
+}
+
+.mediaCaption {
+  margin: 0.5rem 0 0;
+  color: rgba(215, 222, 242, 0.6);
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+/* Fixed size presets, applied to .mediaFigure whether it's floated
+   beside text or standing alone in a .mediaStandalone wrapper. */
+.mediaSizeSmall {
+  width: min(45%, 14rem);
+}
+
+.mediaSizeMedium {
+  width: min(55%, 18rem);
+}
+
+.mediaSizeLarge {
+  width: min(70%, 26rem);
+}
+
+.mediaSizeFull {
+  width: 100%;
+}
+
+/* Left/right images float at a fixed width, like a standard wiki infobox
+   image, so following text wraps around them up to their actual height
+   and reclaims full width right after - only two fixed slots exist, never
+   a freely-dragged position. */
+.mediaFloatLeft {
+  float: left;
+  margin: 0.3rem 1.5rem 1rem 0;
+}
+
+.mediaFloatRight {
+  float: right;
+  margin: 0.3rem 0 1rem 1.5rem;
+}
+
+/* A standalone image (centered or full-width) is placed with flexbox
+   justify-content rather than a float, so it always occupies its own
+   full-width row and never causes surrounding text to reflow. */
+.mediaStandalone {
+  display: flex;
+  clear: both;
+  margin: 1.25rem 0;
+}
+
+.mediaAlignLeft {
+  justify-content: flex-start;
+}
+
+.mediaAlignRight {
+  justify-content: flex-end;
+}
+
+.mediaAlignCenter {
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .mediaFloatLeft,
+  .mediaFloatRight {
+    float: none;
+    width: 100%;
+    margin: 1rem 0;
+  }
+
+  .mediaStandalone .mediaFigure {
+    width: 100%;
+  }
+}

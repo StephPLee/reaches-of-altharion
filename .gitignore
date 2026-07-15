@@ -4,6 +4,9 @@
 # Production
 /build
 
+# Runtime-uploaded files
+/uploads
+
 # Generated files
 .docusaurus
 .cache-loader
@@ -23,3 +26,8 @@ google-service-account.json
 
 # External reference repo
 /integrations/grimoire/
+
+# Scratch verification scripts/screenshots (agent-generated, not project code)
+/.verify-screenshots/
+/scripts/_*.mjs
+/scripts/_session_token.txt

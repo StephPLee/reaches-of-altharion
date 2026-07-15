@@ -119,7 +119,7 @@ const config: Config = {
             devServer: {
               proxy: [
                 {
-                  context: ["/auth", "/api", "/health"],
+                  context: ["/auth", "/api", "/health", "/uploads"],
                   target:
                     process.env.DEV_AUTH_PROXY_TARGET ||
                     "http://127.0.0.1:3001",
@@ -278,12 +278,21 @@ const config: Config = {
           ],
         },
         {
+          to: "/world-of-altharion",
           label: "The World of Altharion",
           position: "left",
           items: [
             {
               to: "/?view=world",
               label: "World Map",
+            },
+            {
+              to: "/world-wiki",
+              label: "World Wiki",
+            },
+            {
+              to: "/world-timeline",
+              label: "Timeline",
             },
           ],
         },

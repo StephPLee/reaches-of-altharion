@@ -1,0 +1,28 @@
+.viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid rgba(190, 176, 138, 0.3);
+  border-radius: 0.85rem;
+  background:
+    repeating-conic-gradient(rgba(255, 255, 255, 0.06) 0% 25%, transparent 0% 50%)
+    50% / 20px 20px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+.viewportImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  max-height: none;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
