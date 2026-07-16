@@ -231,6 +231,54 @@ async function getCharacter(characterId) {
   return payload.data ?? null;
 }
 
+function isActiveCharacter(character) {
+  const normalizedStatus =
+    typeof character?.status === "string"
+      ? character.status.trim().toUpperCase()
+      : "";
+
+  return (
+    normalizedStatus !== "RETIRED" &&
+    normalizedStatus !== "DELETED" &&
+    normalizedStatus !== "ARCHIVED"
+  );
+}
+
+async function listOwnedActiveCharactersForDiscordUser(discordUserId) {
+  const characters = await listAllCharacters();
+  return characters.filter(
+    (character) =>
+      isActiveCharacter(character) &&
+      character?.user?.discordId === discordUserId &&
+      typeof character?.id === "string",
+  );
+}
+
+async function grantCharacterReward({ characterId, currencies, reason, discordUserId }) {
+  const payload = await westMarchesFetch(`/characters/${characterId}/rewards`, {
+    method: "POST",
+    body: JSON.stringify({
+      ...(currencies ? { currencies } : {}),
+      ...(reason ? { reason } : {}),
+      ...(discordUserId ? { discordId: discordUserId } : {}),
+    }),
+  });
+
+  return payload.data ?? null;
+}
+
+async function transferCharacterInventoryItem({ characterId, itemId, toCharacterId, quantity }) {
+  const payload = await westMarchesFetch(
+    `/characters/${characterId}/inventory/${itemId}/transfer`,
+    {
+      method: "POST",
+      body: JSON.stringify({ toCharacterId, quantity }),
+    },
+  );
+
+  return payload.data ?? null;
+}
+
 async function listActiveCharacterDetails() {
   const now = Date.now();
   if (
@@ -409,11 +457,14 @@ async function distributeRewards({ rewards, adventureId = "" }) {
 module.exports = {
   distributeRewards,
   getCharacter,
+  grantCharacterReward,
   isWestMarchesConfigured,
   listAllCharacters,
   listCharacterAttributeStats,
   listCurrencies,
   listMarketplaces,
+  listOwnedActiveCharactersForDiscordUser,
   listRecentAdventures,
+  transferCharacterInventoryItem,
   getEventCurrencyMapping,
 };

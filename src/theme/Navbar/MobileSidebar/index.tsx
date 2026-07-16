@@ -57,6 +57,7 @@ const NAV_GROUPS = [
       { label: "Rewards Calculator", to: "/rewards-calculator" },
       { label: "Stellar Coin Conversion", to: "/stellar-coin-conversion" },
       { label: "Avrae Commands", to: "/avrae" },
+      { label: "Marketplace", to: "/marketplace" },
     ],
   },
 ];

@@ -447,6 +447,26 @@ async function awardScToCharacters({ awards, amount, reason }) {
   return Array.isArray(payload.data) ? payload.data : [];
 }
 
+async function grantWestMarchesItem({
+  characterId,
+  itemName,
+  quantity = 1,
+  isConsumable = false,
+  reason,
+  discordUserId,
+}) {
+  const payload = await westMarchesFetch(`/characters/${characterId}/rewards`, {
+    method: "POST",
+    body: JSON.stringify({
+      items: [{ name: itemName, quantity, isConsumable }],
+      reason,
+      ...(discordUserId ? { discordId: discordUserId } : {}),
+    }),
+  });
+
+  return payload.data ?? null;
+}
+
 module.exports = {
   awardScToCharacters,
   approveWestMarchesCharacter,
@@ -457,11 +477,13 @@ module.exports = {
   getOwnedActiveWestMarchesCharacter,
   getScRewardCharacterPreference,
   getWestMarchesCharacter,
+  grantWestMarchesItem,
   isWestMarchesConfigured,
   findUnapprovedCharacterForDiscordUser,
   listAllWestMarchesCharacters,
   listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
+  normalizeCharacterNameSearch,
   upsertScRewardCharacterPreference,
 };
