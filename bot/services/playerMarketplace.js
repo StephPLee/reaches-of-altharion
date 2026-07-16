@@ -27,16 +27,50 @@ function mapListingRow(row) {
         itemName: row.item_name,
         itemDescription: row.item_description,
         quantity: row.quantity,
-        currencyType: row.currency_type,
-        price: row.price,
+        priceGold: row.price_gold,
+        priceSc: row.price_sc,
         status: row.status,
-        buyerDiscordUserId: row.buyer_discord_user_id,
-        buyerCharacterId: row.buyer_character_id,
-        buyerCharacterName: row.buyer_character_name,
         failureReason: row.failure_reason,
         createdAt: row.created_at,
       }
     : null;
+}
+
+function mapRequestRow(row) {
+  return row
+    ? {
+        id: row.id,
+        requesterDiscordUserId: row.requester_discord_user_id,
+        requesterCharacterId: row.requester_character_id,
+        requesterCharacterName: row.requester_character_name,
+        itemName: row.item_name,
+        quantity: row.quantity,
+        offerPriceGold: row.offer_price_gold,
+        offerPriceSc: row.offer_price_sc,
+        status: row.status,
+        failureReason: row.failure_reason,
+        createdAt: row.created_at,
+      }
+    : null;
+}
+
+function formatPrice(priceGold, priceSc) {
+  const parts = [];
+  if (priceGold !== null && priceGold !== undefined) {
+    parts.push(`${priceGold} ${CURRENCY_LABELS.gold}`);
+  }
+  if (priceSc !== null && priceSc !== undefined) {
+    parts.push(`${priceSc} ${CURRENCY_LABELS.sc}`);
+  }
+  return parts.join(" / ");
+}
+
+function formatListingPrice(listing) {
+  return formatPrice(listing.priceGold, listing.priceSc);
+}
+
+function formatRequestPrice(request) {
+  return formatPrice(request.offerPriceGold, request.offerPriceSc);
 }
 
 function getCharacterInventory(character) {
@@ -53,15 +87,15 @@ async function createListing({
   itemName,
   itemDescription,
   quantity,
-  currencyType,
-  price,
+  priceGold = null,
+  priceSc = null,
 }) {
   try {
     const result = await pool.query(
       `
       INSERT INTO player_marketplace_listings (
         seller_user_id, seller_discord_user_id, seller_character_id, seller_character_name,
-        item_id, item_name, item_description, quantity, currency_type, price
+        item_id, item_name, item_description, quantity, price_gold, price_sc
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
       `,
@@ -74,8 +108,8 @@ async function createListing({
         itemName,
         itemDescription || null,
         quantity,
-        currencyType,
-        price,
+        priceGold,
+        priceSc,
       ],
     );
     return mapListingRow(result.rows[0]);
@@ -154,30 +188,37 @@ function buildSellItemRow(discordUserId, characterId, items) {
   return new ActionRowBuilder().addComponents(menu);
 }
 
-function buildSellCurrencyRow(discordUserId, characterId, itemId) {
-  const menu = new StringSelectMenuBuilder()
-    .setCustomId(`sell-currency-pick:${discordUserId}:${characterId}:${itemId}`)
-    .setPlaceholder("Choose a currency...")
-    .addOptions(
-      Object.entries(CURRENCY_LABELS).map(([value, name]) => ({ label: name, value })),
-    );
-
-  return new ActionRowBuilder().addComponents(menu);
-}
-
-function buildSellPriceModal(discordUserId, characterId, itemId, currencyType, itemName) {
+function buildSellPriceModal(discordUserId, characterId, itemId, itemName) {
   const modal = new ModalBuilder()
-    .setCustomId(`sell-price-modal:${discordUserId}:${characterId}:${itemId}:${currencyType}`)
+    .setCustomId(`sell-price-modal:${discordUserId}:${characterId}:${itemId}`)
     .setTitle(truncateValue(`Sell ${itemName}`, 45));
 
-  const priceInput = new TextInputBuilder()
-    .setCustomId("sell-price")
-    .setLabel(`Price (in ${CURRENCY_LABELS[currencyType] || currencyType})`)
+  const quantityInput = new TextInputBuilder()
+    .setCustomId("sell-quantity")
+    .setLabel("Quantity to sell (default 1)")
     .setStyle(TextInputStyle.Short)
-    .setRequired(true)
+    .setRequired(false)
+    .setMaxLength(6);
+
+  const goldInput = new TextInputBuilder()
+    .setCustomId("sell-price-gold")
+    .setLabel("Price per unit in Gold (optional)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
     .setMaxLength(10);
 
-  modal.addComponents(new ActionRowBuilder().addComponents(priceInput));
+  const scInput = new TextInputBuilder()
+    .setCustomId("sell-price-sc")
+    .setLabel("Price per unit in SC (optional)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(10);
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(quantityInput),
+    new ActionRowBuilder().addComponents(goldInput),
+    new ActionRowBuilder().addComponents(scInput),
+  );
   return modal;
 }
 
@@ -188,8 +229,136 @@ function buildCancelListingRow(discordUserId, listings) {
     .addOptions(
       listings.slice(0, 25).map((listing) => ({
         label: truncateValue(`${listing.itemName} (${listing.sellerCharacterName})`, 100),
-        description: `${listing.price} ${CURRENCY_LABELS[listing.currencyType] || listing.currencyType}`.slice(0, 100),
+        description: formatListingPrice(listing).slice(0, 100),
         value: String(listing.id),
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+async function createRequest({
+  requesterUserId = null,
+  requesterDiscordUserId,
+  requesterCharacterId,
+  requesterCharacterName,
+  itemName,
+  quantity,
+  offerPriceGold = null,
+  offerPriceSc = null,
+}) {
+  const result = await pool.query(
+    `
+    INSERT INTO player_marketplace_requests (
+      requester_user_id, requester_discord_user_id, requester_character_id, requester_character_name,
+      item_name, quantity, offer_price_gold, offer_price_sc
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+    `,
+    [
+      requesterUserId,
+      requesterDiscordUserId,
+      requesterCharacterId,
+      requesterCharacterName,
+      itemName,
+      quantity,
+      offerPriceGold,
+      offerPriceSc,
+    ],
+  );
+  return mapRequestRow(result.rows[0]);
+}
+
+async function cancelRequest({ requestId, requestingDiscordUserId }) {
+  const result = await pool.query(
+    `
+    UPDATE player_marketplace_requests
+    SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW()
+    WHERE id = $1 AND status = 'open' AND requester_discord_user_id = $2
+    RETURNING *
+    `,
+    [requestId, requestingDiscordUserId],
+  );
+  return mapRequestRow(result.rows[0]);
+}
+
+async function listOpenRequestsForDiscordUser(discordUserId) {
+  const result = await pool.query(
+    `SELECT * FROM player_marketplace_requests WHERE requester_discord_user_id = $1 AND status = 'open' ORDER BY created_at DESC`,
+    [discordUserId],
+  );
+  return result.rows.map(mapRequestRow);
+}
+
+function buildRequestCharacterRow(discordUserId, characters) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`request-character-pick:${discordUserId}`)
+    .setPlaceholder("Choose which character is requesting...")
+    .addOptions(
+      characters.slice(0, 25).map((character) => ({
+        label: truncateValue(character.name, 100),
+        description: `Level ${character.level || "unknown"}`.slice(0, 100),
+        value: character.id,
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+function buildRequestModal(discordUserId, characterId) {
+  const modal = new ModalBuilder()
+    .setCustomId(`request-modal:${discordUserId}:${characterId}`)
+    .setTitle("Request an item");
+
+  const itemNameInput = new TextInputBuilder()
+    .setCustomId("request-item-name")
+    .setLabel("Item name")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(200);
+
+  const quantityInput = new TextInputBuilder()
+    .setCustomId("request-quantity")
+    .setLabel("Quantity wanted (default 1)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(6);
+
+  const goldInput = new TextInputBuilder()
+    .setCustomId("request-price-gold")
+    .setLabel("Offer per unit in Gold (optional)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(10);
+
+  const scInput = new TextInputBuilder()
+    .setCustomId("request-price-sc")
+    .setLabel("Offer per unit in SC (optional)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(10);
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(itemNameInput),
+    new ActionRowBuilder().addComponents(quantityInput),
+    new ActionRowBuilder().addComponents(goldInput),
+    new ActionRowBuilder().addComponents(scInput),
+  );
+  return modal;
+}
+
+function buildCancelRequestRow(discordUserId, requests) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`request-cancel-pick:${discordUserId}`)
+    .setPlaceholder("Choose a request to cancel...")
+    .addOptions(
+      requests.slice(0, 25).map((request) => ({
+        label: truncateValue(
+          `${request.itemName} (${request.requesterCharacterName})`,
+          100,
+        ),
+        description: formatRequestPrice(request).slice(0, 100),
+        value: String(request.id),
       })),
     );
 
@@ -200,14 +369,21 @@ module.exports = {
   CURRENCY_LABELS,
   DuplicateActiveListingError,
   buildCancelListingRow,
+  buildCancelRequestRow,
+  buildRequestCharacterRow,
+  buildRequestModal,
   buildSellCharacterRow,
-  buildSellCurrencyRow,
   buildSellItemRow,
   buildSellPriceModal,
   cancelListing,
+  cancelRequest,
   createListing,
+  createRequest,
   findActiveListingByCharacterAndItem,
+  formatListingPrice,
+  formatRequestPrice,
   getCharacterInventory,
   listActiveListingsForCharacter,
   listActiveListingsForDiscordUser,
+  listOpenRequestsForDiscordUser,
 };
