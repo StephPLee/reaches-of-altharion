@@ -286,6 +286,23 @@ const COMMAND_DEFINITIONS = [
         ),
   },
   {
+    name: "request",
+    description: "Request an item you want on the player marketplace, or cancel a request.",
+    help: "Post a request offering gold/SC for an item you want another player to craft or provide, or cancel one of your open requests.",
+    buildCommand: (command) =>
+      command
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("post")
+            .setDescription("Request an item and offer a price for it."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("cancel")
+            .setDescription("Cancel one of your open requests."),
+        ),
+  },
+  {
     name: "post-discord-content",
     description: "Post or refresh mirrored site content to Discord channels.",
     help: "Staff-only. Post or refresh starting graces or character creation content from the site into their Discord channels.",

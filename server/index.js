@@ -195,7 +195,10 @@ const {
 } = require("./westmarches");
 const {
   PurchaseError,
+  fulfillRequest,
+  getOwnedCharacterInventory,
   listActiveListings,
+  listOpenRequests,
   purchaseListing,
 } = require("./playerMarketplace");
 const {
@@ -2608,6 +2611,11 @@ app.post(
     const listingId = Number.parseInt(req.params.id, 10);
     const buyerCharacterId =
       typeof req.body?.buyerCharacterId === "string" ? req.body.buyerCharacterId.trim() : "";
+    const currencyType =
+      typeof req.body?.currencyType === "string" ? req.body.currencyType.trim() : "";
+    const rawQuantity = req.body?.quantity;
+    const quantity =
+      rawQuantity === undefined || rawQuantity === null ? 1 : Number.parseInt(rawQuantity, 10);
 
     if (!Number.isInteger(listingId) || listingId <= 0) {
       res.status(400).json({ error: "Invalid listing id." });
@@ -2617,6 +2625,14 @@ app.post(
       res.status(400).json({ error: "buyerCharacterId is required." });
       return;
     }
+    if (currencyType !== "gold" && currencyType !== "sc") {
+      res.status(400).json({ error: "currencyType must be 'gold' or 'sc'." });
+      return;
+    }
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      res.status(400).json({ error: "quantity must be a positive whole number." });
+      return;
+    }
 
     try {
       const result = await purchaseListing({
@@ -2624,13 +2640,15 @@ app.post(
         buyerUserId: req.memberUser.id,
         buyerDiscordUserId: req.memberUser.discordUserId,
         buyerCharacterId,
+        currencyType,
+        quantity,
       });
       await recordAuditEvent({
         action: "marketplace_purchase",
         status: result.creditFailed ? "partial_error" : "success",
         userId: req.memberUser.id,
         discordUserId: req.memberUser.discordUserId,
-        metadata: { listingId },
+        metadata: { listingId, quantity },
         ...getRequestMetadata(req),
       });
       res.status(200).json({ listing: result.listing, creditFailed: result.creditFailed });
@@ -2649,6 +2667,127 @@ app.post(
       const status = error instanceof PurchaseError ? error.status : 500;
       res.status(status).json({
         error: error instanceof Error ? error.message : "Failed to complete purchase.",
+      });
+    }
+  },
+);
+
+// Intentionally no requireMemberSession here — anyone can browse open requests.
+app.get(
+  "/api/marketplace/requests",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  async (_req, res) => {
+    try {
+      const requests = await listOpenRequests();
+      res.json({ requests });
+    } catch (error) {
+      console.error("Failed to load marketplace requests:", error);
+      res.status(500).json({ error: "Failed to load marketplace requests." });
+    }
+  },
+);
+
+app.get(
+  "/api/marketplace/characters/:characterId/inventory",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const characterId = typeof req.params.characterId === "string" ? req.params.characterId.trim() : "";
+    if (!characterId) {
+      res.status(400).json({ error: "Invalid character id." });
+      return;
+    }
+
+    try {
+      const items = await getOwnedCharacterInventory(characterId, req.memberUser.discordUserId);
+      if (items === null) {
+        res.status(403).json({ error: "That character does not belong to you." });
+        return;
+      }
+      res.json({ items });
+    } catch (error) {
+      console.error("Failed to load character inventory:", error);
+      res.status(500).json({ error: "Failed to load that character's inventory." });
+    }
+  },
+);
+
+app.post(
+  "/api/marketplace/requests/:id/fulfill",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const requestId = Number.parseInt(req.params.id, 10);
+    const fulfillerCharacterId =
+      typeof req.body?.fulfillerCharacterId === "string" ? req.body.fulfillerCharacterId.trim() : "";
+    const fulfillerItemId =
+      typeof req.body?.fulfillerItemId === "string" ? req.body.fulfillerItemId.trim() : "";
+    const currencyType =
+      typeof req.body?.currencyType === "string" ? req.body.currencyType.trim() : "";
+
+    if (!Number.isInteger(requestId) || requestId <= 0) {
+      res.status(400).json({ error: "Invalid request id." });
+      return;
+    }
+    if (!fulfillerCharacterId) {
+      res.status(400).json({ error: "fulfillerCharacterId is required." });
+      return;
+    }
+    if (!fulfillerItemId) {
+      res.status(400).json({ error: "fulfillerItemId is required." });
+      return;
+    }
+    if (currencyType !== "gold" && currencyType !== "sc") {
+      res.status(400).json({ error: "currencyType must be 'gold' or 'sc'." });
+      return;
+    }
+
+    try {
+      const result = await fulfillRequest({
+        requestId,
+        fulfillerUserId: req.memberUser.id,
+        fulfillerDiscordUserId: req.memberUser.discordUserId,
+        fulfillerCharacterId,
+        fulfillerItemId,
+        currencyType,
+      });
+      await recordAuditEvent({
+        action: "marketplace_request_fulfill",
+        status: result.creditFailed ? "partial_error" : "success",
+        userId: req.memberUser.id,
+        discordUserId: req.memberUser.discordUserId,
+        metadata: { requestId },
+        ...getRequestMetadata(req),
+      });
+      res.status(200).json({ request: result.request, creditFailed: result.creditFailed });
+    } catch (error) {
+      await recordAuditEvent({
+        action: "marketplace_request_fulfill",
+        status: "error",
+        userId: req.memberUser.id,
+        discordUserId: req.memberUser.discordUserId,
+        metadata: {
+          requestId,
+          error: error instanceof Error ? error.message : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+      const status = error instanceof PurchaseError ? error.status : 500;
+      res.status(status).json({
+        error: error instanceof Error ? error.message : "Failed to fulfill request.",
       });
     }
   },

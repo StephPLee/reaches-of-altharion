@@ -33,19 +33,25 @@ const {
   upsertScRewardCharacterPreference,
 } = require("./services/westMarches");
 const {
-  CURRENCY_LABELS,
   DuplicateActiveListingError,
   buildCancelListingRow,
+  buildCancelRequestRow,
+  buildRequestCharacterRow,
+  buildRequestModal,
   buildSellCharacterRow,
-  buildSellCurrencyRow,
   buildSellItemRow,
   buildSellPriceModal,
   cancelListing,
+  cancelRequest,
   createListing,
+  createRequest,
   findActiveListingByCharacterAndItem,
+  formatListingPrice,
+  formatRequestPrice,
   getCharacterInventory,
   listActiveListingsForCharacter,
   listActiveListingsForDiscordUser,
+  listOpenRequestsForDiscordUser,
 } = require("./services/playerMarketplace");
 const {
   buildJoinGuildCharacterRow,
@@ -781,35 +787,17 @@ async function handleInteraction(interaction) {
         return;
       }
 
-      const itemId = interaction.values[0];
-      await interaction.update({
-        content: "Choose which currency you want to sell it for.",
-        components: [buildSellCurrencyRow(interaction.user.id, characterId, itemId)],
-      });
-      return;
-    }
-
-    if (interaction.customId.startsWith("sell-currency-pick:")) {
-      const [, ownerId, characterId, itemId] = interaction.customId.split(":");
-      if (ownerId !== interaction.user.id) {
-        await interaction.reply({
-          content: "Use your own `/sell` command so the menu belongs to you.",
-          ephemeral: true,
-        });
-        return;
-      }
-
       try {
-        const currencyType = interaction.values[0];
+        const itemId = interaction.values[0];
         const character = await getWestMarchesCharacter(characterId);
         const item = getCharacterInventory(character).find((entry) => entry.id === itemId);
         const itemName = item?.name || "item";
 
         await interaction.showModal(
-          buildSellPriceModal(interaction.user.id, characterId, itemId, currencyType, itemName),
+          buildSellPriceModal(interaction.user.id, characterId, itemId, itemName),
         );
       } catch (error) {
-        console.error("Failed to process /sell currency select:", error);
+        console.error("Failed to process /sell item select:", error);
         await interaction.reply({
           content: "Something went wrong while starting the listing. Please try again.",
           ephemeral: true,
@@ -860,6 +848,70 @@ async function handleInteraction(interaction) {
         } else {
           await interaction.reply({
             content: "Something went wrong while cancelling that listing. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("request-character-pick:")) {
+      const ownerId = interaction.customId.slice("request-character-pick:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/request` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const characterId = interaction.values[0];
+      await interaction.showModal(buildRequestModal(interaction.user.id, characterId));
+      return;
+    }
+
+    if (interaction.customId.startsWith("request-cancel-pick:")) {
+      const ownerId = interaction.customId.slice("request-cancel-pick:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/request cancel` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const requestId = Number(interaction.values[0]);
+        const cancelled = await cancelRequest({
+          requestId,
+          requestingDiscordUserId: interaction.user.id,
+        });
+
+        if (!cancelled) {
+          await interaction.editReply({
+            content: "That request is no longer open.",
+            components: [],
+          });
+          return;
+        }
+
+        await interaction.editReply({
+          content: `Cancelled your request for **${cancelled.itemName}**.`,
+          components: [],
+        });
+      } catch (error) {
+        console.error("Failed to process /request cancel select:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content: "Something went wrong while cancelling that request. Please try again.",
+            components: [],
+          });
+        } else {
+          await interaction.reply({
+            content: "Something went wrong while cancelling that request. Please try again.",
             ephemeral: true,
           });
         }
@@ -1005,7 +1057,7 @@ async function handleInteraction(interaction) {
     }
 
     if (interaction.customId.startsWith("sell-price-modal:")) {
-      const [, ownerId, characterId, itemId, currencyType] = interaction.customId.split(":");
+      const [, ownerId, characterId, itemId] = interaction.customId.split(":");
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
           content: "Use your own `/sell` command so this form belongs to you.",
@@ -1014,13 +1066,39 @@ async function handleInteraction(interaction) {
         return;
       }
 
+      function parseOptionalPrice(rawValue) {
+        const trimmed = rawValue.trim();
+        if (!trimmed) return { ok: true, value: null };
+        const parsed = Number.parseInt(trimmed, 10);
+        if (!Number.isInteger(parsed) || parsed <= 0 || String(parsed) !== trimmed) {
+          return { ok: false, value: null };
+        }
+        return { ok: true, value: parsed };
+      }
+
       try {
         await interaction.deferReply({ ephemeral: true });
 
-        const rawPrice = interaction.fields.getTextInputValue("sell-price").trim();
-        const price = Number.parseInt(rawPrice, 10);
-        if (!Number.isInteger(price) || price <= 0 || String(price) !== rawPrice) {
-          await interaction.editReply("Price must be a positive whole number.");
+        const rawQuantity = interaction.fields.getTextInputValue("sell-quantity").trim();
+        const quantity = rawQuantity ? Number.parseInt(rawQuantity, 10) : 1;
+        if (!Number.isInteger(quantity) || quantity <= 0 || String(quantity) !== (rawQuantity || "1")) {
+          await interaction.editReply("Quantity must be a positive whole number.");
+          return;
+        }
+
+        const goldResult = parseOptionalPrice(
+          interaction.fields.getTextInputValue("sell-price-gold"),
+        );
+        const scResult = parseOptionalPrice(
+          interaction.fields.getTextInputValue("sell-price-sc"),
+        );
+
+        if (!goldResult.ok || !scResult.ok) {
+          await interaction.editReply("Prices must be positive whole numbers.");
+          return;
+        }
+        if (goldResult.value === null && scResult.value === null) {
+          await interaction.editReply("Enter a price in Gold, SC, or both.");
           return;
         }
 
@@ -1036,23 +1114,32 @@ async function handleInteraction(interaction) {
           return;
         }
 
+        const availableQuantity = item.remainingQty ?? item.quantity ?? 1;
+        if (quantity > availableQuantity) {
+          await interaction.editReply(
+            `You only have ${availableQuantity} of **${item.name}** available.`,
+          );
+          return;
+        }
+
         const existingListing = await findActiveListingByCharacterAndItem(characterId, itemId);
         if (existingListing) {
           await interaction.editReply("That item already has an active listing.");
           return;
         }
 
+        let listing;
         try {
-          await createListing({
+          listing = await createListing({
             sellerDiscordUserId: interaction.user.id,
             sellerCharacterId: characterId,
             sellerCharacterName: formatCharacterName(character),
             itemId,
             itemName: item.name,
             itemDescription: item.description || null,
-            quantity: 1,
-            currencyType,
-            price,
+            quantity,
+            priceGold: goldResult.value,
+            priceSc: scResult.value,
           });
         } catch (createError) {
           if (createError instanceof DuplicateActiveListingError) {
@@ -1062,8 +1149,9 @@ async function handleInteraction(interaction) {
           throw createError;
         }
 
+        const quantityText = quantity > 1 ? `${quantity}x ` : "";
         await interaction.editReply(
-          `Listed **${item.name}** for **${price} ${CURRENCY_LABELS[currencyType] || currencyType}** on the player marketplace.`,
+          `Listed ${quantityText}**${item.name}** for **${formatListingPrice(listing)}**${quantity > 1 ? " each" : ""} on the player marketplace.`,
         );
       } catch (error) {
         console.error("Failed to process /sell price modal:", error);
@@ -1072,6 +1160,93 @@ async function handleInteraction(interaction) {
         } else {
           await interaction.reply({
             content: "Something went wrong while creating that listing. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("request-modal:")) {
+      const [, ownerId, characterId] = interaction.customId.split(":");
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/request` command so this form belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      function parseOptionalPrice(rawValue) {
+        const trimmed = rawValue.trim();
+        if (!trimmed) return { ok: true, value: null };
+        const parsed = Number.parseInt(trimmed, 10);
+        if (!Number.isInteger(parsed) || parsed <= 0 || String(parsed) !== trimmed) {
+          return { ok: false, value: null };
+        }
+        return { ok: true, value: parsed };
+      }
+
+      try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const itemName = interaction.fields.getTextInputValue("request-item-name").trim();
+        if (!itemName) {
+          await interaction.editReply("Item name cannot be empty.");
+          return;
+        }
+
+        const rawQuantity = interaction.fields.getTextInputValue("request-quantity").trim();
+        const quantity = rawQuantity ? Number.parseInt(rawQuantity, 10) : 1;
+        if (!Number.isInteger(quantity) || quantity <= 0 || String(quantity) !== (rawQuantity || "1")) {
+          await interaction.editReply("Quantity must be a positive whole number.");
+          return;
+        }
+
+        const goldResult = parseOptionalPrice(
+          interaction.fields.getTextInputValue("request-price-gold"),
+        );
+        const scResult = parseOptionalPrice(
+          interaction.fields.getTextInputValue("request-price-sc"),
+        );
+
+        if (!goldResult.ok || !scResult.ok) {
+          await interaction.editReply("Prices must be positive whole numbers.");
+          return;
+        }
+        if (goldResult.value === null && scResult.value === null) {
+          await interaction.editReply("Enter an offer in Gold, SC, or both.");
+          return;
+        }
+
+        const character = await getWestMarchesCharacter(characterId);
+        if (!character) {
+          await interaction.editReply("I could not find that character anymore.");
+          return;
+        }
+
+        const request = await createRequest({
+          requesterDiscordUserId: interaction.user.id,
+          requesterCharacterId: characterId,
+          requesterCharacterName: formatCharacterName(character),
+          itemName,
+          quantity,
+          offerPriceGold: goldResult.value,
+          offerPriceSc: scResult.value,
+        });
+
+        const quantityText = quantity > 1 ? `${quantity}x ` : "";
+        await interaction.editReply(
+          `Requested ${quantityText}**${itemName}** for **${formatRequestPrice(request)}**${quantity > 1 ? " each" : ""} on the player marketplace.`,
+        );
+      } catch (error) {
+        console.error("Failed to process /request modal:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply("Something went wrong while creating that request. Please try again.");
+        } else {
+          await interaction.reply({
+            content: "Something went wrong while creating that request. Please try again.",
             ephemeral: true,
           });
         }
@@ -1881,6 +2056,61 @@ async function handleInteraction(interaction) {
       });
     } catch (error) {
       console.error("Failed to process /sell:", error);
+      await interaction.reply({
+        content: "Something went wrong while loading the marketplace. Please try again.",
+        ephemeral: true,
+      });
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "request") {
+    const subcommand = interaction.options.getSubcommand();
+
+    if (!isWestMarchesConfigured()) {
+      await interaction.reply({
+        content: "West Marches API access is not configured, so I cannot manage marketplace requests yet.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      if (subcommand === "post") {
+        const characters = await listOwnedActiveWestMarchesCharacters(interaction.user.id);
+        if (characters.length === 0) {
+          await interaction.reply({
+            content: "I could not find any active WestMarches.games characters under your Discord account.",
+            ephemeral: true,
+          });
+          return;
+        }
+
+        await interaction.reply({
+          content: "Choose which character is requesting.",
+          components: [buildRequestCharacterRow(interaction.user.id, characters)],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const requests = await listOpenRequestsForDiscordUser(interaction.user.id);
+      if (requests.length === 0) {
+        await interaction.reply({
+          content: "You have no open marketplace requests.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      await interaction.reply({
+        content: "Choose a request to cancel.",
+        components: [buildCancelRequestRow(interaction.user.id, requests)],
+        ephemeral: true,
+      });
+    } catch (error) {
+      console.error("Failed to process /request:", error);
       await interaction.reply({
         content: "Something went wrong while loading the marketplace. Please try again.",
         ephemeral: true,
