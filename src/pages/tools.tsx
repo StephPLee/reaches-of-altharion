@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Bot, Calculator, Coins, Dices } from "lucide-react";
+import { Bot, Calculator, Coins, Dices, Store } from "lucide-react";
 
 import SectionLanding, { type SectionLinkGroup } from "./_SectionLanding";
 
@@ -40,6 +40,18 @@ const GROUPS: SectionLinkGroup[] = [
         description: "View available stat rolls and claim them.",
         hint: "View available rolls",
         to: "/stat-rolls",
+      },
+    ],
+  },
+  {
+    heading: "Marketplace",
+    links: [
+      {
+        icon: Store,
+        title: "Marketplace",
+        description: "Buy and sell crafted items with other players.",
+        hint: "Browse listings",
+        to: "/marketplace",
       },
     ],
   },

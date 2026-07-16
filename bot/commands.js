@@ -269,6 +269,23 @@ const COMMAND_DEFINITIONS = [
         ),
   },
   {
+    name: "sell",
+    description: "List one of your crafted items on the player marketplace, or cancel a listing.",
+    help: "List a WestMarches.games item for sale in gold or SC, or cancel one of your active listings.",
+    buildCommand: (command) =>
+      command
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("list")
+            .setDescription("List one of your items for sale."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("cancel")
+            .setDescription("Cancel one of your active listings."),
+        ),
+  },
+  {
     name: "post-discord-content",
     description: "Post or refresh mirrored site content to Discord channels.",
     help: "Staff-only. Post or refresh starting graces or character creation content from the site into their Discord channels.",

@@ -4,6 +4,7 @@ const { ActivityType } = require("discord.js");
 const { registerGuildCommands } = require("./commands");
 const { handleInteraction } = require("./interactions");
 const { handleMessageForSticky } = require("./services/stickyMessages");
+const { handleMessageForCraftWatcher } = require("./services/craftWatcher");
 
 const bot = new Client({
   intents: [
@@ -43,6 +44,9 @@ bot.on("interactionCreate", async (interaction) => {
 bot.on("messageCreate", (message) => {
   handleMessageForSticky(bot, message).catch((error) => {
     console.error("Unhandled sticky message error:", error);
+  });
+  handleMessageForCraftWatcher(bot, message).catch((error) => {
+    console.error("Unhandled craft watcher error:", error);
   });
 });
 

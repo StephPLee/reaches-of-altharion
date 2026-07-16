@@ -275,6 +275,10 @@ const config: Config = {
               to: "/stat-rolls",
               label: "Stat Rolls",
             },
+            {
+              to: "/marketplace",
+              label: "Marketplace",
+            },
           ],
         },
         {

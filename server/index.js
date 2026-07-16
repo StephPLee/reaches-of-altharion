@@ -190,8 +190,14 @@ const {
   listAllCharacters,
   listCharacterAttributeStats,
   listCurrencies,
+  listOwnedActiveCharactersForDiscordUser,
   listRecentAdventures,
 } = require("./westmarches");
+const {
+  PurchaseError,
+  listActiveListings,
+  purchaseListing,
+} = require("./playerMarketplace");
 const {
   calculateEventCurrency,
   createRewardEvent,
@@ -2539,6 +2545,111 @@ app.get(
     } catch (westMarchesError) {
       console.error("Failed to load own West Marches characters:", westMarchesError);
       res.status(500).json({ error: "Failed to load your characters." });
+    }
+  },
+);
+
+// Intentionally no requireMemberSession here — anyone can browse active listings.
+app.get(
+  "/api/marketplace/listings",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  async (_req, res) => {
+    try {
+      const listings = await listActiveListings();
+      res.json({ listings });
+    } catch (error) {
+      console.error("Failed to load marketplace listings:", error);
+      res.status(500).json({ error: "Failed to load marketplace listings." });
+    }
+  },
+);
+
+app.get(
+  "/api/marketplace/my-characters",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    try {
+      const characters = await listOwnedActiveCharactersForDiscordUser(
+        req.memberUser.discordUserId,
+      );
+      res.json({
+        characters: characters.map((character) => ({
+          id: character.id,
+          name: typeof character.name === "string" ? character.name.trim() : "",
+          level: character.level,
+        })),
+      });
+    } catch (error) {
+      console.error("Failed to load buyer's West Marches characters:", error);
+      res.status(500).json({ error: "Failed to load your characters." });
+    }
+  },
+);
+
+app.post(
+  "/api/marketplace/listings/:id/purchase",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    if (!isWestMarchesConfigured()) {
+      res.status(503).json({ error: "West Marches API is not configured." });
+      return;
+    }
+
+    const listingId = Number.parseInt(req.params.id, 10);
+    const buyerCharacterId =
+      typeof req.body?.buyerCharacterId === "string" ? req.body.buyerCharacterId.trim() : "";
+
+    if (!Number.isInteger(listingId) || listingId <= 0) {
+      res.status(400).json({ error: "Invalid listing id." });
+      return;
+    }
+    if (!buyerCharacterId) {
+      res.status(400).json({ error: "buyerCharacterId is required." });
+      return;
+    }
+
+    try {
+      const result = await purchaseListing({
+        listingId,
+        buyerUserId: req.memberUser.id,
+        buyerDiscordUserId: req.memberUser.discordUserId,
+        buyerCharacterId,
+      });
+      await recordAuditEvent({
+        action: "marketplace_purchase",
+        status: result.creditFailed ? "partial_error" : "success",
+        userId: req.memberUser.id,
+        discordUserId: req.memberUser.discordUserId,
+        metadata: { listingId },
+        ...getRequestMetadata(req),
+      });
+      res.status(200).json({ listing: result.listing, creditFailed: result.creditFailed });
+    } catch (error) {
+      await recordAuditEvent({
+        action: "marketplace_purchase",
+        status: "error",
+        userId: req.memberUser.id,
+        discordUserId: req.memberUser.discordUserId,
+        metadata: {
+          listingId,
+          error: error instanceof Error ? error.message : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+      const status = error instanceof PurchaseError ? error.status : 500;
+      res.status(status).json({
+        error: error instanceof Error ? error.message : "Failed to complete purchase.",
+      });
     }
   },
 );
