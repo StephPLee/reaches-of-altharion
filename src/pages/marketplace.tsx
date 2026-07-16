@@ -51,117 +51,6 @@ type CurrencyType = "gold" | "sc";
 
 const CURRENCY_LABELS: Record<CurrencyType, string> = { gold: "Gold", sc: "SC" };
 
-// TEMPORARY: styling preview only. Flip to false to use the real fetched
-// `listings`/`requests` state once the layout is approved.
-const USE_MOCK_LISTINGS = true;
-const USE_MOCK_REQUESTS = true;
-
-const MOCK_LISTINGS: Listing[] = [
-  {
-    id: 1,
-    sellerCharacterName: "Harkul, Right Hand of the Red Mother",
-    itemName: "Potion Of Diminution",
-    quantity: 1,
-    priceGold: 150,
-    priceSc: null,
-    status: "active",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    sellerCharacterName: "Serena May",
-    itemName: "Grief Taker",
-    quantity: 1,
-    priceGold: 1000,
-    priceSc: 5,
-    status: "active",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 3,
-    sellerCharacterName: "Cindorius The Local Rat",
-    itemName: "Alchemist's Fire",
-    quantity: 3,
-    priceGold: 45,
-    priceSc: null,
-    status: "active",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 4,
-    sellerCharacterName: "Ra'salhague",
-    itemName: "Amulet of the Night",
-    quantity: 1,
-    priceGold: null,
-    priceSc: 8,
-    status: "active",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 5,
-    sellerCharacterName: "Telessa",
-    itemName: "Scroll of Guidance",
-    quantity: 5,
-    priceGold: 20,
-    priceSc: null,
-    status: "active",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 6,
-    sellerCharacterName: "Hiruko",
-    itemName: "Crucible Blade +3",
-    quantity: 1,
-    priceGold: 1800,
-    priceSc: 25,
-    status: "active",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 7,
-    sellerCharacterName: "Pawn",
-    itemName: "Healing Potion",
-    quantity: 10,
-    priceGold: 15,
-    priceSc: null,
-    status: "active",
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const MOCK_REQUESTS: MarketplaceRequest[] = [
-  {
-    id: 101,
-    requesterCharacterName: "Dust",
-    itemName: "Potion of Fire Breath",
-    quantity: 2,
-    offerPriceGold: 300,
-    offerPriceSc: null,
-    status: "open",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 102,
-    requesterCharacterName: "Baerentoeter",
-    itemName: "Cloak of Elvenkind",
-    quantity: 1,
-    offerPriceGold: null,
-    offerPriceSc: 10,
-    status: "open",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 103,
-    requesterCharacterName: "helmier",
-    itemName: "Adamantine Ore",
-    quantity: 5,
-    offerPriceGold: 50,
-    offerPriceSc: 2,
-    status: "open",
-    createdAt: new Date().toISOString(),
-  },
-];
-
 function getAuthApiBaseUrl(siteConfig): string {
   const configuredBaseUrl = siteConfig.customFields?.authApiBaseUrl;
   return typeof configuredBaseUrl === "string"
@@ -215,9 +104,7 @@ export default function MarketplacePage(): ReactNode {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Marketplace (buy) state
-  const [listings, setListings] = useState<Listing[]>(
-    USE_MOCK_LISTINGS ? MOCK_LISTINGS : [],
-  );
+  const [listings, setListings] = useState<Listing[]>([]);
   const [isListingsLoading, setIsListingsLoading] = useState(true);
   const [listingsError, setListingsError] = useState("");
   const [activeListingId, setActiveListingId] = useState<number | null>(null);
@@ -229,9 +116,7 @@ export default function MarketplacePage(): ReactNode {
   const [purchaseError, setPurchaseError] = useState("");
 
   // Requests (fulfill) state
-  const [requests, setRequests] = useState<MarketplaceRequest[]>(
-    USE_MOCK_REQUESTS ? MOCK_REQUESTS : [],
-  );
+  const [requests, setRequests] = useState<MarketplaceRequest[]>([]);
   const [isRequestsLoading, setIsRequestsLoading] = useState(true);
   const [requestsError, setRequestsError] = useState("");
   const [activeRequestId, setActiveRequestId] = useState<number | null>(null);
@@ -271,11 +156,6 @@ export default function MarketplacePage(): ReactNode {
   }, [authApiBaseUrl]);
 
   useEffect(() => {
-    if (USE_MOCK_LISTINGS) {
-      setIsListingsLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
     async function loadListings() {
@@ -310,11 +190,6 @@ export default function MarketplacePage(): ReactNode {
   }, [authApiBaseUrl]);
 
   useEffect(() => {
-    if (USE_MOCK_REQUESTS) {
-      setIsRequestsLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
     async function loadRequests() {
