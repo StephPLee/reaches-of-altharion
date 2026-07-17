@@ -1844,6 +1844,21 @@ function parseOptionalWholeNumber(value) {
   return Math.trunc(value);
 }
 
+function normalizeRewardItems(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((item) => ({
+      name: typeof item?.name === "string" ? item.name.trim().slice(0, 200) : "",
+      quantity:
+        Number.isInteger(item?.quantity) && item.quantity > 0 ? item.quantity : 1,
+      isConsumable: item?.isConsumable === true,
+    }))
+    .filter((item) => item.name);
+}
+
 async function normalizeWestMarchesRewardEntry(
   body,
   activeRewardEventOverride = undefined,
@@ -1857,6 +1872,7 @@ async function normalizeWestMarchesRewardEntry(
     discordId,
     eventRelated,
     adventureId,
+    items,
   } = body ?? {};
 
   if (typeof characterId !== "string" || !characterId.trim()) {
@@ -1886,10 +1902,13 @@ async function normalizeWestMarchesRewardEntry(
     return { error: "Reward values cannot be negative." };
   }
 
+  const normalizedItems = normalizeRewardItems(items);
+
   if (
     normalizedExperience === 0 &&
     normalizedGold === 0 &&
-    normalizedSc === 0
+    normalizedSc === 0 &&
+    normalizedItems.length === 0
   ) {
     return { error: "At least one reward value must be greater than zero." };
   }
@@ -1937,6 +1956,7 @@ async function normalizeWestMarchesRewardEntry(
       typeof reason === "string" && reason.trim()
         ? reason.trim().slice(0, 500)
         : "Rewards calculator submission",
+    ...(normalizedItems.length > 0 ? { items: normalizedItems } : {}),
     ...(typeof discordId === "string" && discordId.trim()
       ? { discordId: discordId.trim() }
       : {}),
