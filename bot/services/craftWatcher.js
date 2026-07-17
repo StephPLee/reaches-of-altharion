@@ -1,3 +1,4 @@
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const pool = require("../db");
 const config = require("../config");
 const {
@@ -71,24 +72,33 @@ async function updateCraftWatchEvent(id, fields) {
     `
     UPDATE craft_watch_events
     SET
-      match_status = $2,
-      matched_character_id = $3,
-      matched_character_name = $4,
-      matched_discord_user_id = $5,
-      reward_result = $6,
-      error_message = $7
+      match_status = COALESCE($2, match_status),
+      matched_character_id = COALESCE($3, matched_character_id),
+      matched_character_name = COALESCE($4, matched_character_name),
+      matched_discord_user_id = COALESCE($5, matched_discord_user_id),
+      reward_result = COALESCE($6, reward_result),
+      error_message = COALESCE($7, error_message),
+      confirmation_status = COALESCE($8, confirmation_status),
+      discord_confirm_message_id = COALESCE($9, discord_confirm_message_id)
     WHERE id = $1
     `,
     [
       id,
-      fields.matchStatus,
+      fields.matchStatus ?? null,
       fields.matchedCharacterId ?? null,
       fields.matchedCharacterName ?? null,
       fields.matchedDiscordUserId ?? null,
       fields.rewardResult ? JSON.stringify(fields.rewardResult) : null,
       fields.errorMessage ?? null,
+      fields.confirmationStatus ?? null,
+      fields.discordConfirmMessageId ?? null,
     ],
   );
+}
+
+async function getCraftWatchEventById(id) {
+  const result = await pool.query(`SELECT * FROM craft_watch_events WHERE id = $1`, [id]);
+  return result.rows[0] ?? null;
 }
 
 function buildUnmatchedWarning({ characterName, itemName }) {
@@ -98,6 +108,20 @@ function buildUnmatchedWarning({ characterName, itemName }) {
 function buildAmbiguousWarning({ characterName, itemName }, matches) {
   const names = matches.map(formatCharacterName).join(", ");
   return `I found multiple WestMarches.games characters named **${characterName}** (${names}) — I could not automatically grant **${itemName}**. A staff member will need to add it manually.`;
+}
+
+function buildCraftConfirmRow(auditId, discordUserId) {
+  const confirmButton = new ButtonBuilder()
+    .setCustomId(`craft-confirm:${auditId}:${discordUserId}:yes`)
+    .setLabel("Yes, add it")
+    .setStyle(ButtonStyle.Success);
+
+  const declineButton = new ButtonBuilder()
+    .setCustomId(`craft-confirm:${auditId}:${discordUserId}:no`)
+    .setLabel("No thanks")
+    .setStyle(ButtonStyle.Secondary);
+
+  return new ActionRowBuilder().addComponents(confirmButton, declineButton);
 }
 
 async function handleMessageForCraftWatcher(client, message) {
@@ -142,29 +166,35 @@ async function handleMessageForCraftWatcher(client, message) {
     }
 
     const character = matches[0];
-    const isConsumable = guessIsConsumable(parsed.itemName);
-
-    const rewardResult = await grantWestMarchesItem({
-      characterId: character.id,
-      itemName: parsed.itemName,
-      quantity: 1,
-      isConsumable,
-      reason: `Crafting: ${parsed.itemName}`.slice(0, 500),
-      discordUserId: character?.user?.discordId,
-    });
+    const discordUserId = character?.user?.discordId || null;
 
     await updateCraftWatchEvent(auditId, {
       matchStatus: "matched",
       matchedCharacterId: character.id,
       matchedCharacterName: formatCharacterName(character),
-      matchedDiscordUserId: character?.user?.discordId || null,
-      rewardResult,
+      matchedDiscordUserId: discordUserId,
+      confirmationStatus: "pending",
     });
 
-    await message.reply({
-      content: `Added **${parsed.itemName}** to **${formatCharacterName(character)}**'s inventory. Use \`/sell\` to list it on the player marketplace.`,
-      allowedMentions: { parse: [] },
+    if (!discordUserId) {
+      await updateCraftWatchEvent(auditId, {
+        confirmationStatus: "declined",
+        errorMessage: "no_discord_user_linked",
+      });
+      await message.reply({
+        content: `I matched **${parsed.itemName}** to **${formatCharacterName(character)}**, but that character isn't linked to a Discord account, so I can't ask them to confirm. A staff member will need to add it manually.`,
+        allowedMentions: { parse: [] },
+      });
+      return;
+    }
+
+    const confirmMessage = await message.reply({
+      content: `<@${discordUserId}>, would you like to add **${parsed.itemName}** to **${formatCharacterName(character)}**'s WestMarches.games inventory?`,
+      components: [buildCraftConfirmRow(auditId, discordUserId)],
+      allowedMentions: { users: [discordUserId] },
     });
+
+    await updateCraftWatchEvent(auditId, { discordConfirmMessageId: confirmMessage.id });
   } catch (error) {
     console.error("Failed to process craft-complete embed:", error);
     await updateCraftWatchEvent(auditId, {
@@ -181,10 +211,42 @@ async function handleMessageForCraftWatcher(client, message) {
   }
 }
 
+async function resolveCraftConfirmation({ auditId, decision }) {
+  const event = await getCraftWatchEventById(auditId);
+  if (!event) {
+    return { status: "not_found" };
+  }
+  if (event.confirmation_status !== "pending") {
+    return { status: "already_resolved", event };
+  }
+
+  if (decision === "no") {
+    await updateCraftWatchEvent(auditId, { confirmationStatus: "declined" });
+    return { status: "declined", event };
+  }
+
+  try {
+    const rewardResult = await grantWestMarchesItem({
+      characterId: event.matched_character_id,
+      itemName: event.raw_item_name,
+      quantity: 1,
+      isConsumable: guessIsConsumable(event.raw_item_name),
+      reason: `Crafting: ${event.raw_item_name}`.slice(0, 500),
+      discordUserId: event.matched_discord_user_id,
+    });
+    await updateCraftWatchEvent(auditId, { confirmationStatus: "confirmed", rewardResult });
+    return { status: "confirmed", event, rewardResult };
+  } catch (error) {
+    console.error("Failed to grant craft confirmation reward:", error);
+    return { status: "error", event, error };
+  }
+}
+
 module.exports = {
   CRAFT_TITLE_PATTERN,
   CRAFT_COMPLETE_FIELD_NAME_PATTERN,
   CRAFT_COMPLETE_VALUE_PATTERN,
   parseCraftCompleteEmbed,
   handleMessageForCraftWatcher,
+  resolveCraftConfirmation,
 };

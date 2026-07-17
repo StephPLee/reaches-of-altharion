@@ -83,7 +83,7 @@ type WestMarchesStatus = {
   };
 };
 
-type RewardTarget = "player" | "dm" | "rp";
+type RewardTarget = "player" | "dm" | "rp" | "manual";
 
 const REWARD_TABLE: RewardRow[] = [
   {
@@ -321,12 +321,23 @@ function formatCharacterOption(character: WestMarchesCharacter) {
 
 const MIN_PARTY_CHIP_FONT_SCALE = 0.62;
 
+type PlayerRewardOverride = {
+  excluded: boolean;
+  xp: string;
+  gold: string;
+  sc: string;
+};
+
 function PartyChipsRow({
   characterIds,
   getLabel,
+  overrides,
+  onSelect,
 }: {
   characterIds: string[];
   getLabel: (characterId: string) => string;
+  overrides: Record<string, PlayerRewardOverride>;
+  onSelect: (characterId: string) => void;
 }): ReactNode {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [fontSize, setFontSize] = useState("");
@@ -367,11 +378,28 @@ function PartyChipsRow({
       className={styles.selectionChips}
       style={fontSize ? { fontSize } : undefined}
     >
-      {characterIds.map((characterId) => (
-        <span key={characterId} className={styles.selectionChip}>
-          {getLabel(characterId)}
-        </span>
-      ))}
+      {characterIds.map((characterId) => {
+        const override = overrides[characterId];
+        const chipClassName = [
+          styles.selectionChip,
+          override?.excluded ? styles.selectionChipExcluded : "",
+          override && !override.excluded ? styles.selectionChipModified : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        return (
+          <button
+            key={characterId}
+            type="button"
+            className={chipClassName}
+            onClick={() => onSelect(characterId)}
+          >
+            {getLabel(characterId)}
+            {override?.excluded ? " (excluded)" : override ? " (custom)" : ""}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -385,6 +413,17 @@ export default function RewardsCalculatorPage(): ReactNode {
   const [questLevel, setQuestLevel] = useState("6");
   const [players, setPlayers] = useState("5");
   const [isEventRelated, setIsEventRelated] = useState(false);
+  const [isPrizeHunt, setIsPrizeHunt] = useState(false);
+  const [playerOverrides, setPlayerOverrides] = useState<
+    Record<string, PlayerRewardOverride>
+  >({});
+  const [editingOverrideCharacterId, setEditingOverrideCharacterId] = useState<
+    string | null
+  >(null);
+  const [draftExcluded, setDraftExcluded] = useState(false);
+  const [draftXp, setDraftXp] = useState("0");
+  const [draftGold, setDraftGold] = useState("0");
+  const [draftSc, setDraftSc] = useState("0");
   const [rpHours, setRpHours] = useState("0");
   const [rpMinutes, setRpMinutes] = useState("10");
   const [rpLevel, setRpLevel] = useState("4");
@@ -413,11 +452,17 @@ export default function RewardsCalculatorPage(): ReactNode {
   const adventurePanelRef = useRef<HTMLDivElement>(null);
   const [dmCharacterId, setDmCharacterId] = useState("");
   const [rpCharacterId, setRpCharacterId] = useState("");
+  const [manualCharacterId, setManualCharacterId] = useState("");
   const [dmCharacterQuery, setDmCharacterQuery] = useState("");
   const [rpCharacterQuery, setRpCharacterQuery] = useState("");
+  const [manualCharacterQuery, setManualCharacterQuery] = useState("");
+  const [manualXp, setManualXp] = useState("0");
+  const [manualGold, setManualGold] = useState("0");
+  const [manualSc, setManualSc] = useState("0");
   const [playerReason, setPlayerReason] = useState("");
   const [dmReason, setDmReason] = useState("");
   const [rpReason, setRpReason] = useState("");
+  const [manualReason, setManualReason] = useState("");
   const [submittingTarget, setSubmittingTarget] = useState<RewardTarget | null>(
     null,
   );
@@ -761,8 +806,11 @@ export default function RewardsCalculatorPage(): ReactNode {
     : "";
   const dmScReasonText = dmScMultiplier > 1 ? ", below level 10 DM SC x2" : "";
   const playerDefaultReason = `Quest rewards: ${safeHours}h ${safeMinutes}m, level ${safeQuestLevel}, ${safePlayers} player${safePlayers === 1 ? "" : "s"}${eventReasonText}`;
+  const prizeHuntPlaceholder =
+    "Character Name - Item\nOne per line, e.g.:\nHarkul - Potion of Diminution";
   const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}${dmScReasonText}${eventReasonText}`;
   const rpDefaultReason = `RP rewards: ${safeRpHours}h ${safeRpMinutes}m, level ${safeRpLevel}`;
+  const manualDefaultReason = "Individual reward";
 
   function filterCharacters(query: string, characterList = characters) {
     const normalizedQuery = query.trim().toLowerCase();
@@ -802,6 +850,47 @@ export default function RewardsCalculatorPage(): ReactNode {
     () => filterCharacters(rpCharacterQuery, rpCharacterList),
     [rpCharacterList, rpCharacterQuery],
   );
+  const filteredManualCharacters = useMemo(
+    () => filterCharacters(manualCharacterQuery, characters),
+    [characters, manualCharacterQuery],
+  );
+
+  function parsePrizeHuntLines(
+    notes: string,
+    characterIds: string[],
+  ): { itemsByCharacterId: Record<string, string>; errors: string[] } {
+    const itemsByCharacterId: Record<string, string> = {};
+    const errors: string[] = [];
+    const lines = notes
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    for (const line of lines) {
+      const match = line.match(/^(.+?)\s*-\s*(.+)$/);
+      if (!match) {
+        errors.push(`Could not parse "${line}" — use the format "Character Name - Item".`);
+        continue;
+      }
+
+      const [, namePart, itemPart] = match;
+      const normalizedName = namePart.trim().toLowerCase();
+      const character = characterIds
+        .map((characterId) => characters.find((item) => item.id === characterId))
+        .find(
+          (item) => item && formatCharacterOption(item).toLowerCase() === normalizedName,
+        );
+
+      if (!character) {
+        errors.push(`Could not find "${namePart.trim()}" in the selected party.`);
+        continue;
+      }
+
+      itemsByCharacterId[character.id] = itemPart.trim();
+    }
+
+    return { itemsByCharacterId, errors };
+  }
 
   async function submitReward(target: RewardTarget) {
     const targetConfig =
@@ -813,7 +902,9 @@ export default function RewardsCalculatorPage(): ReactNode {
             sc: playerSc,
             eventRelated: isEventRelated,
             adventureId: selectedPlayerAdventure?.id || "",
-            reason: playerReason.trim() || playerDefaultReason,
+            reason: isPrizeHunt
+              ? playerDefaultReason
+              : playerReason.trim() || playerDefaultReason,
           }
         : target === "dm"
           ? {
@@ -825,13 +916,22 @@ export default function RewardsCalculatorPage(): ReactNode {
               adventureId: selectedPlayerAdventure?.id || "",
               reason: dmReason.trim() || dmDefaultReason,
             }
-          : {
-              characterId: rpCharacterId,
-              experience: Math.round(rpXp),
-              gold: Math.round(rpGold),
-              sc: 0,
-              reason: rpReason.trim() || rpDefaultReason,
-            };
+          : target === "manual"
+            ? {
+                characterId: manualCharacterId,
+                experience: Math.max(0, parseWholeNumber(manualXp, 0)),
+                gold: Math.max(0, parseWholeNumber(manualGold, 0)),
+                sc: Math.max(0, parseWholeNumber(manualSc, 0)),
+                adventureId: selectedPlayerAdventure?.id || "",
+                reason: manualReason.trim() || manualDefaultReason,
+              }
+            : {
+                characterId: rpCharacterId,
+                experience: Math.round(rpXp),
+                gold: Math.round(rpGold),
+                sc: 0,
+                reason: rpReason.trim() || rpDefaultReason,
+              };
 
     if (
       (target === "player" && targetConfig.characterIds.length === 0) ||
@@ -846,18 +946,74 @@ export default function RewardsCalculatorPage(): ReactNode {
       return;
     }
 
+    const includedPlayerCharacterIds =
+      target === "player"
+        ? targetConfig.characterIds.filter(
+            (characterId) => !playerOverrides[characterId]?.excluded,
+          )
+        : [];
+
+    if (target === "player" && includedPlayerCharacterIds.length === 0) {
+      setSubmissionMessage("");
+      setSubmissionError(
+        "All party members are excluded from this reward — nothing to submit.",
+      );
+      return;
+    }
+
+    let prizeItemsByCharacterId: Record<string, string> = {};
+    if (target === "player" && isPrizeHunt) {
+      const parsed = parsePrizeHuntLines(playerReason, includedPlayerCharacterIds);
+      if (parsed.errors.length > 0) {
+        setSubmissionMessage("");
+        setSubmissionError(parsed.errors.join(" "));
+        return;
+      }
+      prizeItemsByCharacterId = parsed.itemsByCharacterId;
+    }
+
     const rewards =
       target === "player"
-        ? targetConfig.characterIds.map((characterId) => ({
-            characterId,
-            experience: targetConfig.experience,
-            gold: targetConfig.gold,
-            sc: targetConfig.sc,
-            eventRelated: targetConfig.eventRelated,
-            rewardRole: "player",
-            adventureId: targetConfig.adventureId,
-            reason: targetConfig.reason,
-          }))
+        ? includedPlayerCharacterIds.map((characterId) => {
+            const override = playerOverrides[characterId];
+            const experience = override
+              ? Math.max(0, parseWholeNumber(override.xp, 0))
+              : targetConfig.experience;
+            const gold = override
+              ? Math.max(0, parseWholeNumber(override.gold, 0))
+              : targetConfig.gold;
+            const sc = override
+              ? Math.max(0, parseWholeNumber(override.sc, 0))
+              : targetConfig.sc;
+            const prizeItem = prizeItemsByCharacterId[characterId];
+            return {
+              characterId,
+              experience,
+              gold,
+              sc,
+              eventRelated: targetConfig.eventRelated,
+              rewardRole: "player",
+              adventureId: targetConfig.adventureId,
+              // A prize item makes this entry's reason unique so the bulk
+              // rewards API (which merges entries with identical experience,
+              // currencies, and reason into one Discord notification) doesn't
+              // fold this player's prize into the shared party notification.
+              reason: prizeItem
+                ? `${targetConfig.reason} — Prize: ${prizeItem}`
+                : targetConfig.reason,
+              ...(prizeItem
+                ? {
+                    items: [
+                      {
+                        name: prizeItem,
+                        quantity: 1,
+                        isConsumable: false,
+                      },
+                    ],
+                  }
+                : {}),
+            };
+          })
         : [
             {
               characterId: targetConfig.characterId,
@@ -871,7 +1027,8 @@ export default function RewardsCalculatorPage(): ReactNode {
                     rewardRole: "dm",
                   }
                 : {}),
-              ...(target === "dm"
+              ...(target === "manual" ? { rewardRole: "player" } : {}),
+              ...(target === "dm" || target === "manual"
                 ? { adventureId: targetConfig.adventureId }
                 : {}),
             },
@@ -922,8 +1079,10 @@ export default function RewardsCalculatorPage(): ReactNode {
 
       setSubmissionMessage(
         target === "player"
-          ? `PLAYER rewards submitted for ${targetConfig.characterIds.length} characters.`
-          : `${target.toUpperCase()} rewards submitted successfully.`,
+          ? `PLAYER rewards submitted for ${includedPlayerCharacterIds.length} characters.`
+          : target === "manual"
+            ? "Individual reward submitted successfully."
+            : `${target.toUpperCase()} rewards submitted successfully.`,
       );
     } catch (submitError) {
       setSubmissionError(
@@ -954,6 +1113,46 @@ export default function RewardsCalculatorPage(): ReactNode {
     return character ? formatCharacterOption(character) : characterId;
   }
 
+  function openOverrideEditor(characterId: string) {
+    if (editingOverrideCharacterId === characterId) {
+      setEditingOverrideCharacterId(null);
+      return;
+    }
+
+    const existing = playerOverrides[characterId];
+    setDraftExcluded(existing?.excluded ?? false);
+    setDraftXp(existing?.xp ?? String(Math.round(playerXp)));
+    setDraftGold(existing?.gold ?? String(Math.round(playerGold)));
+    setDraftSc(existing?.sc ?? String(playerSc));
+    setEditingOverrideCharacterId(characterId);
+  }
+
+  function saveOverride() {
+    if (!editingOverrideCharacterId) {
+      return;
+    }
+
+    setPlayerOverrides((current) => ({
+      ...current,
+      [editingOverrideCharacterId]: {
+        excluded: draftExcluded,
+        xp: draftXp,
+        gold: draftGold,
+        sc: draftSc,
+      },
+    }));
+    setEditingOverrideCharacterId(null);
+  }
+
+  function clearOverride(characterId: string) {
+    setPlayerOverrides((current) => {
+      const next = { ...current };
+      delete next[characterId];
+      return next;
+    });
+    setEditingOverrideCharacterId(null);
+  }
+
   function renderRewardSubmissionControls(
     target: RewardTarget,
     description: string,
@@ -961,18 +1160,41 @@ export default function RewardsCalculatorPage(): ReactNode {
     setReason: (value: string) => void,
     defaultReason: string,
   ) {
-    const singleCharacterId = target === "dm" ? dmCharacterId : rpCharacterId;
+    const singleCharacterId =
+      target === "dm"
+        ? dmCharacterId
+        : target === "manual"
+          ? manualCharacterId
+          : rpCharacterId;
     const setSingleCharacterId =
-      target === "dm" ? setDmCharacterId : setRpCharacterId;
+      target === "dm"
+        ? setDmCharacterId
+        : target === "manual"
+          ? setManualCharacterId
+          : setRpCharacterId;
     const characterQuery =
-      target === "dm" ? dmCharacterQuery : rpCharacterQuery;
+      target === "dm"
+        ? dmCharacterQuery
+        : target === "manual"
+          ? manualCharacterQuery
+          : rpCharacterQuery;
     const setCharacterQuery =
-      target === "dm" ? setDmCharacterQuery : setRpCharacterQuery;
+      target === "dm"
+        ? setDmCharacterQuery
+        : target === "manual"
+          ? setManualCharacterQuery
+          : setRpCharacterQuery;
     const filteredCharacters =
-      target === "dm" ? filteredDmCharacters : filteredRpCharacters;
+      target === "dm"
+        ? filteredDmCharacters
+        : target === "manual"
+          ? filteredManualCharacters
+          : filteredRpCharacters;
 
     function handleAdventureChange(adventureId: string) {
       setPlayerAdventureId(adventureId);
+      setPlayerOverrides({});
+      setEditingOverrideCharacterId(null);
       const adventure = adventures.find((item) => item.id === adventureId);
       if (adventure) {
         setPlayers(String(Math.max(1, adventure.participantCount)));
@@ -1092,7 +1314,83 @@ export default function RewardsCalculatorPage(): ReactNode {
                 <PartyChipsRow
                   characterIds={selectedPlayerCharacterIds}
                   getLabel={getCharacterLabel}
+                  overrides={playerOverrides}
+                  onSelect={openOverrideEditor}
                 />
+              ) : null}
+              {editingOverrideCharacterId ? (
+                <div className={styles.overridePanel}>
+                  <p className={styles.fieldSubheading}>
+                    {getCharacterLabel(editingOverrideCharacterId)} — Individual Override
+                  </p>
+                  <label className={styles.toggleRow} htmlFor="override-excluded">
+                    <input
+                      id="override-excluded"
+                      type="checkbox"
+                      checked={draftExcluded}
+                      onChange={(event) => setDraftExcluded(event.target.checked)}
+                    />
+                    <span>
+                      Exclude from this reward
+                      <small>
+                        They will receive nothing from this submission — use
+                        this if they're being rewarded separately.
+                      </small>
+                    </span>
+                  </label>
+                  {!draftExcluded ? (
+                    <div className={styles.inputGrid}>
+                      <div className={styles.field}>
+                        <label htmlFor="override-xp">XP</label>
+                        <input
+                          id="override-xp"
+                          inputMode="numeric"
+                          value={draftXp}
+                          onChange={(event) => setDraftXp(event.target.value)}
+                        />
+                      </div>
+                      <div className={styles.field}>
+                        <label htmlFor="override-gold">Gold</label>
+                        <input
+                          id="override-gold"
+                          inputMode="numeric"
+                          value={draftGold}
+                          onChange={(event) => setDraftGold(event.target.value)}
+                        />
+                      </div>
+                      <div className={styles.field}>
+                        <label htmlFor="override-sc">SC</label>
+                        <input
+                          id="override-sc"
+                          inputMode="numeric"
+                          value={draftSc}
+                          onChange={(event) => setDraftSc(event.target.value)}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className={styles.formActions}>
+                    <button type="button" className={styles.actionButton} onClick={saveOverride}>
+                      Save
+                    </button>
+                    {playerOverrides[editingOverrideCharacterId] ? (
+                      <button
+                        type="button"
+                        className={styles.actionButton}
+                        onClick={() => clearOverride(editingOverrideCharacterId)}
+                      >
+                        Remove Override
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={styles.actionButton}
+                      onClick={() => setEditingOverrideCharacterId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ) : null}
             </div>
           ) : (
@@ -1125,6 +1423,40 @@ export default function RewardsCalculatorPage(): ReactNode {
               </div>
             </div>
           )}
+          {target === "manual" ? (
+            <div className={styles.field}>
+              <label className={styles.fieldSubheading}>Reward Amounts</label>
+              <div className={styles.inputGrid}>
+                <div className={styles.field}>
+                  <label htmlFor="manual-xp">XP</label>
+                  <input
+                    id="manual-xp"
+                    inputMode="numeric"
+                    value={manualXp}
+                    onChange={(event) => setManualXp(event.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="manual-gold">Gold</label>
+                  <input
+                    id="manual-gold"
+                    inputMode="numeric"
+                    value={manualGold}
+                    onChange={(event) => setManualGold(event.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="manual-sc">SC</label>
+                  <input
+                    id="manual-sc"
+                    inputMode="numeric"
+                    value={manualSc}
+                    onChange={(event) => setManualSc(event.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
           <div className={styles.field}>
             <label htmlFor={`${target}-reason`}>Notes</label>
             <textarea
@@ -1298,16 +1630,51 @@ export default function RewardsCalculatorPage(): ReactNode {
                       : `${playerEventCurrencyAmount} ${eventCurrencyName} under the active ${activeEvent?.name} rule.`}
                   </p>
                 ) : null}
-                {user?.canSubmitRewards
-                  ? renderRewardSubmissionControls(
+                {user?.canSubmitRewards ? (
+                  <>
+                    <label className={styles.toggleRow} htmlFor="prize-hunt">
+                      <input
+                        id="prize-hunt"
+                        type="checkbox"
+                        checked={isPrizeHunt}
+                        onChange={(event) => setIsPrizeHunt(event.target.checked)}
+                      />
+                      <span>
+                        Prize hunt
+                        <small>
+                          Give each player named in the notes an item, using
+                          the format "Character Name - Item" (one per line).
+                        </small>
+                      </span>
+                    </label>
+                    {renderRewardSubmissionControls(
                       "player",
                       "",
                       playerReason,
                       setPlayerReason,
-                      playerDefaultReason,
-                    )
-                  : null}
+                      isPrizeHunt ? prizeHuntPlaceholder : playerDefaultReason,
+                    )}
+                  </>
+                ) : null}
               </section>
+
+              {user?.canSubmitRewards ? (
+                <section className={styles.panel}>
+                  <Heading as="h2">Individual Reward</Heading>
+                  <p className={styles.muted}>
+                    Give one player a custom reward — useful when someone only
+                    attended part of the quest and doesn't qualify for the
+                    full reward package above.
+                  </p>
+                  {renderRewardSubmissionControls(
+                    "manual",
+                    "",
+                    manualReason,
+                    setManualReason,
+                    manualDefaultReason,
+                  )}
+                </section>
+              ) : null}
 
               <section className={`${styles.panel} ${styles.rewardPanel}`}>
                 <Heading as="h3">DM Rewards</Heading>

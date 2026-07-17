@@ -4,6 +4,7 @@ const { buildHelpMessage } = require("./commands");
 const { hasDmOrRequiredRole, hasRequiredRole } = require("./permissions");
 const { getDisplayName } = require("./utils");
 const { getOrAssignCampaign } = require("./services/campaigns");
+const { resolveCraftConfirmation } = require("./services/craftWatcher");
 const {
   buildBossHealthEmbed,
   buildBossLogEmbed,
@@ -1457,6 +1458,76 @@ async function handleInteraction(interaction) {
         await interaction.editReply(message);
       } else {
         await interaction.reply({ content: message, ephemeral: true });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.isButton()) {
+    if (!interaction.customId.startsWith("craft-confirm:")) {
+      return;
+    }
+
+    const [, auditIdRaw, ownerId, decision] = interaction.customId.split(":");
+    if (ownerId !== interaction.user.id) {
+      await interaction.reply({
+        content: "This isn't your craft to confirm.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const auditId = Number(auditIdRaw);
+      const result = await resolveCraftConfirmation({ auditId, decision });
+
+      if (result.status === "not_found") {
+        await interaction.editReply("I couldn't find that craft confirmation anymore.");
+        return;
+      }
+
+      if (result.status === "already_resolved") {
+        await interaction.editReply("This craft confirmation has already been resolved.");
+        return;
+      }
+
+      if (result.status === "declined") {
+        await interaction.editReply("Okay, not added to your inventory.");
+        await interaction.message
+          .edit({
+            content: `${interaction.message.content}\n\n❌ **Declined** — not added to inventory.`,
+            components: [],
+          })
+          .catch(() => {});
+        return;
+      }
+
+      if (result.status === "confirmed") {
+        await interaction.editReply(
+          `Added **${result.event.raw_item_name}** to **${result.event.matched_character_name}**'s inventory!`,
+        );
+        await interaction.message
+          .edit({
+            content: `${interaction.message.content}\n\n✅ **Added to inventory.**`,
+            components: [],
+          })
+          .catch(() => {});
+        return;
+      }
+
+      await interaction.editReply("Something went wrong while adding that item. Please try again.");
+    } catch (error) {
+      console.error("Failed to process craft confirmation button:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply("Something went wrong. Please try again.");
+      } else {
+        await interaction.reply({
+          content: "Something went wrong. Please try again.",
+          ephemeral: true,
+        });
       }
     }
 

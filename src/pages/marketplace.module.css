@@ -56,14 +56,6 @@
     font-size: 0.82rem;
 }
 
-.successText {
-    margin: 0 0 0.85rem;
-    color: #9be3a8;
-    font-weight: 700;
-    font-size: 0.88rem;
-    text-align: center;
-}
-
 /* Tabs */
 .tabs {
     display: flex;

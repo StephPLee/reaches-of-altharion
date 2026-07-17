@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Layout from "@theme/Layout";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
+import ToastStack from "../components/worldWiki/ToastStack";
+import { useToasts } from "../components/worldWiki/useToasts";
 import styles from "./marketplace.module.css";
 
 type SessionUser = {
@@ -98,6 +100,7 @@ export default function MarketplacePage(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
 
+  const { toasts, showToast, dismissToast } = useToasts();
   const [activeTab, setActiveTab] = useState<"marketplace" | "requests">("marketplace");
   const [user, setUser] = useState<SessionUser | null>(null);
   const [myCharacters, setMyCharacters] = useState<BuyerCharacter[]>([]);
@@ -112,7 +115,6 @@ export default function MarketplacePage(): ReactNode {
   const [buyCharacterId, setBuyCharacterId] = useState("");
   const [buyCurrency, setBuyCurrency] = useState<CurrencyType | "">("");
   const [isPurchasing, setIsPurchasing] = useState(false);
-  const [purchaseMessage, setPurchaseMessage] = useState("");
   const [purchaseError, setPurchaseError] = useState("");
 
   // Requests (fulfill) state
@@ -126,7 +128,6 @@ export default function MarketplacePage(): ReactNode {
   const [fulfillInventory, setFulfillInventory] = useState<InventoryItem[]>([]);
   const [isFulfillInventoryLoading, setIsFulfillInventoryLoading] = useState(false);
   const [isFulfilling, setIsFulfilling] = useState(false);
-  const [fulfillMessage, setFulfillMessage] = useState("");
   const [fulfillError, setFulfillError] = useState("");
 
   useEffect(() => {
@@ -297,7 +298,6 @@ export default function MarketplacePage(): ReactNode {
     setBuyCharacterId("");
     const currencies = listingCurrencies(listing);
     setBuyCurrency(currencies.length === 1 ? currencies[0] : "");
-    setPurchaseMessage("");
     setPurchaseError("");
   }
 
@@ -314,7 +314,6 @@ export default function MarketplacePage(): ReactNode {
     try {
       setIsPurchasing(true);
       setPurchaseError("");
-      setPurchaseMessage("");
 
       const response = await fetch(
         `${authApiBaseUrl}/api/marketplace/listings/${listing.id}/purchase`,
@@ -344,8 +343,9 @@ export default function MarketplacePage(): ReactNode {
           .filter((item) => item.quantity > 0),
       );
       setActiveListingId(null);
-      setPurchaseMessage(
-        `Purchased ${buyQuantity}x **${listing.itemName}** for ${total} ${CURRENCY_LABELS[buyCurrency]}.`,
+      showToast(
+        "success",
+        `Purchased ${buyQuantity}x ${listing.itemName} for ${total} ${CURRENCY_LABELS[buyCurrency]}.`,
       );
     } catch (error) {
       setPurchaseError(error instanceof Error ? error.message : "Failed to complete purchase.");
@@ -360,7 +360,6 @@ export default function MarketplacePage(): ReactNode {
     setFulfillItemId("");
     const currencies = requestCurrencies(request);
     setFulfillCurrency(currencies.length === 1 ? currencies[0] : "");
-    setFulfillMessage("");
     setFulfillError("");
   }
 
@@ -381,7 +380,6 @@ export default function MarketplacePage(): ReactNode {
     try {
       setIsFulfilling(true);
       setFulfillError("");
-      setFulfillMessage("");
 
       const response = await fetch(
         `${authApiBaseUrl}/api/marketplace/requests/${request.id}/fulfill`,
@@ -403,9 +401,7 @@ export default function MarketplacePage(): ReactNode {
 
       setRequests((current) => current.filter((item) => item.id !== request.id));
       setActiveRequestId(null);
-      setFulfillMessage(
-        `Fulfilled **${request.itemName}** for **${formatRequestPrice(request)}**.`,
-      );
+      showToast("success", `Fulfilled ${request.itemName} for ${formatRequestPrice(request)}.`);
     } catch (error) {
       setFulfillError(error instanceof Error ? error.message : "Failed to fulfill request.");
     } finally {
@@ -432,6 +428,7 @@ export default function MarketplacePage(): ReactNode {
   return (
     <Layout title="Marketplace" description="Player-run item marketplace for Reaches of Altharion.">
       <div className={styles.page}>
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
         <div className={styles.shell}>
           <h1 className={styles.heading}>Marketplace</h1>
           <p className={styles.intro}>
@@ -478,7 +475,6 @@ export default function MarketplacePage(): ReactNode {
 
           {activeTab === "marketplace" ? (
             <>
-              {purchaseMessage ? <p className={styles.successText}>{purchaseMessage}</p> : null}
               {listingsError ? <p className={styles.error}>{listingsError}</p> : null}
 
               {isListingsLoading ? (
@@ -610,7 +606,6 @@ export default function MarketplacePage(): ReactNode {
             </>
           ) : (
             <>
-              {fulfillMessage ? <p className={styles.successText}>{fulfillMessage}</p> : null}
               {requestsError ? <p className={styles.error}>{requestsError}</p> : null}
 
               {isRequestsLoading ? (

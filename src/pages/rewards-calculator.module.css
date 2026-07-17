@@ -606,6 +606,38 @@
     background: rgba(9, 11, 24, 0.6);
     color: rgba(210, 192, 145, 0.9);
     font-family: inherit;
+    cursor: pointer;
+    transition:
+        border-color 140ms ease,
+        background-color 140ms ease,
+        color 140ms ease;
+}
+
+.selectionChip:hover,
+.selectionChip:focus-visible {
+    border-color: rgba(210, 192, 145, 0.6);
+    background: rgba(9, 11, 24, 0.85);
+}
+
+.selectionChipModified {
+    border-color: rgba(202, 168, 255, 0.6);
+    color: #e4d1ff;
+}
+
+.selectionChipExcluded {
+    border-color: rgba(255, 138, 138, 0.5);
+    color: #ffb4c1;
+    text-decoration: line-through;
+}
+
+.overridePanel {
+    margin-top: 0.75rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(202, 168, 255, 0.35);
+    border-radius: 0.65rem;
+    background: rgba(9, 11, 24, 0.7);
+    display: grid;
+    gap: 0.75rem;
 }
 
 .badgeRow {

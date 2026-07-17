@@ -15,6 +15,13 @@ const GROUPS: SectionLinkGroup[] = [
         hint: "Build commands",
         to: "/avrae",
       },
+      {
+        icon: Store,
+        title: "Marketplace",
+        description: "Buy and sell crafted items with other players.",
+        hint: "Browse listings",
+        to: "/marketplace",
+      },
     ],
   },
   {
@@ -40,18 +47,6 @@ const GROUPS: SectionLinkGroup[] = [
         description: "View available stat rolls and claim them.",
         hint: "View available rolls",
         to: "/stat-rolls",
-      },
-    ],
-  },
-  {
-    heading: "Marketplace",
-    links: [
-      {
-        icon: Store,
-        title: "Marketplace",
-        description: "Buy and sell crafted items with other players.",
-        hint: "Browse listings",
-        to: "/marketplace",
       },
     ],
   },
