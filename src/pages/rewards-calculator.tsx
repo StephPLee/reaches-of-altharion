@@ -319,6 +319,14 @@ function formatCharacterOption(character: WestMarchesCharacter) {
   return character.name.trim();
 }
 
+// Browsers/OS text replacement often convert a typed straight apostrophe (')
+// into a curly one (' or '), so a name typed into a textarea can visually
+// match a character's name while failing an exact string comparison. Fold
+// all apostrophe-like characters to a single form before comparing names.
+function normalizeApostrophes(value: string): string {
+  return value.replace(/[‘’ʼʻ`´]/g, "'");
+}
+
 const MIN_PARTY_CHIP_FONT_SCALE = 0.62;
 
 type PlayerRewardOverride = {
@@ -874,11 +882,13 @@ export default function RewardsCalculatorPage(): ReactNode {
       }
 
       const [, namePart, itemPart] = match;
-      const normalizedName = namePart.trim().toLowerCase();
+      const normalizedName = normalizeApostrophes(namePart.trim().toLowerCase());
       const character = characterIds
         .map((characterId) => characters.find((item) => item.id === characterId))
         .find(
-          (item) => item && formatCharacterOption(item).toLowerCase() === normalizedName,
+          (item) =>
+            item &&
+            normalizeApostrophes(formatCharacterOption(item).toLowerCase()) === normalizedName,
         );
 
       if (!character) {
