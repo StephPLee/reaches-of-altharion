@@ -254,11 +254,12 @@ async function listOwnedActiveCharactersForDiscordUser(discordUserId) {
   );
 }
 
-async function grantCharacterReward({ characterId, currencies, reason, discordUserId }) {
+async function grantCharacterReward({ characterId, currencies, items, reason, discordUserId }) {
   const payload = await westMarchesFetch(`/characters/${characterId}/rewards`, {
     method: "POST",
     body: JSON.stringify({
       ...(currencies ? { currencies } : {}),
+      ...(items ? { items } : {}),
       ...(reason ? { reason } : {}),
       ...(discordUserId ? { discordId: discordUserId } : {}),
     }),

@@ -186,6 +186,7 @@ const {
   distributeRewards,
   getCharacter,
   getEventCurrencyMapping,
+  grantCharacterReward,
   isWestMarchesConfigured,
   listAllCharacters,
   listCharacterAttributeStats,
@@ -3361,7 +3362,21 @@ app.post(
     }
 
     try {
-      const rewards = await distributeRewards(normalizedPayload);
+      // The bulk /rewards endpoint's response schema lists an `items` array
+      // per reward record, but live testing confirmed it never actually
+      // grants them — only the single-character POST /characters/{id}/rewards
+      // endpoint does. Strip items from the bulk call and grant them
+      // separately below so the bulk call isn't sending a field it silently
+      // ignores.
+      const entriesWithItems = normalizedPayload.rewards.filter(
+        (entry) => Array.isArray(entry.items) && entry.items.length > 0,
+      );
+      const bulkPayload = {
+        ...normalizedPayload,
+        rewards: normalizedPayload.rewards.map(({ items, ...entry }) => entry),
+      };
+
+      const rewards = await distributeRewards(bulkPayload);
       const [reward] = rewards;
 
       if (
@@ -3382,9 +3397,31 @@ app.post(
         }
       }
 
+      const itemGrantErrors = [];
+      for (const entry of entriesWithItems) {
+        try {
+          await grantCharacterReward({
+            characterId: entry.characterId,
+            items: entry.items,
+            reason: entry.reason,
+            discordUserId: entry.discordId,
+          });
+        } catch (itemError) {
+          console.error(
+            "Reward XP/gold succeeded but granting a prize item failed:",
+            { characterId: entry.characterId, items: entry.items, error: itemError },
+          );
+          itemGrantErrors.push({
+            characterId: entry.characterId,
+            items: entry.items,
+            error: itemError instanceof Error ? itemError.message : "unknown_error",
+          });
+        }
+      }
+
       await recordAuditEvent({
         action: "westmarches_reward_distribute",
-        status: "success",
+        status: itemGrantErrors.length > 0 ? "partial_error" : "success",
         userId: req.staffUser.id,
         discordUserId: req.staffUser.discordUserId,
         metadata: {
@@ -3392,13 +3429,15 @@ app.post(
             (entry) => entry.characterId,
           ),
           rewards,
+          itemGrantErrors,
         },
         ...getRequestMetadata(req),
       });
 
-      res.status(201).json(
-        normalizedPayload.rewards.length === 1 ? { reward } : { rewards },
-      );
+      res.status(201).json({
+        ...(normalizedPayload.rewards.length === 1 ? { reward } : { rewards }),
+        ...(itemGrantErrors.length > 0 ? { itemGrantErrors } : {}),
+      });
     } catch (westMarchesError) {
       console.error(
         "Failed to distribute West Marches reward:",

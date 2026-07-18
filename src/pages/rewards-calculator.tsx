@@ -1087,12 +1087,20 @@ export default function RewardsCalculatorPage(): ReactNode {
         throw new Error(payload.error || "Failed to submit rewards.");
       }
 
+      const itemGrantErrorCount = Array.isArray(payload.itemGrantErrors)
+        ? payload.itemGrantErrors.length
+        : 0;
+      const itemGrantNote =
+        itemGrantErrorCount > 0
+          ? ` XP/Gold/SC were submitted, but ${itemGrantErrorCount} prize item${itemGrantErrorCount === 1 ? "" : "s"} could not be granted — check with a developer.`
+          : "";
+
       setSubmissionMessage(
-        target === "player"
+        (target === "player"
           ? `PLAYER rewards submitted for ${includedPlayerCharacterIds.length} characters.`
           : target === "manual"
             ? "Individual reward submitted successfully."
-            : `${target.toUpperCase()} rewards submitted successfully.`,
+            : `${target.toUpperCase()} rewards submitted successfully.`) + itemGrantNote,
       );
     } catch (submitError) {
       setSubmissionError(
