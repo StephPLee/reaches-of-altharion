@@ -33,7 +33,6 @@ type IslandHotspot = {
   landmarks: IslandLandmark[];
   to: string;
   image: string;
-  eventPulse?: boolean;
   x: number;
   y: number;
   width: number;
@@ -69,7 +68,6 @@ const ISLAND_HOTSPOTS: IslandHotspot[] = [
     ],
     to: "/player-information",
     image: "/img/Solcrata.png",
-    eventPulse: true, // temporary event highlight, remove when the event ends
     x: 32.2,
     y: 31.5,
     width: 46,
@@ -526,9 +524,7 @@ function HomepageHeader() {
                   : island.label;
                 const islandClassName = `${styles.islandHotspot} ${
                   isDimmed ? styles.islandHotspotDimmed : ""
-                } ${isSelected ? styles.islandHotspotSelected : ""} ${
-                  island.eventPulse ? styles.islandHotspotEventPulse : ""
-                }`;
+                } ${isSelected ? styles.islandHotspotSelected : ""}`;
                 const labelStyle = {
                   "--label-x": `${island.labelX ?? 50}%`,
                   "--label-y": `${island.labelY ?? 50}%`,
@@ -593,17 +589,6 @@ function HomepageHeader() {
                         src={island.image}
                         alt=""
                       />
-                      {island.eventPulse ? (
-                        <div
-                          className={styles.islandEventGlow}
-                          style={
-                            {
-                              "--island-mask": `url(${island.image})`,
-                            } as CSSProperties
-                          }
-                          aria-hidden="true"
-                        />
-                      ) : null}
                       <AnimatePresence>
                         {isSelected
                           ? island.landmarks.map((landmark, landmarkIndex) => (
