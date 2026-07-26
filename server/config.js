@@ -112,6 +112,10 @@ module.exports = {
   adminRateLimitMaxRequests: Number(
     process.env.ADMIN_RATE_LIMIT_MAX_REQUESTS || 120,
   ),
+  feedbackRateLimitWindowMs: Number(process.env.FEEDBACK_RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000),
+  feedbackRateLimitMaxRequests: Number(process.env.FEEDBACK_RATE_LIMIT_MAX_REQUESTS || 5),
+  googleSheetsFeedbackWebhookUrl: process.env.GOOGLE_SHEETS_FEEDBACK_WEBHOOK_URL || "",
+  googleSheetsFeedbackWebhookSecret: process.env.GOOGLE_SHEETS_FEEDBACK_WEBHOOK_SECRET || "",
   westMarchesApiBaseUrl: (
     process.env.WEST_MARCHES_API_BASE_URL ||
     "https://www.westmarches.games/api/v1"

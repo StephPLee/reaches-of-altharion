@@ -29,6 +29,10 @@ const {
   port,
   requiredRoleId,
   dmRoleId,
+  feedbackRateLimitMaxRequests,
+  feedbackRateLimitWindowMs,
+  googleSheetsFeedbackWebhookSecret,
+  googleSheetsFeedbackWebhookUrl,
   sessionRateLimitMaxRequests,
   sessionRateLimitWindowMs,
   sessionCookieSameSite,
@@ -38,6 +42,7 @@ const {
   westMarchesScCurrencyId,
 } = require("./config");
 const { recordAuditEvent } = require("./audit");
+const { submitFeedback } = require("../shared/feedback");
 const {
   deleteSavedAvraeCharacter,
   listSavedAvraeCharacters,
@@ -429,6 +434,12 @@ const sessionRateLimiter = createRateLimiter({
   keyPrefix: "session",
 });
 
+const feedbackRateLimiter = createRateLimiter({
+  windowMs: feedbackRateLimitWindowMs,
+  maxRequests: feedbackRateLimitMaxRequests,
+  keyPrefix: "feedback",
+});
+
 const adminRateLimiter = createRateLimiter({
   windowMs: adminRateLimitWindowMs,
   maxRequests: adminRateLimitMaxRequests,
@@ -565,6 +576,36 @@ async function requireMemberSession(req, res, next) {
   }
 }
 
+app.post(
+  "/api/feedback",
+  requireTrustedOrigin,
+  feedbackRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    try {
+      const { anonymous, feedback } = req.body ?? {};
+      if (typeof anonymous !== "boolean") {
+        res.status(400).json({ error: "Anonymous must be true or false." });
+        return;
+      }
+      const { sheetSync } = await submitFeedback(pool, {
+        discordUserId: req.memberUser.discordUserId,
+        username: req.memberUser.username,
+        anonymous,
+        feedback,
+        source: "website",
+      }, {
+        webhookUrl: googleSheetsFeedbackWebhookUrl,
+        webhookSecret: googleSheetsFeedbackWebhookSecret,
+      });
+      res.status(201).json({ ok: true, sheetSynced: !sheetSync.configured || sheetSync.synced });
+    } catch (error) {
+      const statusCode = Number(error?.statusCode) || 500;
+      if (statusCode >= 500) console.error("Failed to submit website feedback:", error);
+      res.status(statusCode).json({ error: statusCode === 400 ? error.message : "Failed to save feedback." });
+    }
+  },
+);
 app.get("/health", async (_req, res) => {
   await pool.query("SELECT 1");
   res.json({ ok: true });
