@@ -1,4 +1,4 @@
-﻿const { REST, Routes, SlashCommandBuilder } = require("discord.js");
+const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 const config = require("./config");
 const { hasDmOrRequiredRole, hasRequiredRole } = require("./permissions");
 
@@ -7,6 +7,18 @@ const COMMAND_DEFINITIONS = [
     name: "help",
     description: "List the bot commands and what they do.",
     help: "List the bot commands and what they do.",
+  },
+  {
+    name: "feedback",
+    description: "Send feedback to the Reaches of Altharion staff.",
+    help: "Send feedback to staff, with the option to hide your username.",
+    buildCommand: (command) =>
+      command.addBooleanOption((option) =>
+        option
+          .setName("anonymous")
+          .setDescription("Hide your username from the submitted feedback.")
+          .setRequired(true),
+      ),
   },
   {
     name: "cc-link",

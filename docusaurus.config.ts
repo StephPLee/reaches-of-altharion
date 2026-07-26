@@ -181,6 +181,10 @@ const config: Config = {
               label: "Transformations",
             },
             {
+              to: "/feedback",
+              label: "Feedback",
+            },
+            {
               to: "/character-attributes",
               label: "Server Stats",
             },

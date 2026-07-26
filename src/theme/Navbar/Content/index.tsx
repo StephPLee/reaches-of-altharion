@@ -14,6 +14,7 @@ import { splitNavbarItems } from "@docusaurus/theme-common/internal";
 import { createPortal } from "react-dom";
 import NavbarItem from "@theme/NavbarItem";
 import NavbarLogo from "@theme/Navbar/Logo";
+import useMemberSession from "../../../hooks/useMemberSession";
 
 type NavGroup = {
   title: string | null;
@@ -64,6 +65,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Banned Content", to: "/docs/banned-content" },
       { label: "Transformations", to: "/docs/transformations" },
       { label: "Character Attributes", to: "/character-attributes" },
+      { label: "Feedback", to: "/feedback" },
     ],
   },
   {
@@ -683,6 +685,18 @@ export default function NavbarContent(): ReactNode {
   const isCalendarActive = location.pathname === "/calendar";
   const authApiBaseUrl = getAuthApiBaseUrl(siteConfig);
   const discordInviteUrl = getDiscordInviteUrl(siteConfig);
+  const { authenticated } = useMemberSession(authApiBaseUrl);
+  const visibleItems = items.map((item: any) =>
+    Array.isArray(item.items)
+      ? {
+          ...item,
+          items: item.items.filter(
+            (child) => child.to !== "/feedback" || authenticated,
+          ),
+        }
+      : item,
+  );
+  const [visibleLeftItems, visibleRightItems] = splitNavbarItems(visibleItems);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -716,8 +730,8 @@ export default function NavbarContent(): ReactNode {
         </div>
 
         <div className="navbar__items navbar__items--center custom-navbar-center">
-          <NavbarItems items={leftItems} isCalendarActive={isCalendarActive} />
-          <NavbarItems items={rightItems} isCalendarActive={isCalendarActive} />
+          <NavbarItems items={visibleLeftItems} isCalendarActive={isCalendarActive} />
+          <NavbarItems items={visibleRightItems} isCalendarActive={isCalendarActive} />
         </div>
 
         <div
@@ -776,7 +790,7 @@ export default function NavbarContent(): ReactNode {
                         )
                       ) : null}
                       <div className="custom-mobile-menu-group__links">
-                        {group.links.map((link) => {
+                        {group.links.filter((link) => link.to !== "/feedback" || authenticated).map((link) => {
                           const isActive =
                             location.pathname === link.to ||
                             `${location.pathname}${location.search}` ===

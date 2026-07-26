@@ -4,10 +4,13 @@ import {
   ChartSpline,
   Feather,
   MessageCircleQuestion,
+  MessageSquarePlus,
   ShieldAlert,
   WandSparkles,
 } from "lucide-react";
 
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+import useMemberSession from "../hooks/useMemberSession";
 import SectionLanding, { type SectionLinkGroup } from "./_SectionLanding";
 
 const GROUPS: SectionLinkGroup[] = [
@@ -69,12 +72,27 @@ const GROUPS: SectionLinkGroup[] = [
 ];
 
 export default function PlayerInformationPage(): ReactNode {
+  const { siteConfig } = useDocusaurusContext();
+  const configured = siteConfig.customFields?.authApiBaseUrl;
+  const apiBaseUrl = typeof configured === "string" ? configured.replace(/\/$/, "") : "";
+  const { authenticated } = useMemberSession(apiBaseUrl);
+  const groups = GROUPS.map((group, index) => index !== 0 || !authenticated ? group : {
+    ...group,
+    links: [...group.links, {
+      icon: MessageSquarePlus,
+      title: "Feedback",
+      description: "Send feedback privately to the staff team.",
+      hint: "Share feedback",
+      to: "/feedback",
+    }],
+  });
+
   return (
     <SectionLanding
       pageTitle="Player Information"
       title="Player Information"
       subtitle="Everything you need to play"
-      groups={GROUPS}
+      groups={groups}
     />
   );
 }

@@ -1,4 +1,4 @@
-﻿const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
 const config = require("./config");
 const { buildHelpMessage } = require("./commands");
 const { hasDmOrRequiredRole, hasRequiredRole } = require("./permissions");
@@ -114,6 +114,8 @@ const {
   postSticky,
   setStickyMessage,
 } = require("./services/stickyMessages");
+
+const { buildFeedbackModal, saveDiscordFeedback } = require("./services/feedback");
 
 const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
 const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
@@ -1010,6 +1012,25 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.isModalSubmit()) {
+    if (interaction.customId.startsWith("feedback-modal:")) {
+      const anonymous = interaction.customId.slice("feedback-modal:".length) === "anonymous";
+      const feedback = interaction.fields.getTextInputValue("feedback");
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const { sheetSync } = await saveDiscordFeedback(interaction, { anonymous, feedback });
+        await interaction.editReply(
+          sheetSync.configured && !sheetSync.synced
+            ? "Your feedback was saved. The staff spreadsheet copy is temporarily delayed."
+            : "Thank you—your feedback has been submitted.",
+        );
+      } catch (error) {
+        console.error("Failed to submit Discord feedback:", error);
+        await interaction.editReply(error instanceof Error && error.statusCode === 400
+          ? error.message
+          : "I couldn't save your feedback. Please try again shortly.");
+      }
+      return;
+    }
     if (interaction.customId.startsWith("sticky-modal:")) {
       const channelId = interaction.customId.slice("sticky-modal:".length);
 
@@ -1546,6 +1567,11 @@ async function handleInteraction(interaction) {
     return;
   }
 
+  if (interaction.commandName === "feedback") {
+    const anonymous = interaction.options.getBoolean("anonymous", true);
+    await interaction.showModal(buildFeedbackModal({ anonymous }));
+    return;
+  }
   if (interaction.commandName === "magicitem") {
     await interaction.reply({
       content: "Choose a rarity to roll a random magic item.",

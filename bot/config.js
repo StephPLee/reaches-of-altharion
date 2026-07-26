@@ -1,4 +1,4 @@
-﻿const path = require("path");
+const path = require("path");
 const dotenv = require("dotenv");
 
 // Support both project-root .env and bot/.env.
@@ -42,6 +42,10 @@ const config = {
   westMarchesScCurrencyId: process.env.WEST_MARCHES_SC_CURRENCY_ID || "",
   craftingWorkshopsForumChannelId:
     process.env.CRAFTING_WORKSHOPS_FORUM_CHANNEL_ID || "",
+  googleSheetsFeedbackWebhookUrl:
+    process.env.GOOGLE_SHEETS_FEEDBACK_WEBHOOK_URL || "",
+  googleSheetsFeedbackWebhookSecret:
+    process.env.GOOGLE_SHEETS_FEEDBACK_WEBHOOK_SECRET || "",
 };
 
 
