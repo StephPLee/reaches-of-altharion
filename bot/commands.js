@@ -34,7 +34,7 @@ const COMMAND_DEFINITIONS = [
   {
     name: "characters",
     description: "List your WestMarches.games characters.",
-    help: "List your WestMarches.games characters with their class and level. Use the visibility option to share it publicly.",
+    help: "List your WestMarches.games characters with their class and level.",
     buildCommand: (command) =>
       command.addStringOption((option) =>
         option
@@ -49,12 +49,12 @@ const COMMAND_DEFINITIONS = [
   {
     name: "sc-character",
     description: "Set your default character for SC-only rewards.",
-    help: "Choose which of your active WestMarches.games characters receives automatic SC-only rewards.",
+    help: "Choose which of your characters receives automatic SC-only rewards.",
   },
   {
     name: "approve",
     description: "Approve a homebrew link for the site.",
-    help: "Staff-only. Approve a homebrew link into the site-backed homebrew lists. Pass the submission post link to auto-fill the modal.",
+    help: "Staff-only. Approve a homebrew link. Pass the submission post link to auto-fill the form.",
     requiresRole: true,
     buildCommand: (command) =>
       command.addStringOption((option) =>
@@ -67,7 +67,7 @@ const COMMAND_DEFINITIONS = [
   {
     name: "approve-character",
     description: "Approve a WestMarches.games character.",
-    help: "DM/staff. Approve a user's unapproved character and award the approver 2 SC.",
+    help: "DM/staff. Approve a user's unapproved character.",
     requiresDmOrRole: true,
     buildCommand: (command) =>
       command
@@ -87,12 +87,12 @@ const COMMAND_DEFINITIONS = [
   {
     name: "join-guild",
     description: "Join or move one of your characters to a guild.",
-    help: "Choose one of your WestMarches.games characters and add or move them to a guild roster.",
+    help: "Choose one of your characters and add or move them to a guild roster.",
   },
   {
     name: "leave-guild",
     description: "Remove one of your characters from their guild roster.",
-    help: "Remove one of your WestMarches.games characters from their current guild roster.",
+    help: "Remove one of your characters from their current guild.",
   },
   {
     name: "post-guild-rosters",
@@ -259,13 +259,13 @@ const COMMAND_DEFINITIONS = [
   {
     name: "rollstats",
     description: "Roll 5 valid stat lines and post them to the stat roll repository.",
-    help: "Roll 5 valid stat lines (80–84 total, ≥2 over 12, ≥1 over 15, ≥1 under 10) and save them to the site.",
+    help: "Roll 5 valid stat lines and save them to the site.",
     defaultMemberPermissions: null,
   },
   {
     name: "sticky",
     description: "Manage a sticky message that stays at the bottom of a channel or thread.",
-    help: "Staff-only. Set or remove a sticky message that automatically reposts to the bottom of the current channel or thread whenever new messages come in.",
+    help: "Staff-only. Set or remove a sticky message to the bottom of the current channel.",
     requiresRole: true,
     buildCommand: (command) =>
       command
@@ -283,7 +283,7 @@ const COMMAND_DEFINITIONS = [
   {
     name: "sell",
     description: "List one of your crafted items on the player marketplace, or cancel a listing.",
-    help: "List a WestMarches.games item for sale in gold or SC, or cancel one of your active listings.",
+    help: "List an item for sale in gold or SC, or cancel one of your active listings.",
     buildCommand: (command) =>
       command
         .addSubcommand((subcommand) =>
@@ -361,22 +361,61 @@ async function registerGuildCommands() {
 }
 
 
-function buildHelpMessage(interaction) {
+function buildHelpMessages(interaction) {
   const canUseRoleCommands = hasRequiredRole(interaction);
   const canUseDmCommands = hasDmOrRequiredRole(interaction);
-  return COMMAND_DEFINITIONS.filter(
+  const availableCommands = COMMAND_DEFINITIONS.filter(
     (command) =>
       (!command.requiresRole || canUseRoleCommands) &&
       (!command.requiresDmOrRole || canUseDmCommands),
-  ).map(
-    (command) => `/${command.name} - ${command.help}`,
-  ).join("\n");
+  );
+
+  const sections = [
+    {
+      title: "General Commands",
+      commands: availableCommands.filter(
+        (command) =>
+          !command.name.startsWith("boss-") &&
+          !command.requiresRole &&
+          !command.requiresDmOrRole,
+      ),
+    },
+    {
+      title: "Staff Commands",
+      commands: availableCommands.filter(
+        (command) =>
+          !command.name.startsWith("boss-") && command.requiresRole,
+      ),
+    },
+    {
+      title: "DM Commands",
+      commands: availableCommands.filter(
+        (command) =>
+          !command.name.startsWith("boss-") && command.requiresDmOrRole,
+      ),
+    },
+    {
+      title: "Boss Commands",
+      commands: availableCommands.filter((command) =>
+        command.name.startsWith("boss-"),
+      ),
+    },
+  ];
+
+  return sections
+    .filter((section) => section.commands.length > 0)
+    .map(
+      (section) =>
+        `**${section.title}**\n${section.commands
+          .map((command) => `/${command.name} - ${command.help}`)
+          .join("\n")}`,
+    );
 }
 
 
 module.exports = {
   COMMAND_DEFINITIONS,
-  buildHelpMessage,
+  buildHelpMessages,
   commands,
   registerGuildCommands,
 };

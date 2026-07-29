@@ -1,6 +1,6 @@
 const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
 const config = require("./config");
-const { buildHelpMessage } = require("./commands");
+const { buildHelpMessages } = require("./commands");
 const { hasDmOrRequiredRole, hasRequiredRole } = require("./permissions");
 const { getDisplayName } = require("./utils");
 const { getOrAssignCampaign } = require("./services/campaigns");
@@ -1582,13 +1582,19 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.commandName === "help") {
+    const helpMessages = buildHelpMessages(interaction);
     await interaction.reply({
-      content: buildHelpMessage(interaction),
+      content: helpMessages[0],
       ephemeral: true,
     });
+    for (const content of helpMessages.slice(1)) {
+      await interaction.followUp({
+        content,
+        ephemeral: true,
+      });
+    }
     return;
   }
-
   if (interaction.commandName === "sc-character") {
     if (!isWestMarchesConfigured()) {
       await interaction.reply({
