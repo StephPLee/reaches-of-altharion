@@ -1621,7 +1621,6 @@ function normalizeBannedContentPayload(body) {
     contentType,
     title,
     notes,
-    sortOrder,
     isPublished,
   } = body ?? {};
 
@@ -1636,17 +1635,11 @@ function normalizeBannedContentPayload(body) {
     };
   }
 
-  const parsedSortOrder =
-    typeof sortOrder === "number" && Number.isFinite(sortOrder)
-      ? Math.trunc(sortOrder)
-      : 0;
-
   return {
     sourcebookId,
     contentType: typeof contentType === "string" ? contentType.trim() : "",
     title: title.trim(),
     notes: typeof notes === "string" ? notes.trim() : "",
-    sortOrder: parsedSortOrder,
     isPublished: isPublished !== false,
   };
 }

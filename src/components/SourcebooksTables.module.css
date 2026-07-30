@@ -74,15 +74,11 @@
 .editorPanel {
     display: grid;
     gap: 1rem;
-    padding: 1rem;
-    border: 1px solid rgba(112, 134, 186, 0.28);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.68);
-}
-
-[data-theme="dark"] .editorPanel {
-    border-color: rgba(154, 180, 235, 0.2);
-    background: rgba(11, 16, 28, 0.82);
+    margin: 1rem 0;
+    padding: 1.15rem;
+    border: 1px solid rgba(190, 176, 138, 0.2);
+    border-radius: 0.8rem;
+    background: rgba(10, 11, 24, 0.78);
 }
 
 .editorGrid {
@@ -95,6 +91,7 @@
     display: grid;
     gap: 0.35rem;
     min-width: 0;
+    color: #e8e1f3;
     font-weight: 700;
 }
 
@@ -103,10 +100,10 @@
     min-width: 0;
     min-height: 2.6rem;
     padding: 0.65rem 0.75rem;
-    border: 1px solid rgba(112, 134, 186, 0.38);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.92);
-    color: inherit;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 0.75rem;
+    background: rgba(8, 9, 19, 0.55);
+    color: #ece2ff;
     font: inherit;
     font-weight: 400;
 }
@@ -115,23 +112,20 @@
     width: 100%;
     min-width: 0;
     padding: 0.65rem 0.75rem;
-    border: 1px solid rgba(112, 134, 186, 0.38);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.92);
-    color: inherit;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    border-radius: 0.75rem;
+    background: rgba(8, 9, 19, 0.55);
+    color: #ece2ff;
     font: inherit;
     font-weight: 400;
     resize: vertical;
 }
 
-[data-theme="dark"] .input {
-    border-color: rgba(154, 180, 235, 0.24);
-    background: rgba(8, 12, 22, 0.9);
-}
-
-[data-theme="dark"] .textarea {
-    border-color: rgba(154, 180, 235, 0.24);
-    background: rgba(8, 12, 22, 0.9);
+.input:focus,
+.textarea:focus {
+    outline: none;
+    border-color: rgba(190, 176, 138, 0.4);
+    box-shadow: 0 0 0 1px rgba(190, 176, 138, 0.15);
 }
 
 .editorActions,
@@ -146,7 +140,7 @@
 .secondaryButton,
 .inlineButton,
 .inlineDangerButton {
-    border-radius: 8px;
+    border-radius: 999px;
     cursor: pointer;
     font: inherit;
     font-weight: 700;
@@ -167,22 +161,15 @@
 
 .primaryButton,
 .inlineButton {
-    border: 1px solid rgba(88, 122, 210, 0.28);
-    background: rgba(232, 238, 248, 0.9);
-    color: inherit;
-}
-
-[data-theme="dark"] .primaryButton,
-[data-theme="dark"] .inlineButton {
-    border-color: rgba(154, 180, 235, 0.22);
-    background: rgba(17, 26, 56, 0.68);
-    color: #edf1ff;
+    border: 1px solid rgba(185, 145, 255, 0.32);
+    background: rgba(20, 16, 44, 0.75);
+    color: #f0e5ff;
 }
 
 .secondaryButton {
-    border: 1px solid rgba(112, 134, 186, 0.28);
-    background: transparent;
-    color: inherit;
+    border: 1px solid rgba(190, 176, 138, 0.22);
+    background: rgba(12, 12, 24, 0.6);
+    color: #e2ddf5;
 }
 
 .inlineDangerButton {
@@ -226,6 +213,18 @@
 .error {
     margin: 0;
     color: #9f1d35;
+}
+
+.codeInput {
+    min-height: 14rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.88rem;
+}
+
+.formHint {
+    margin: -0.35rem 0 0;
+    color: rgba(215, 222, 242, 0.68);
+    font-size: 0.85rem;
 }
 
 [data-theme="dark"] .success {
