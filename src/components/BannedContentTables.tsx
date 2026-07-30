@@ -11,7 +11,6 @@ type SourcebookRow = {
   publisher: string;
   type: string;
   edition: string;
-  sortOrder?: number;
   bannedContentCount?: number;
 };
 
@@ -24,7 +23,6 @@ type BannedContentEntry = {
   contentType: string;
   title: string;
   notes: string;
-  sortOrder?: number;
 };
 
 type BannedContentGroup = {
@@ -44,7 +42,6 @@ type BookFormState = {
   publisher: string;
   type: string;
   edition: string;
-  sortOrder: string;
 };
 
 type ContentFormState = {
@@ -52,7 +49,6 @@ type ContentFormState = {
   contentType: string;
   title: string;
   notes: string;
-  sortOrder: string;
 };
 
 function getAuthApiBaseUrl(siteConfig): string {
@@ -68,7 +64,6 @@ function createEmptyBookForm(): BookFormState {
     publisher: "",
     type: "",
     edition: "",
-    sortOrder: "0",
   };
 }
 
@@ -78,7 +73,6 @@ function createEmptyContentForm(sourcebookId = ""): ContentFormState {
     contentType: "",
     title: "",
     notes: "",
-    sortOrder: "0",
   };
 }
 
@@ -101,6 +95,7 @@ export default function BannedContentTables() {
   const [loading, setLoading] = useState(true);
   const [bookFormOpen, setBookFormOpen] = useState(false);
   const [contentFormOpen, setContentFormOpen] = useState(false);
+  const [contentFormLocationId, setContentFormLocationId] = useState<number | null>(null);
   const [editingBookId, setEditingBookId] = useState<number | null>(null);
   const [editingContentId, setEditingContentId] = useState<number | null>(null);
   const [deletingBookId, setDeletingBookId] = useState<number | null>(null);
@@ -108,6 +103,8 @@ export default function BannedContentTables() {
     null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bulkFormOpen, setBulkFormOpen] = useState(false);
+  const [bulkJson, setBulkJson] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [bookForm, setBookForm] = useState<BookFormState>(
@@ -297,6 +294,7 @@ export default function BannedContentTables() {
 
   function openCreateContentForm(sourcebookId = "") {
     setContentFormOpen(true);
+    setContentFormLocationId(sourcebookId ? Number(sourcebookId) : null);
     setEditingContentId(null);
     setContentForm(createEmptyContentForm(sourcebookId));
     setMessage("");
@@ -315,7 +313,6 @@ export default function BannedContentTables() {
       publisher: book.publisher,
       type: book.type,
       edition: book.edition,
-      sortOrder: String(book.sortOrder ?? 0),
     });
     setMessage("");
     setError("");
@@ -327,13 +324,13 @@ export default function BannedContentTables() {
     }
 
     setContentFormOpen(true);
+    setContentFormLocationId(entry.sourcebookId);
     setEditingContentId(entry.id);
     setContentForm({
       sourcebookId: String(entry.sourcebookId),
       contentType: entry.contentType,
       title: entry.title,
       notes: entry.notes,
-      sortOrder: String(entry.sortOrder ?? 0),
     });
     setMessage("");
     setError("");
@@ -366,7 +363,6 @@ export default function BannedContentTables() {
             publisher: bookForm.publisher.trim(),
             type: bookForm.type.trim(),
             edition: bookForm.edition.trim(),
-            sortOrder: Number.parseInt(bookForm.sortOrder, 10) || 0,
             isPublished: true,
           }),
         },
@@ -424,7 +420,6 @@ export default function BannedContentTables() {
             contentType: contentForm.contentType.trim(),
             title: contentForm.title.trim(),
             notes: contentForm.notes.trim(),
-            sortOrder: Number.parseInt(contentForm.sortOrder, 10) || 0,
             isPublished: true,
           }),
         },
@@ -485,6 +480,74 @@ export default function BannedContentTables() {
       );
     } finally {
       setDeletingBookId(null);
+    }
+  }
+
+  async function handleBulkSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    setError("");
+
+    try {
+      const parsed: unknown = JSON.parse(bulkJson);
+      if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
+        throw new Error("Bulk JSON must be an object keyed by sourcebook title.");
+      }
+
+      const items: ContentFormState[] = [];
+      for (const [bookTitle, rawEntries] of Object.entries(parsed)) {
+        const matchingBooks = selectableSourcebooks.filter(
+          (book) => book.title.trim().toLowerCase() === bookTitle.trim().toLowerCase(),
+        );
+        if (matchingBooks.length !== 1 || !matchingBooks[0].id) {
+          throw new Error(matchingBooks.length > 1
+            ? `Sourcebook title "${bookTitle}" is ambiguous.`
+            : `Sourcebook "${bookTitle}" was not found.`);
+        }
+        if (!Array.isArray(rawEntries) || rawEntries.length === 0) {
+          throw new Error(`"${bookTitle}" must contain a non-empty array.`);
+        }
+
+        rawEntries.forEach((rawEntry, index) => {
+          const entry: Record<string, unknown> | null =
+            typeof rawEntry === "string"
+              ? { title: rawEntry }
+              : rawEntry && typeof rawEntry === "object"
+                ? rawEntry as Record<string, unknown>
+                : null;
+          if (!entry || typeof entry.title !== "string" || !entry.title.trim()) {
+            throw new Error(`Entry ${index + 1} for "${bookTitle}" needs a title.`);
+          }
+          items.push({
+            sourcebookId: String(matchingBooks[0].id),
+            title: entry.title.trim(),
+            contentType: typeof entry.contentType === "string" ? entry.contentType.trim() : "",
+            notes: typeof entry.notes === "string" ? entry.notes.trim() : "",
+          });
+        });
+      }
+
+      if (items.length === 0) throw new Error("Add at least one entry.");
+      setIsSubmitting(true);
+      for (const item of items) {
+        const response = await fetch(`${authApiBaseUrl}/api/admin/banned-content/items`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...item, sourcebookId: Number(item.sourcebookId), isPublished: true }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || `Failed to add "${item.title}".`);
+      }
+
+      await refreshBannedContent(true);
+      setBulkJson("");
+      setBulkFormOpen(false);
+      setMessage(`${items.length} banned content ${items.length === 1 ? "entry" : "entries"} added.`);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Failed to import banned content.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -569,17 +632,6 @@ export default function BannedContentTables() {
               }
             />
           </label>
-          <label className={styles.field}>
-            <span>Sort Order</span>
-            <input
-              className={styles.input}
-              type="number"
-              value={bookForm.sortOrder}
-              onChange={(event) =>
-                updateBookForm("sortOrder", event.target.value)
-              }
-            />
-          </label>
         </div>
         <div className={styles.editorActions}>
           <button
@@ -608,8 +660,12 @@ export default function BannedContentTables() {
     );
   }
 
-  function renderContentForm() {
+  function renderContentForm(sourcebookId: number | null = null) {
     if (!isStaff || !contentFormOpen) {
+      return null;
+    }
+
+    if (sourcebookId !== contentFormLocationId) {
       return null;
     }
 
@@ -658,17 +714,6 @@ export default function BannedContentTables() {
               required
             />
           </label>
-          <label className={styles.field}>
-            <span>Sort Order</span>
-            <input
-              className={styles.input}
-              type="number"
-              value={contentForm.sortOrder}
-              onChange={(event) =>
-                updateContentForm("sortOrder", event.target.value)
-              }
-            />
-          </label>
         </div>
         <label className={styles.field}>
           <span>Notes</span>
@@ -685,6 +730,7 @@ export default function BannedContentTables() {
             className={styles.secondaryButton}
             onClick={() => {
               setContentFormOpen(false);
+              setContentFormLocationId(null);
               setEditingContentId(null);
             }}
           >
@@ -822,9 +868,46 @@ export default function BannedContentTables() {
             >
               Add Banned Content
             </button>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => {
+                setBulkFormOpen((open) => !open);
+                setMessage("");
+                setError("");
+              }}
+            >
+              Bulk Add
+            </button>
           </div>
         ) : null}
         {renderContentForm()}
+        {isStaff && bulkFormOpen ? (
+          <form className={styles.editorPanel} onSubmit={handleBulkSubmit}>
+            <label className={styles.field}>
+              <span>Bulk JSON</span>
+              <textarea
+                className={`${styles.textarea} ${styles.codeInput}`}
+                value={bulkJson}
+                onChange={(event) => setBulkJson(event.target.value)}
+                rows={12}
+                placeholder={'{\n  "Book Name": [\n    "Banned title",\n    { "title": "Another title", "contentType": "Spell", "notes": "Optional note" }\n  ]\n}'}
+                required
+              />
+            </label>
+            <p className={styles.formHint}>
+              Use exact sourcebook titles. Entries may be title strings, or objects with title, contentType, and notes.
+            </p>
+            <div className={styles.editorActions}>
+              <button type="button" className={styles.secondaryButton} onClick={() => setBulkFormOpen(false)}>
+                Close
+              </button>
+              <button type="submit" className={styles.primaryButton} disabled={isSubmitting}>
+                {isSubmitting ? "Importing..." : "Import Entries"}
+              </button>
+            </div>
+          </form>
+        ) : null}
         {filteredGroups.length > 0 ? (
           filteredGroups.map((group) => (
             <section
@@ -850,6 +933,7 @@ export default function BannedContentTables() {
                   </button>
                 </div>
               ) : null}
+              {renderContentForm(group.sourcebookId)}
               {group.entries.length > 0 ? (
                 <table>
                   <thead>

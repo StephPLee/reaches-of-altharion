@@ -10,7 +10,6 @@ function mapBannedContentRow(row) {
     contentType: row.content_type,
     title: row.title,
     notes: row.notes,
-    sortOrder: row.sort_order,
     isPublished: row.is_published,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -29,7 +28,6 @@ async function listBannedContentEntries({ includeUnpublished = false } = {}) {
       banned_content_entries.content_type,
       banned_content_entries.title,
       banned_content_entries.notes,
-      banned_content_entries.sort_order,
       banned_content_entries.is_published,
       banned_content_entries.created_at,
       banned_content_entries.updated_at
@@ -44,9 +42,8 @@ async function listBannedContentEntries({ includeUnpublished = false } = {}) {
         ELSE 1
       END ASC,
       LOWER(sourcebook_entries.title) ASC,
-      banned_content_entries.sort_order ASC,
-      LOWER(banned_content_entries.content_type) ASC,
       LOWER(banned_content_entries.title) ASC,
+      LOWER(banned_content_entries.content_type) ASC,
       banned_content_entries.id ASC
     `,
     [includeUnpublished],
@@ -60,7 +57,6 @@ async function createBannedContentEntry({
   contentType,
   title,
   notes,
-  sortOrder,
   isPublished,
   createdByUserId,
 }) {
@@ -71,12 +67,11 @@ async function createBannedContentEntry({
       content_type,
       title,
       notes,
-      sort_order,
       is_published,
       created_by_user_id,
       updated_by_user_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+    VALUES ($1, $2, $3, $4, $5, $6, $6)
     RETURNING id
     `,
     [
@@ -84,7 +79,6 @@ async function createBannedContentEntry({
       contentType,
       title,
       notes,
-      sortOrder,
       isPublished,
       createdByUserId,
     ],
@@ -100,7 +94,6 @@ async function updateBannedContentEntry({
   contentType,
   title,
   notes,
-  sortOrder,
   isPublished,
   updatedByUserId,
 }) {
@@ -112,9 +105,8 @@ async function updateBannedContentEntry({
       content_type = $3,
       title = $4,
       notes = $5,
-      sort_order = $6,
-      is_published = $7,
-      updated_by_user_id = $8,
+      is_published = $6,
+      updated_by_user_id = $7,
       updated_at = NOW()
     WHERE id = $1
     RETURNING id
@@ -125,7 +117,6 @@ async function updateBannedContentEntry({
       contentType,
       title,
       notes,
-      sortOrder,
       isPublished,
       updatedByUserId,
     ],
