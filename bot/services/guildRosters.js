@@ -29,12 +29,28 @@ function mapGuildRosterMembership(row) {
         id: Number(row.id),
         guildId: Number(row.guild_id),
         guildName: row.guild_name,
+        discordRoleId: row.guild_discord_role_id ?? null,
         westMarchesCharacterId: row.westmarches_character_id,
         characterName: row.character_name,
         discordUserId: row.discord_user_id,
         lastMembershipChangeAt: row.last_membership_change_at,
       }
     : null;
+}
+
+async function isDiscordUserStillInGuild(discordUserId, guildId) {
+  const result = await pool.query(
+    `
+    SELECT 1
+    FROM guild_roster_memberships
+    WHERE discord_user_id = $1
+      AND guild_id = $2
+    LIMIT 1
+    `,
+    [discordUserId, guildId],
+  );
+
+  return result.rowCount > 0;
 }
 
 function getGuildRosterCooldownUntil(membership) {
@@ -126,6 +142,7 @@ async function getGuildRosterMembership({
       m.id,
       m.guild_id,
       g.name AS guild_name,
+      g.discord_role_id AS guild_discord_role_id,
       m.westmarches_character_id,
       m.character_name,
       m.discord_user_id,
@@ -155,6 +172,7 @@ async function listGuildRosterMembershipsForDiscordUser(discordUserId) {
       m.id,
       m.guild_id,
       g.name AS guild_name,
+      g.discord_role_id AS guild_discord_role_id,
       m.westmarches_character_id,
       m.character_name,
       m.discord_user_id,
@@ -186,6 +204,7 @@ async function deleteGuildRosterMembership({
         m.id,
         m.guild_id,
         g.name AS guild_name,
+        g.discord_role_id AS guild_discord_role_id,
         m.westmarches_character_id,
         m.character_name,
         m.discord_user_id,
@@ -242,6 +261,7 @@ async function deleteGuildRosterMembership({
       membership: mapGuildRosterMembership({
         ...deleteResult.rows[0],
         guild_name: membership.guildName,
+        guild_discord_role_id: membership.discordRoleId,
       }),
       cooldownUntil: null,
     };
@@ -266,7 +286,7 @@ async function upsertGuildRosterMembership({
 
     const guildResult = await client.query(
       `
-      SELECT id, name
+      SELECT id, name, discord_role_id
       FROM guilds
       WHERE id = $1
         AND is_published = true
@@ -287,6 +307,7 @@ async function upsertGuildRosterMembership({
         m.id,
         m.guild_id,
         g.name AS guild_name,
+        g.discord_role_id AS guild_discord_role_id,
         m.westmarches_character_id,
         m.character_name,
         m.discord_user_id,
@@ -399,6 +420,7 @@ async function upsertGuildRosterMembership({
         ...mapGuildRosterMembership({
           ...membershipResult.rows[0],
           guild_name: guild.name,
+          guild_discord_role_id: guild.discord_role_id,
         }),
       },
       previousMembership,
@@ -645,6 +667,7 @@ module.exports = {
   formatDiscordTimestamp,
   getGuildRosterCooldownUntil,
   getGuildRosterMembership,
+  isDiscordUserStillInGuild,
   listGuildRosterMembershipsForDiscordUser,
   listPublishedGuilds,
   parseJoinGuildGuildCustomId,

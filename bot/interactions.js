@@ -62,6 +62,7 @@ const {
   formatDiscordTimestamp,
   getGuildRosterCooldownUntil,
   getGuildRosterMembership,
+  isDiscordUserStillInGuild,
   listGuildRosterMembershipsForDiscordUser,
   listPublishedGuilds,
   parseJoinGuildGuildCustomId,
@@ -193,6 +194,24 @@ function buildRpStatusText(session) {
     `Started by <@${session.startedByDiscordUserId}>.`,
     `Active time so far: **${formatRpDuration(session.activeSeconds)}**.`,
   ].join("\n");
+}
+
+async function syncMemberGuildRole(member, { addRoleId, removeRoleId } = {}) {
+  if (addRoleId && !member.roles.cache.has(addRoleId)) {
+    try {
+      await member.roles.add(addRoleId);
+    } catch (error) {
+      console.error(`Failed to add guild role ${addRoleId} to ${member.id}:`, error);
+    }
+  }
+
+  if (removeRoleId && removeRoleId !== addRoleId && member.roles.cache.has(removeRoleId)) {
+    try {
+      await member.roles.remove(removeRoleId);
+    } catch (error) {
+      console.error(`Failed to remove guild role ${removeRoleId} from ${member.id}:`, error);
+    }
+  }
 }
 
 async function handleInteraction(interaction) {
@@ -582,6 +601,9 @@ async function handleInteraction(interaction) {
         }
 
         if (previousMembership?.guildId === membership.guildId) {
+          await syncMemberGuildRole(interaction.member, {
+            addRoleId: membership.discordRoleId,
+          });
           await interaction.editReply({
             content: `**${characterName}** is already in **${membership.guildName}**.`,
             components: [],
@@ -593,6 +615,20 @@ async function handleInteraction(interaction) {
           interaction,
           [previousMembership?.guildId, membership.guildId].filter(Boolean),
         );
+
+        const stillInOldGuild = previousMembership
+          ? await isDiscordUserStillInGuild(
+              interaction.user.id,
+              previousMembership.guildId,
+            )
+          : false;
+        await syncMemberGuildRole(interaction.member, {
+          addRoleId: membership.discordRoleId,
+          removeRoleId:
+            previousMembership && !stillInOldGuild
+              ? previousMembership.discordRoleId
+              : null,
+        });
 
         await interaction.editReply({
           content: previousMembership
@@ -686,6 +722,16 @@ async function handleInteraction(interaction) {
         }
 
         await updateGuildRosterMessages(interaction, [membership.guildId]);
+
+        const stillInGuild = await isDiscordUserStillInGuild(
+          interaction.user.id,
+          membership.guildId,
+        );
+        if (!stillInGuild) {
+          await syncMemberGuildRole(interaction.member, {
+            removeRoleId: membership.discordRoleId,
+          });
+        }
 
         await interaction.editReply({
           content: `Removed **${membership.characterName}** from **${membership.guildName}**.`,
