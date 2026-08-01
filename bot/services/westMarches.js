@@ -269,6 +269,19 @@ async function approveWestMarchesCharacter(characterId) {
   return payload.data ?? null;
 }
 
+async function retireWestMarchesCharacter(characterId, reason, discordUserId) {
+  const payload = await westMarchesFetch(`/characters/${characterId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      status: "RETIRED",
+      reason,
+      ...(discordUserId ? { discordId: discordUserId } : {}),
+    }),
+  });
+
+  return payload.data ?? null;
+}
+
 function normalizeCharacterNameSearch(value) {
   return typeof value === "string"
     ? value.trim().toLowerCase().replace(/\s+/g, " ")
@@ -421,6 +434,26 @@ function buildScRewardCharacterRow(discordUserId, characters, currentCharacterId
   return new ActionRowBuilder().addComponents(menu);
 }
 
+function buildRetireCharacterRow(discordUserId, characters) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`retire-character:${discordUserId}`)
+    .setPlaceholder("Choose the character to retire...")
+    .addOptions(
+      characters.slice(0, 25).map((character) => {
+        const characterName = formatCharacterName(character);
+        const level = normalizeCharacterLevel(character);
+
+        return {
+          label: characterName.slice(0, 100),
+          description: `Level ${level || "unknown"}`.slice(0, 100),
+          value: character.id,
+        };
+      }),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
 async function awardScToCharacters({ awards, amount, reason }) {
   if (!config.westMarchesScCurrencyId) {
     throw new Error("missing_sc_currency_id");
@@ -471,6 +504,7 @@ module.exports = {
   awardScToCharacters,
   approveWestMarchesCharacter,
   buildCharacterListEmbed,
+  buildRetireCharacterRow,
   buildScRewardCharacterRow,
   formatCharacterClass,
   formatCharacterName,
@@ -485,5 +519,6 @@ module.exports = {
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
   normalizeCharacterNameSearch,
+  retireWestMarchesCharacter,
   upsertScRewardCharacterPreference,
 };

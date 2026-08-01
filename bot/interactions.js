@@ -21,6 +21,7 @@ const {
   awardScToCharacters,
   approveWestMarchesCharacter,
   buildCharacterListEmbed,
+  buildRetireCharacterRow,
   buildScRewardCharacterRow,
   findUnapprovedCharacterForDiscordUser,
   formatCharacterName,
@@ -31,6 +32,7 @@ const {
   listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
+  retireWestMarchesCharacter,
   upsertScRewardCharacterPreference,
 } = require("./services/westMarches");
 const {
@@ -417,6 +419,81 @@ async function handleInteraction(interaction) {
           await interaction.reply({
             content:
               "Something went wrong while setting your SC character. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("retire-character:")) {
+      const ownerId = interaction.customId.slice("retire-character:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/retire` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (!isWestMarchesConfigured()) {
+        await interaction.reply({
+          content:
+            "West Marches API access is not configured, so I cannot retire your character yet.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const character = await getOwnedActiveWestMarchesCharacter(
+          interaction.user.id,
+          characterId,
+        );
+
+        if (!character) {
+          await interaction.editReply({
+            content:
+              "I could not find that active character under your Discord account.",
+            components: [],
+          });
+          return;
+        }
+
+        const characterName = formatCharacterName(character);
+        await retireWestMarchesCharacter(
+          character.id,
+          `Retired via /retire by ${interaction.user.username} on Discord.`,
+          interaction.user.id,
+        );
+
+        await interaction.editReply({
+          content: `**${characterName}** has been retired.`,
+          components: [],
+        });
+
+        if (interaction.channel?.send) {
+          await interaction.channel.send({
+            content: `**${characterName}** has retired!`,
+            allowedMentions: { parse: [] },
+          });
+        }
+      } catch (error) {
+        console.error("Failed to process /retire select:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content:
+              "Something went wrong while retiring your character. Please try again.",
+            components: [],
+          });
+        } else {
+          await interaction.reply({
+            content:
+              "Something went wrong while retiring your character. Please try again.",
             ephemeral: true,
           });
         }
@@ -1646,6 +1723,60 @@ async function handleInteraction(interaction) {
       });
     } catch (error) {
       console.error("Failed to process /sc-character:", error);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply(
+          "Something went wrong while loading your characters. Please try again.",
+        );
+      } else {
+        await interaction.reply({
+          content:
+            "Something went wrong while loading your characters. Please try again.",
+          ephemeral: true,
+        });
+      }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "retire") {
+    if (!isWestMarchesConfigured()) {
+      await interaction.reply({
+        content:
+          "West Marches API access is not configured, so I cannot load your characters yet.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ ephemeral: true });
+
+      const characters = await listOwnedActiveWestMarchesCharacters(
+        interaction.user.id,
+      );
+
+      if (characters.length === 0) {
+        await interaction.editReply(
+          "I could not find any active WestMarches.games characters linked to your Discord account.",
+        );
+        return;
+      }
+
+      const visibleCharacters = characters.slice(0, 25);
+      const overflowText =
+        characters.length > visibleCharacters.length
+          ? `\n\nI found ${characters.length} active characters. Discord menus can only show 25 options, so only the first 25 by name are listed.`
+          : "";
+
+      await interaction.editReply({
+        content: `Choose the character you want to retire.${overflowText}`,
+        components: [
+          buildRetireCharacterRow(interaction.user.id, visibleCharacters),
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to process /retire:", error);
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(
           "Something went wrong while loading your characters. Please try again.",
