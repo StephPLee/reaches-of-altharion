@@ -52,6 +52,11 @@ const COMMAND_DEFINITIONS = [
     help: "Choose which of your characters receives automatic SC-only rewards.",
   },
   {
+    name: "retire",
+    description: "Retire one of your active characters.",
+    help: "Choose one of your active characters to retire. Posts a public retirement announcement.",
+  },
+  {
     name: "approve",
     description: "Approve a homebrew link for the site.",
     help: "Staff-only. Approve a homebrew link. Pass the submission post link to auto-fill the form.",
