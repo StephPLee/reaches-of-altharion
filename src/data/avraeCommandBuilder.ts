@@ -27,7 +27,7 @@ export type AvraeCommandOptions = {
   rawFlags?: string | string[];
 };
 
-function quote(value: string): string {
+export function quote(value: string): string {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 

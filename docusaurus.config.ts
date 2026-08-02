@@ -181,6 +181,10 @@ const config: Config = {
               label: "Transformations",
             },
             {
+              to: "/book-requests",
+              label: "Book Requests",
+            },
+            {
               to: "/feedback",
               label: "Feedback",
             },

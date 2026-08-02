@@ -44,6 +44,12 @@ const {
 const { recordAuditEvent } = require("./audit");
 const { submitFeedback } = require("../shared/feedback");
 const {
+  createBookRequest,
+  listOpenBookRequests,
+  markBookRequestPurchased,
+  toggleBookRequestUpvote,
+} = require("../shared/bookRequests");
+const {
   deleteSavedAvraeCharacter,
   listSavedAvraeCharacters,
   updateAvraeCharacterOverrides,
@@ -606,6 +612,71 @@ app.post(
     }
   },
 );
+app.get(
+  "/api/book-requests",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    try {
+      const requests = await listOpenBookRequests(pool, req.memberUser.discordUserId);
+      res.json({ requests });
+    } catch (error) {
+      console.error("Failed to load book requests:", error);
+      res.status(500).json({ error: "Failed to load book requests." });
+    }
+  },
+);
+
+app.post(
+  "/api/book-requests",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    try {
+      const { title, notes } = req.body ?? {};
+      const request = await createBookRequest(pool, {
+        discordUserId: req.memberUser.discordUserId,
+        username: req.memberUser.globalName || req.memberUser.username,
+        title,
+        notes,
+        source: "website",
+      });
+      res.status(201).json({ request });
+    } catch (error) {
+      const statusCode = Number(error?.statusCode) || 500;
+      if (statusCode >= 500) console.error("Failed to create book request:", error);
+      res.status(statusCode).json({ error: statusCode === 400 ? error.message : "Failed to create book request." });
+    }
+  },
+);
+
+app.post(
+  "/api/book-requests/:id/upvote",
+  requireTrustedOrigin,
+  sessionRateLimiter,
+  requireMemberSession,
+  async (req, res) => {
+    const requestId = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(requestId) || requestId <= 0) {
+      res.status(400).json({ error: "Invalid request id." });
+      return;
+    }
+
+    try {
+      const result = await toggleBookRequestUpvote(pool, {
+        requestId,
+        discordUserId: req.memberUser.discordUserId,
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to toggle book request upvote:", error);
+      res.status(500).json({ error: "Failed to update upvote." });
+    }
+  },
+);
+
 app.get("/health", async (_req, res) => {
   await pool.query("SELECT 1");
   res.json({ ok: true });
@@ -1289,6 +1360,52 @@ app.use(
   requireTrustedOrigin,
   adminRateLimiter,
   requireStaffSession,
+);
+
+app.post(
+  "/api/admin/book-requests/:id/purchase",
+  requireStaffSession,
+  async (req, res) => {
+    const requestId = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(requestId) || requestId <= 0) {
+      res.status(400).json({ error: "Invalid request id." });
+      return;
+    }
+
+    try {
+      const request = await markBookRequestPurchased(pool, {
+        requestId,
+        staffDiscordUserId: req.staffUser.discordUserId,
+        staffUsername: req.staffUser.globalName || req.staffUser.username,
+      });
+      await recordAuditEvent({
+        action: "book_request_purchase",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { requestId },
+        ...getRequestMetadata(req),
+      });
+      res.json({ request });
+    } catch (error) {
+      await recordAuditEvent({
+        action: "book_request_purchase",
+        status: "error",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          requestId,
+          error: error instanceof Error ? error.message : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+      const statusCode = Number(error?.statusCode) || 500;
+      if (statusCode >= 500) console.error("Failed to mark book request purchased:", error);
+      res.status(statusCode).json({
+        error: statusCode === 404 ? error.message : "Failed to mark book request purchased.",
+      });
+    }
+  },
 );
 
 async function getViewerRoles(req) {

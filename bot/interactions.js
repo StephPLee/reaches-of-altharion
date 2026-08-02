@@ -119,6 +119,7 @@ const {
 } = require("./services/stickyMessages");
 
 const { buildFeedbackModal, saveDiscordFeedback } = require("./services/feedback");
+const { buildBookRequestModal, saveDiscordBookRequest } = require("./services/bookRequests");
 
 const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
 const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
@@ -1154,6 +1155,21 @@ async function handleInteraction(interaction) {
       }
       return;
     }
+    if (interaction.customId === "book-request-modal") {
+      const title = interaction.fields.getTextInputValue("title");
+      const notes = interaction.fields.getTextInputValue("notes");
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        await saveDiscordBookRequest(interaction, { title, notes });
+        await interaction.editReply("Thanks! Your book request has been submitted.");
+      } catch (error) {
+        console.error("Failed to submit Discord book request:", error);
+        await interaction.editReply(error instanceof Error && error.statusCode === 400
+          ? error.message
+          : "I couldn't save your book request. Please try again shortly.");
+      }
+      return;
+    }
     if (interaction.customId.startsWith("sticky-modal:")) {
       const channelId = interaction.customId.slice("sticky-modal:".length);
 
@@ -1693,6 +1709,10 @@ async function handleInteraction(interaction) {
   if (interaction.commandName === "feedback") {
     const anonymous = interaction.options.getBoolean("anonymous", true);
     await interaction.showModal(buildFeedbackModal({ anonymous }));
+    return;
+  }
+  if (interaction.commandName === "book-request") {
+    await interaction.showModal(buildBookRequestModal());
     return;
   }
   if (interaction.commandName === "magicitem") {

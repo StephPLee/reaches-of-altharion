@@ -1,0 +1,126 @@
+.selectCombo {
+    position: relative;
+}
+
+.selectTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: 2.7rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(190, 176, 138, 0.28);
+    border-radius: 0.65rem;
+    background: rgba(6, 8, 18, 0.72);
+    color: #f4ecff;
+    font-family: inherit;
+    font-size: 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 140ms ease,
+        background-color 140ms ease,
+        box-shadow 140ms ease;
+}
+
+.selectTrigger:hover {
+    border-color: rgba(202, 168, 255, 0.4);
+}
+
+.selectTrigger:focus-visible,
+.selectTrigger[aria-expanded="true"] {
+    outline: none;
+    border-color: rgba(202, 168, 255, 0.5);
+    background: rgba(8, 9, 19, 0.85);
+    box-shadow: 0 0 0 1px rgba(202, 168, 255, 0.2);
+}
+
+.selectTriggerValue {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.selectTriggerPlaceholder {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: rgba(236, 226, 255, 0.5);
+}
+
+.selectChevron {
+    flex-shrink: 0;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-right: 2px solid rgba(210, 192, 145, 0.75);
+    border-bottom: 2px solid rgba(210, 192, 145, 0.75);
+    transform: rotate(45deg) translateY(-2px);
+}
+
+.selectPanel {
+    position: fixed;
+    z-index: 200;
+    display: grid;
+    gap: 0.2rem;
+    max-height: 16rem;
+    padding: 0.4rem;
+    overflow-y: auto;
+    border: 1px solid rgba(190, 176, 138, 0.28);
+    border-radius: 0.75rem;
+    background: rgba(10, 11, 22, 0.97);
+    box-shadow: 0 18px 40px rgba(2, 4, 12, 0.55);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(210, 192, 145, 0.55) rgba(8, 9, 19, 0.3);
+}
+
+.selectPanel::-webkit-scrollbar {
+    width: 0.7rem;
+}
+
+.selectPanel::-webkit-scrollbar-track {
+    background: rgba(8, 9, 19, 0.3);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(190, 176, 138, 0.1);
+}
+
+.selectPanel::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgba(210, 192, 145, 0.65) 0%,
+        rgba(202, 168, 255, 0.42) 100%
+    );
+    background-clip: padding-box;
+}
+
+.selectOption {
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    background: none;
+    color: rgba(236, 226, 255, 0.82);
+    font-family: inherit;
+    font-size: 0.92rem;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 140ms ease,
+        background-color 140ms ease;
+}
+
+.selectOption:hover,
+.selectOption:focus-visible {
+    outline: none;
+    border-color: rgba(202, 168, 255, 0.3);
+    background: rgba(202, 168, 255, 0.12);
+    color: #fff7ff;
+}
+
+.selectOptionActive {
+    border-color: rgba(202, 168, 255, 0.42);
+    background: rgba(202, 168, 255, 0.18);
+    color: #fff7ff;
+}

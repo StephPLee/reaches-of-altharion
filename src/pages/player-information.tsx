@@ -3,6 +3,7 @@ import {
   BookOpen,
   ChartSpline,
   Feather,
+  Library,
   MessageCircleQuestion,
   MessageSquarePlus,
   ShieldAlert,
@@ -76,15 +77,33 @@ export default function PlayerInformationPage(): ReactNode {
   const configured = siteConfig.customFields?.authApiBaseUrl;
   const apiBaseUrl = typeof configured === "string" ? configured.replace(/\/$/, "") : "";
   const { authenticated } = useMemberSession(apiBaseUrl);
-  const groups = GROUPS.map((group, index) => index !== 0 || !authenticated ? group : {
-    ...group,
-    links: [...group.links, {
-      icon: MessageSquarePlus,
-      title: "Feedback",
-      description: "Send feedback privately to the staff team.",
-      hint: "Share feedback",
-      to: "/feedback",
-    }],
+  const groups = GROUPS.map((group, index) => {
+    if (!authenticated) return group;
+    if (index === 0) {
+      return {
+        ...group,
+        links: [...group.links, {
+          icon: MessageSquarePlus,
+          title: "Feedback",
+          description: "Send feedback privately to the staff team.",
+          hint: "Share feedback",
+          to: "/feedback",
+        }],
+      };
+    }
+    if (index === 1) {
+      return {
+        ...group,
+        links: [...group.links, {
+          icon: Library,
+          title: "Book Requests",
+          description: "Request books we don't have access to yet.",
+          hint: "Request a book",
+          to: "/book-requests",
+        }],
+      };
+    }
+    return group;
   });
 
   return (

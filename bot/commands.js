@@ -21,6 +21,11 @@ const COMMAND_DEFINITIONS = [
       ),
   },
   {
+    name: "book-request",
+    description: "Request a book the server doesn't have access to yet.",
+    help: "Submit a book request so staff know what to purchase.",
+  },
+  {
     name: "cc-link",
     description: "Get your assigned character creation campaign link.",
     help: "Get your assigned D&D Beyond character creation campaign link.",

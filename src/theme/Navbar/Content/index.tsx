@@ -37,6 +37,8 @@ type AuthUser = {
   canSubmitRewards?: boolean;
 };
 
+const AUTH_GATED_PATHS = ["/feedback", "/book-requests"];
+
 const MOBILE_NAV_GROUPS: NavGroup[] = [
   {
     title: null,
@@ -64,6 +66,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Sourcebooks", to: "/docs/sourcebooks" },
       { label: "Banned Content", to: "/docs/banned-content" },
       { label: "Transformations", to: "/docs/transformations" },
+      { label: "Book Requests", to: "/book-requests" },
       { label: "Character Attributes", to: "/character-attributes" },
       { label: "Feedback", to: "/feedback" },
     ],
@@ -691,7 +694,7 @@ export default function NavbarContent(): ReactNode {
       ? {
           ...item,
           items: item.items.filter(
-            (child) => child.to !== "/feedback" || authenticated,
+            (child) => !AUTH_GATED_PATHS.includes(child.to) || authenticated,
           ),
         }
       : item,
@@ -790,7 +793,7 @@ export default function NavbarContent(): ReactNode {
                         )
                       ) : null}
                       <div className="custom-mobile-menu-group__links">
-                        {group.links.filter((link) => link.to !== "/feedback" || authenticated).map((link) => {
+                        {group.links.filter((link) => !AUTH_GATED_PATHS.includes(link.to) || authenticated).map((link) => {
                           const isActive =
                             location.pathname === link.to ||
                             `${location.pathname}${location.search}` ===

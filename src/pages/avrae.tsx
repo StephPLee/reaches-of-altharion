@@ -7,6 +7,16 @@ import {
   parseTargets,
   type AvraeActionKind,
 } from "../data/avraeCommandBuilder";
+import {
+  composeCraftCommand,
+  CRAFT_RARITIES,
+  CRAFT_TOOLS,
+  CRAFT_USAGES,
+  type CraftAbility,
+  type CraftMode,
+  type CraftRollMode,
+} from "../data/craftCommandBuilder";
+import ThemedSelect from "../components/ThemedSelect";
 import styles from "./grimoire.module.css";
 
 const ABILITIES = [
@@ -16,6 +26,16 @@ const ABILITIES = [
   { id: "int", label: "INT" },
   { id: "wis", label: "WIS" },
   { id: "cha", label: "CHA" },
+];
+
+const CRAFT_TOOL_OPTIONS = CRAFT_TOOLS.map((tool) => ({
+  value: tool,
+  label: tool,
+}));
+
+const CRAFT_ABILITY_OPTIONS = [
+  { value: "", label: "None" },
+  ...ABILITIES.map(({ id, label }) => ({ value: id, label })),
 ];
 
 const SKILLS = [
@@ -108,7 +128,7 @@ const KIND_LABELS: Record<AvraeActionKind, string> = {
   initiative: "Initiative",
 };
 
-type AppView = "vault" | "character" | "modifiers";
+type AppView = "vault" | "character" | "modifiers" | "craft";
 type SheetTab = "attacks" | "spells" | "companions" | "wildshapes";
 
 type AuthUser = {
@@ -343,6 +363,18 @@ export default function AvraeCommandsPage(): ReactNode {
   const [initiativeCompanionNickname, setInitiativeCompanionNickname] =
     useState("");
   const [copied, setCopied] = useState(false);
+  const [craftMode, setCraftMode] = useState<CraftMode>("start");
+  const [craftItem, setCraftItem] = useState("");
+  const [craftRarity, setCraftRarity] = useState(CRAFT_RARITIES[0].value);
+  const [craftUsage, setCraftUsage] = useState(CRAFT_USAGES[0].value);
+  const [craftTool, setCraftTool] = useState(CRAFT_TOOLS[0]);
+  const [craftAbility, setCraftAbility] = useState<CraftAbility | "">("");
+  const [craftRollMode, setCraftRollMode] = useState<CraftRollMode>("normal");
+  const [craftGuidance, setCraftGuidance] = useState(false);
+  const [craftHalf, setCraftHalf] = useState(false);
+  const [craftFreeCheck, setCraftFreeCheck] = useState(false);
+  const [craftBonuses, setCraftBonuses] = useState("");
+  const [craftCopied, setCraftCopied] = useState(false);
   const [openDrawer, setOpenDrawer] = useState<"modifiers" | "targets" | null>(
     null,
   );
@@ -770,6 +802,43 @@ export default function AvraeCommandsPage(): ReactNode {
     await navigator.clipboard.writeText(command);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  const craftCommand = useMemo(
+    () =>
+      composeCraftCommand({
+        mode: craftMode,
+        item: craftItem,
+        rarity: craftRarity,
+        usage: craftUsage,
+        tool: craftTool,
+        ability: craftAbility,
+        rollMode: craftRollMode,
+        guidance: craftGuidance,
+        half: craftHalf,
+        bonuses: craftBonuses,
+        freeCheck: craftFreeCheck,
+      }),
+    [
+      craftMode,
+      craftItem,
+      craftRarity,
+      craftUsage,
+      craftTool,
+      craftAbility,
+      craftRollMode,
+      craftGuidance,
+      craftHalf,
+      craftBonuses,
+      craftFreeCheck,
+    ],
+  );
+
+  async function copyCraftCommand(): Promise<void> {
+    if (!navigator?.clipboard) return;
+    await navigator.clipboard.writeText(craftCommand);
+    setCraftCopied(true);
+    window.setTimeout(() => setCraftCopied(false), 1600);
   }
 
   function handleLogin(): void {
@@ -1634,6 +1703,7 @@ export default function AvraeCommandsPage(): ReactNode {
                   { id: "vault", label: "Collection" },
                   { id: "character", label: "Active Character" },
                   { id: "modifiers", label: "Modifiers" },
+                  { id: "craft", label: "Craft" },
                 ] as { id: AppView; label: string }[]
               ).map((tab) => (
                 <button
@@ -2862,6 +2932,149 @@ export default function AvraeCommandsPage(): ReactNode {
                     ))}
                   </div>
                 </section>
+              </div>
+            </section>
+          ) : null}
+
+          {view === "craft" ? (
+            <section className={styles.appView}>
+              <div className={styles.viewHeading}>
+                <h1>Craft Command Builder</h1>
+                <p>Build a !craft start command for the crafting alias.</p>
+              </div>
+
+              {craftMode !== "continue" ? (
+                <div className={styles.formGrid}>
+                  <label className={styles.field}>
+                    <span>Item</span>
+                    <input
+                      placeholder="Item Name"
+                      value={craftItem}
+                      onChange={(event) => setCraftItem(event.target.value)}
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Rarity</span>
+                    <ThemedSelect
+                      value={craftRarity}
+                      onChange={setCraftRarity}
+                      options={CRAFT_RARITIES}
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Usage</span>
+                    <ThemedSelect
+                      value={craftUsage}
+                      onChange={setCraftUsage}
+                      options={CRAFT_USAGES}
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Tool</span>
+                    <ThemedSelect
+                      value={craftTool}
+                      onChange={setCraftTool}
+                      options={CRAFT_TOOL_OPTIONS}
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Ability</span>
+                    <ThemedSelect
+                      value={craftAbility}
+                      onChange={(value) =>
+                        setCraftAbility(value as CraftAbility | "")
+                      }
+                      options={CRAFT_ABILITY_OPTIONS}
+                      placeholder="None"
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Bonuses (one -b per line)</span>
+                    <textarea
+                      placeholder={"1d10+1"}
+                      value={craftBonuses}
+                      onChange={(event) => setCraftBonuses(event.target.value)}
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              <div className={styles.toggleRow}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={craftMode === "continue"}
+                    onChange={(event) =>
+                      setCraftMode(event.target.checked ? "continue" : "start")
+                    }
+                  />
+                  <span>Continuing an existing craft</span>
+                </label>
+                {craftMode === "continue" ? (
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={craftFreeCheck}
+                      onChange={(event) =>
+                        setCraftFreeCheck(event.target.checked)
+                      }
+                    />
+                    <span>Free check (-i)</span>
+                  </label>
+                ) : (
+                  <>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={craftRollMode === "adv"}
+                        onChange={(event) =>
+                          setCraftRollMode(
+                            event.target.checked ? "adv" : "normal",
+                          )
+                        }
+                      />
+                      <span>Advantage</span>
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={craftRollMode === "dis"}
+                        onChange={(event) =>
+                          setCraftRollMode(
+                            event.target.checked ? "dis" : "normal",
+                          )
+                        }
+                      />
+                      <span>Disadvantage</span>
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={craftGuidance}
+                        onChange={(event) =>
+                          setCraftGuidance(event.target.checked)
+                        }
+                      />
+                      <span>Guidance</span>
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={craftHalf}
+                        onChange={(event) => setCraftHalf(event.target.checked)}
+                      />
+                      <span>Half time</span>
+                    </label>
+                  </>
+                )}
+              </div>
+
+              <div className={styles.csCommandBar}>
+                <span>CMD</span>
+                <code>{craftCommand}</code>
+                <button type="button" onClick={copyCraftCommand}>
+                  {craftCopied ? "Copied" : "Copy"}
+                </button>
               </div>
             </section>
           ) : null}
