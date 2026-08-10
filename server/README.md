@@ -54,6 +54,7 @@ Run [sql/045_reward_event_calendar_link.sql](C:/Users/Steph/reaches-of-altharion
 Run [sql/046_world_wiki.sql](C:/Users/Steph/reaches-of-altharion/sql/046_world_wiki.sql) before using the World Wiki or Timeline features. Uploaded wiki images are stored on disk under `uploads/world-wiki/` (not version controlled) and served at `/uploads/world-wiki/:fileName`.
 Run [sql/047_timeline_event_image.sql](C:/Users/Steph/reaches-of-altharion/sql/047_timeline_event_image.sql) to add the optional `image_path` column to `timeline_events`.
 Run [sql/048_timeline_chapter_marker.sql](C:/Users/Steph/reaches-of-altharion/sql/048_timeline_chapter_marker.sql) to add the `is_chapter_marker` column to `timeline_events`.
+Run [sql/058_capstones_schema.sql](C:/Users/Steph/reaches-of-altharion/sql/058_capstones_schema.sql) and [sql/059_seed_capstones.sql](C:/Users/Steph/reaches-of-altharion/sql/059_seed_capstones.sql) before using the New Capstones homebrew section.
 
 ## Production notes
 
