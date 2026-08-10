@@ -154,6 +154,15 @@ const {
   updateBoonAutomation,
 } = require("./boons");
 const {
+  createCapstone,
+  createCapstoneAutomation,
+  deleteCapstone,
+  deleteCapstoneAutomation,
+  listCapstones,
+  updateCapstone,
+  updateCapstoneAutomation,
+} = require("./capstones");
+const {
   buildAuthorizationUrl,
   deleteChannelMessage,
   editChannelMessage,
@@ -1984,6 +1993,77 @@ function normalizeBoonAutomationPayload(body) {
   };
 }
 
+function normalizeCapstoneAutomationPayload(body) {
+  const { capstoneId, panelTitle, panelSubtitle, setupCommands, codeBlocks } =
+    body ?? {};
+
+  if (!Number.isInteger(capstoneId) || capstoneId <= 0) {
+    return { error: "Valid capstone id is required." };
+  }
+
+  const normalizedSetupCommands = Array.isArray(setupCommands)
+    ? setupCommands
+        .filter(
+          (command) =>
+            command &&
+            typeof command.command === "string" &&
+            command.command.trim(),
+        )
+        .map((command) => ({
+          label:
+            typeof command.label === "string" && command.label.trim()
+              ? command.label.trim()
+              : "Required CC",
+          command: command.command.trim(),
+        }))
+    : [];
+
+  const normalizedCodeBlocks = Array.isArray(codeBlocks)
+    ? codeBlocks
+        .filter(
+          (codeBlock) =>
+            codeBlock &&
+            typeof codeBlock.title === "string" &&
+            codeBlock.title.trim() &&
+            typeof codeBlock.code === "string" &&
+            codeBlock.code.trim(),
+        )
+        .map((codeBlock) => ({
+          title: codeBlock.title.trim(),
+          code: codeBlock.code,
+          downloadName:
+            typeof codeBlock.downloadName === "string" &&
+            codeBlock.downloadName.trim()
+              ? codeBlock.downloadName.trim()
+              : `${codeBlock.title
+                  .trim()
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")}.txt`,
+        }))
+    : [];
+
+  if (
+    normalizedSetupCommands.length === 0 &&
+    normalizedCodeBlocks.length === 0
+  ) {
+    return { error: "Add at least one setup command or code block." };
+  }
+
+  return {
+    capstoneId,
+    panelTitle:
+      typeof panelTitle === "string" && panelTitle.trim()
+        ? panelTitle.trim()
+        : "Avrae Automation",
+    panelSubtitle:
+      typeof panelSubtitle === "string" && panelSubtitle.trim()
+        ? panelSubtitle.trim()
+        : "Expand to view setup and download options",
+    setupCommands: normalizedSetupCommands,
+    codeBlocks: normalizedCodeBlocks,
+  };
+}
+
 function parseOptionalWholeNumber(value) {
   if (value === undefined || value === null || value === "") {
     return 0;
@@ -2504,6 +2584,16 @@ app.get("/api/boons", async (_req, res) => {
   } catch (boonError) {
     console.error("Failed to load boons:", boonError);
     res.status(500).json({ error: "Failed to load boons." });
+  }
+});
+
+app.get("/api/capstones", async (_req, res) => {
+  try {
+    const capstones = await listCapstones();
+    res.json({ capstones });
+  } catch (capstoneError) {
+    console.error("Failed to load capstones:", capstoneError);
+    res.status(500).json({ error: "Failed to load capstones." });
   }
 });
 
@@ -4183,6 +4273,283 @@ app.delete(
     } catch (boonError) {
       console.error("Failed to delete boon automation:", boonError);
       res.status(500).json({ error: "Failed to delete boon automation." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/capstones",
+  requireTrustedOrigin,
+  requireStaffSession,
+  async (req, res) => {
+    const { title, slug, contentMarkdown, sortOrder, isPublished } =
+      req.body ?? {};
+
+    if (
+      typeof title !== "string" ||
+      !title.trim() ||
+      typeof slug !== "string" ||
+      !slug.trim() ||
+      typeof contentMarkdown !== "string" ||
+      !contentMarkdown.trim()
+    ) {
+      res
+        .status(400)
+        .json({ error: "title, slug, and contentMarkdown are required." });
+      return;
+    }
+
+    try {
+      const capstone = await createCapstone({
+        title: title.trim(),
+        slug: slug.trim(),
+        contentMarkdown,
+        sortOrder:
+          typeof sortOrder === "number" && Number.isFinite(sortOrder)
+            ? Math.trunc(sortOrder)
+            : 0,
+        isPublished: Boolean(isPublished),
+        createdByUserId: req.staffUser.id,
+      });
+
+      await recordAuditEvent({
+        action: "capstone_create",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { capstoneId: capstone.id, slug: capstone.slug },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ capstone });
+    } catch (capstoneError) {
+      console.error("Failed to create capstone:", capstoneError);
+      res.status(500).json({ error: "Failed to create capstone." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/capstones/:capstoneId",
+  requireTrustedOrigin,
+  requireStaffSession,
+  async (req, res) => {
+    const capstoneId = Number(req.params.capstoneId);
+    const { title, slug, contentMarkdown, sortOrder, isPublished } =
+      req.body ?? {};
+
+    if (
+      !Number.isInteger(capstoneId) ||
+      capstoneId <= 0 ||
+      typeof title !== "string" ||
+      !title.trim() ||
+      typeof slug !== "string" ||
+      !slug.trim() ||
+      typeof contentMarkdown !== "string" ||
+      !contentMarkdown.trim()
+    ) {
+      res.status(400).json({
+        error:
+          "Valid capstoneId, title, slug, and contentMarkdown are required.",
+      });
+      return;
+    }
+
+    try {
+      const capstone = await updateCapstone({
+        capstoneId,
+        title: title.trim(),
+        slug: slug.trim(),
+        contentMarkdown,
+        sortOrder:
+          typeof sortOrder === "number" && Number.isFinite(sortOrder)
+            ? Math.trunc(sortOrder)
+            : 0,
+        isPublished: Boolean(isPublished),
+        updatedByUserId: req.staffUser.id,
+      });
+
+      if (!capstone) {
+        res.status(404).json({ error: "Capstone not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "capstone_update",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { capstoneId: capstone.id, slug: capstone.slug },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ capstone });
+    } catch (capstoneError) {
+      console.error("Failed to update capstone:", capstoneError);
+      res.status(500).json({ error: "Failed to update capstone." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/capstones/:capstoneId",
+  requireTrustedOrigin,
+  requireStaffSession,
+  async (req, res) => {
+    const capstoneId = Number(req.params.capstoneId);
+
+    if (!Number.isInteger(capstoneId) || capstoneId <= 0) {
+      res.status(400).json({ error: "Invalid capstone id." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteCapstone(capstoneId);
+
+      if (!deleted) {
+        res.status(404).json({ error: "Capstone not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "capstone_delete",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { capstoneId },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(204).end();
+    } catch (capstoneError) {
+      console.error("Failed to delete capstone:", capstoneError);
+      res.status(500).json({ error: "Failed to delete capstone." });
+    }
+  },
+);
+
+app.post(
+  "/api/admin/capstones/:capstoneId/automation",
+  requireTrustedOrigin,
+  requireStaffSession,
+  async (req, res) => {
+    const capstoneId = Number(req.params.capstoneId);
+    const normalizedPayload = normalizeCapstoneAutomationPayload({
+      ...req.body,
+      capstoneId,
+    });
+
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const automationEntry = await createCapstoneAutomation(normalizedPayload);
+
+      await recordAuditEvent({
+        action: "capstone_automation_create",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          capstoneId: normalizedPayload.capstoneId,
+          automationEntryId: automationEntry.id,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(201).json({ automationEntry });
+    } catch (capstoneError) {
+      console.error("Failed to create capstone automation:", capstoneError);
+      res.status(500).json({ error: "Failed to create capstone automation." });
+    }
+  },
+);
+
+app.patch(
+  "/api/admin/capstone-automation/:automationEntryId",
+  requireTrustedOrigin,
+  requireStaffSession,
+  async (req, res) => {
+    const automationEntryId = Number(req.params.automationEntryId);
+
+    if (!Number.isInteger(automationEntryId) || automationEntryId <= 0) {
+      res.status(400).json({ error: "Invalid automation entry id." });
+      return;
+    }
+
+    const normalizedPayload = normalizeCapstoneAutomationPayload(req.body);
+
+    if ("error" in normalizedPayload) {
+      res.status(400).json({ error: normalizedPayload.error });
+      return;
+    }
+
+    try {
+      const automationEntry = await updateCapstoneAutomation({
+        automationEntryId,
+        ...normalizedPayload,
+      });
+
+      if (!automationEntry) {
+        res.status(404).json({ error: "Automation entry not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "capstone_automation_update",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          automationEntryId,
+          capstoneId: normalizedPayload.capstoneId,
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ automationEntry });
+    } catch (capstoneError) {
+      console.error("Failed to update capstone automation:", capstoneError);
+      res.status(500).json({ error: "Failed to update capstone automation." });
+    }
+  },
+);
+
+app.delete(
+  "/api/admin/capstone-automation/:automationEntryId",
+  requireTrustedOrigin,
+  requireStaffSession,
+  async (req, res) => {
+    const automationEntryId = Number(req.params.automationEntryId);
+
+    if (!Number.isInteger(automationEntryId) || automationEntryId <= 0) {
+      res.status(400).json({ error: "Invalid automation entry id." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteCapstoneAutomation(automationEntryId);
+
+      if (!deleted) {
+        res.status(404).json({ error: "Automation entry not found." });
+        return;
+      }
+
+      await recordAuditEvent({
+        action: "capstone_automation_delete",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { automationEntryId },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(204).end();
+    } catch (capstoneError) {
+      console.error("Failed to delete capstone automation:", capstoneError);
+      res.status(500).json({ error: "Failed to delete capstone automation." });
     }
   },
 );

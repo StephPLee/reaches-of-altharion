@@ -48,6 +48,11 @@ const APPROVE_CATEGORIES = [
     label: "Boons",
     description: "Approve a boon.",
   },
+  {
+    value: "capstones",
+    label: "Capstones",
+    description: "Approve a class capstone.",
+  },
 ];
 
 const APPROVE_RARITIES = [
@@ -244,7 +249,7 @@ function categoryNeedsDetail(category) {
 }
 
 function categoryUsesMarkdown(category) {
-  return ["starting-graces", "boons"].includes(category);
+  return ["starting-graces", "boons", "capstones"].includes(category);
 }
 
 function getCategory(categoryValue) {
@@ -477,6 +482,14 @@ function getMarkdownApproveTarget(category) {
       table: "boons",
       categoryLabel: categoryConfig.label,
       sitePathPrefix: "/docs/homebrew/boons#boon-",
+    };
+  }
+
+  if (category === "capstones") {
+    return {
+      table: "capstones",
+      categoryLabel: categoryConfig.label,
+      sitePathPrefix: "/docs/homebrew/capstones#capstone-",
     };
   }
 

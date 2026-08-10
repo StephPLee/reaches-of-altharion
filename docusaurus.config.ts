@@ -228,6 +228,10 @@ const config: Config = {
               label: "Boons",
             },
             {
+              to: "/docs/homebrew/capstones",
+              label: "New Capstones",
+            },
+            {
               to: "/docs/homebrew/guilds",
               label: "Guilds",
             },
