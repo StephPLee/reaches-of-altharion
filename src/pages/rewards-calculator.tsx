@@ -319,14 +319,6 @@ function formatCharacterOption(character: WestMarchesCharacter) {
   return character.name.trim();
 }
 
-// Browsers/OS text replacement often convert a typed straight apostrophe (')
-// into a curly one (' or '), so a name typed into a textarea can visually
-// match a character's name while failing an exact string comparison. Fold
-// all apostrophe-like characters to a single form before comparing names.
-function normalizeApostrophes(value: string): string {
-  return value.replace(/[‘’ʼʻ`´]/g, "'");
-}
-
 const MIN_PARTY_CHIP_FONT_SCALE = 0.62;
 
 type PlayerRewardOverride = {
@@ -424,6 +416,9 @@ export default function RewardsCalculatorPage(): ReactNode {
   const [isPrizeHunt, setIsPrizeHunt] = useState(false);
   const [playerOverrides, setPlayerOverrides] = useState<
     Record<string, PlayerRewardOverride>
+  >({});
+  const [playerPrizeItems, setPlayerPrizeItems] = useState<
+    Record<string, string>
   >({});
   const [editingOverrideCharacterId, setEditingOverrideCharacterId] = useState<
     string | null
@@ -814,8 +809,6 @@ export default function RewardsCalculatorPage(): ReactNode {
     : "";
   const dmScReasonText = dmScMultiplier > 1 ? ", below level 10 DM SC x2" : "";
   const playerDefaultReason = `Quest rewards: ${safeHours}h ${safeMinutes}m, level ${safeQuestLevel}, ${safePlayers} player${safePlayers === 1 ? "" : "s"}${eventReasonText}`;
-  const prizeHuntPlaceholder =
-    "Character Name - Item\nOne per line, e.g.:\nHarkul - Potion of Diminution";
   const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}${dmScReasonText}${eventReasonText}`;
   const rpDefaultReason = `RP rewards: ${safeRpHours}h ${safeRpMinutes}m, level ${safeRpLevel}`;
   const manualDefaultReason = "Individual reward";
@@ -862,45 +855,6 @@ export default function RewardsCalculatorPage(): ReactNode {
     () => filterCharacters(manualCharacterQuery, characters),
     [characters, manualCharacterQuery],
   );
-
-  function parsePrizeHuntLines(
-    notes: string,
-    characterIds: string[],
-  ): { itemsByCharacterId: Record<string, string>; errors: string[] } {
-    const itemsByCharacterId: Record<string, string> = {};
-    const errors: string[] = [];
-    const lines = notes
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    for (const line of lines) {
-      const match = line.match(/^(.+?)\s*-\s*(.+)$/);
-      if (!match) {
-        errors.push(`Could not parse "${line}" — use the format "Character Name - Item".`);
-        continue;
-      }
-
-      const [, namePart, itemPart] = match;
-      const normalizedName = normalizeApostrophes(namePart.trim().toLowerCase());
-      const character = characterIds
-        .map((characterId) => characters.find((item) => item.id === characterId))
-        .find(
-          (item) =>
-            item &&
-            normalizeApostrophes(formatCharacterOption(item).toLowerCase()) === normalizedName,
-        );
-
-      if (!character) {
-        errors.push(`Could not find "${namePart.trim()}" in the selected party.`);
-        continue;
-      }
-
-      itemsByCharacterId[character.id] = itemPart.trim();
-    }
-
-    return { itemsByCharacterId, errors };
-  }
 
   async function submitReward(target: RewardTarget) {
     const targetConfig =
@@ -971,15 +925,14 @@ export default function RewardsCalculatorPage(): ReactNode {
       return;
     }
 
-    let prizeItemsByCharacterId: Record<string, string> = {};
+    const prizeItemsByCharacterId: Record<string, string> = {};
     if (target === "player" && isPrizeHunt) {
-      const parsed = parsePrizeHuntLines(playerReason, includedPlayerCharacterIds);
-      if (parsed.errors.length > 0) {
-        setSubmissionMessage("");
-        setSubmissionError(parsed.errors.join(" "));
-        return;
+      for (const characterId of includedPlayerCharacterIds) {
+        const item = playerPrizeItems[characterId]?.trim();
+        if (item) {
+          prizeItemsByCharacterId[characterId] = item;
+        }
       }
-      prizeItemsByCharacterId = parsed.itemsByCharacterId;
     }
 
     const rewards =
@@ -1212,6 +1165,7 @@ export default function RewardsCalculatorPage(): ReactNode {
     function handleAdventureChange(adventureId: string) {
       setPlayerAdventureId(adventureId);
       setPlayerOverrides({});
+      setPlayerPrizeItems({});
       setEditingOverrideCharacterId(null);
       const adventure = adventures.find((item) => item.id === adventureId);
       if (adventure) {
@@ -1410,6 +1364,37 @@ export default function RewardsCalculatorPage(): ReactNode {
                   </div>
                 </div>
               ) : null}
+              {isPrizeHunt && selectedPlayerAdventure ? (
+                <div className={styles.field}>
+                  <p className={styles.fieldSubheading}>Prize items</p>
+                  <div className={styles.prizeItemList}>
+                    {selectedPlayerCharacterIds
+                      .filter(
+                        (characterId) =>
+                          !playerOverrides[characterId]?.excluded,
+                      )
+                      .map((characterId) => (
+                        <div key={characterId} className={styles.prizeItemRow}>
+                          <label htmlFor={`prize-item-${characterId}`}>
+                            {getCharacterLabel(characterId)}
+                          </label>
+                          <input
+                            id={`prize-item-${characterId}`}
+                            className={styles.input}
+                            value={playerPrizeItems[characterId] || ""}
+                            onChange={(event) =>
+                              setPlayerPrizeItems((current) => ({
+                                ...current,
+                                [characterId]: event.target.value,
+                              }))
+                            }
+                            placeholder="Item (leave blank for no item)"
+                          />
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className={styles.field}>
@@ -1475,17 +1460,19 @@ export default function RewardsCalculatorPage(): ReactNode {
               </div>
             </div>
           ) : null}
-          <div className={styles.field}>
-            <label htmlFor={`${target}-reason`}>Notes</label>
-            <textarea
-              id={`${target}-reason`}
-              className={styles.textarea}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder={defaultReason}
-              rows={3}
-            />
-          </div>
+          {target === "player" && isPrizeHunt ? null : (
+            <div className={styles.field}>
+              <label htmlFor={`${target}-reason`}>Notes</label>
+              <textarea
+                id={`${target}-reason`}
+                className={styles.textarea}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder={defaultReason}
+                rows={3}
+              />
+            </div>
+          )}
         </div>
         <div className={styles.formActions}>
           <button
@@ -1660,8 +1647,8 @@ export default function RewardsCalculatorPage(): ReactNode {
                       <span>
                         Prize hunt
                         <small>
-                          Give each player named in the notes an item, using
-                          the format "Character Name - Item" (one per line).
+                          Give any player below an item — leave it blank for
+                          players who don't get one.
                         </small>
                       </span>
                     </label>
@@ -1670,7 +1657,7 @@ export default function RewardsCalculatorPage(): ReactNode {
                       "",
                       playerReason,
                       setPlayerReason,
-                      isPrizeHunt ? prizeHuntPlaceholder : playerDefaultReason,
+                      playerDefaultReason,
                     )}
                   </>
                 ) : null}
