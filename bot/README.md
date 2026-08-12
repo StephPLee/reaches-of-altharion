@@ -65,6 +65,7 @@ Run `sql/032_sc_reward_character_preferences.sql` to create the table that store
 Run `sql/023_event_bosses.sql` to create the manual boss fight tables.
 Run `sql/024_rp_sessions.sql` to create the RP timer table.
 Run `sql/046_sticky_messages.sql` to create the sticky message table.
+Run `sql/060_discord_message_id_arrays.sql` so `/post-discord-content` can post long starting graces or wiki sections across multiple messages instead of truncating them.
 
 ## 3) Environment Variables
 
