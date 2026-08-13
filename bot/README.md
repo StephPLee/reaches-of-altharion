@@ -67,6 +67,7 @@ Run `sql/024_rp_sessions.sql` to create the RP timer table.
 Run `sql/046_sticky_messages.sql` to create the sticky message table.
 Run `sql/060_discord_message_id_arrays.sql` so `/post-discord-content` can post long starting graces or wiki sections across multiple messages instead of truncating them.
 Run `sql/061_quest_calls.sql` to create the quest call tables.
+Run `sql/062_quest_call_responses_characters.sql` to move quest call responses from level brackets to specific characters.
 
 ## 3) Environment Variables
 
