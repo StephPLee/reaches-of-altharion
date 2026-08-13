@@ -106,7 +106,7 @@ function buildQuestCallEmbed(call, responses) {
   const embed = new EmbedBuilder()
     .setTitle("Quest Call")
     .setDescription(
-      `<@${call.dmDiscordUserId}> is available to run a quest right now! Click **Respond with a character** below and pick which of your characters you'd like to bring — quests run at a level, and characters within ±2 levels of that can join, so this helps find a level that works for the most people.\n\n${statusLine}\n\n**Interest by level**\n${interestLines}`,
+      `<@${call.dmDiscordUserId}> is available to run a quest right now! Click **Respond with a character** below and pick which of your characters you'd like to bring.\n\n${statusLine}\n\n**Interest by level**\n${interestLines}`,
     )
     .setColor(isClosed ? 0x99aab5 : 0x57f287)
     .setFooter({ text: "Only the DM who posted this call can close it early." });
