@@ -10,15 +10,6 @@ const pool = require("../db");
 const EXPIRY_MS = 2 * 60 * 60 * 1000; // 2 hours
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
-// Mirrors the ranges in bot/interactions.js getBossDamageQuestMultiplier.
-// If those ranges ever change, update both places.
-const QUEST_LEVEL_BRACKETS = [
-  { key: "4-8", label: "Levels 4-8" },
-  { key: "9-13", label: "Levels 9-13" },
-  { key: "14-17", label: "Levels 14-17" },
-  { key: "18-20", label: "Levels 18-20" },
-];
-
 function mapQuestCallRow(row) {
   return row
     ? {
@@ -34,31 +25,49 @@ function mapQuestCallRow(row) {
     : null;
 }
 
-function buildQuestCallComponents(questCallId) {
-  const selectMenu = new StringSelectMenuBuilder()
-    .setCustomId(`quest-call-pick:${questCallId}`)
-    .setPlaceholder("Which level bracket(s) can you play?")
-    .setMinValues(0)
-    .setMaxValues(QUEST_LEVEL_BRACKETS.length)
-    .addOptions(
-      QUEST_LEVEL_BRACKETS.map((bracket) => ({
-        label: bracket.label,
-        value: bracket.key,
-      })),
-    );
+function mapResponseRow(row) {
+  return {
+    discordUserId: row.discord_user_id,
+    characterId: row.character_id,
+    characterName: row.character_name,
+    characterLevel: row.character_level,
+    updatedAt: row.updated_at,
+  };
+}
+
+function buildQuestCallMessageComponents(questCallId) {
+  const respondButton = new ButtonBuilder()
+    .setCustomId(`quest-call-respond:${questCallId}`)
+    .setLabel("Respond with a character")
+    .setStyle(ButtonStyle.Primary);
 
   const closeButton = new ButtonBuilder()
     .setCustomId(`quest-call-close:${questCallId}`)
     .setLabel("Close call")
     .setStyle(ButtonStyle.Danger);
 
-  return [
-    new ActionRowBuilder().addComponents(selectMenu),
-    new ActionRowBuilder().addComponents(closeButton),
-  ];
+  return [new ActionRowBuilder().addComponents(respondButton, closeButton)];
 }
 
-function buildQuestCallEmbed(call, rows) {
+function buildQuestCallCharacterRow(questCallId, characters, selectedCharacterIds = []) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`quest-call-character-pick:${questCallId}`)
+    .setPlaceholder("Choose the character(s) you'd like to play...")
+    .setMinValues(0)
+    .setMaxValues(Math.min(characters.length, 25))
+    .addOptions(
+      characters.slice(0, 25).map((character) => ({
+        label: character.name.slice(0, 100),
+        description: `${character.className ? `${character.className} · ` : ""}Level ${character.level || "unknown"}`.slice(0, 100),
+        value: character.id,
+        default: selectedCharacterIds.includes(character.id),
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+function buildQuestCallEmbed(call, responses) {
   const isClosed = Boolean(call.closedAt);
   const expiresUnix = Math.floor(new Date(call.expiresAt).getTime() / 1000);
 
@@ -68,22 +77,39 @@ function buildQuestCallEmbed(call, rows) {
       : "**This call has expired.**"
     : `Expires <t:${expiresUnix}:R>.`;
 
+  const byLevel = new Map();
+  for (const response of responses) {
+    const key = response.characterLevel > 0 ? response.characterLevel : "unknown";
+    if (!byLevel.has(key)) byLevel.set(key, []);
+    byLevel.get(key).push(response);
+  }
+
+  const levelKeys = [...byLevel.keys()].sort((a, b) => {
+    if (a === "unknown") return 1;
+    if (b === "unknown") return -1;
+    return a - b;
+  });
+
+  const interestLines = levelKeys.length
+    ? levelKeys
+        .map((level) => {
+          const entries = byLevel.get(level);
+          const label = level === "unknown" ? "Unknown level" : `Level ${level}`;
+          const names = entries
+            .map((entry) => `<@${entry.discordUserId}> (${entry.characterName})`)
+            .join(", ");
+          return `**${label}** (${entries.length}) — ${names}`;
+        })
+        .join("\n")
+    : "_No responses yet._";
+
   const embed = new EmbedBuilder()
     .setTitle("Quest Call")
     .setDescription(
-      `<@${call.dmDiscordUserId}> is available to run a quest right now! Pick the level bracket(s) you have a character ready for below.\n\n${statusLine}`,
+      `<@${call.dmDiscordUserId}> is available to run a quest right now! Click **Respond with a character** below and pick which of your characters you'd like to bring — quests run at a level, and characters within ±2 levels of that can join, so this helps find a level that works for the most people.\n\n${statusLine}\n\n**Interest by level**\n${interestLines}`,
     )
-    .setColor(isClosed ? 0x99aab5 : 0x57f287);
-
-  for (const bracket of QUEST_LEVEL_BRACKETS) {
-    const responders = rows.filter((row) => row.brackets.includes(bracket.key));
-    const value = responders.length
-      ? responders.map((row) => `<@${row.discordUserId}>`).join("\n")
-      : "_no one yet_";
-    embed.addFields({ name: bracket.label, value });
-  }
-
-  embed.setFooter({ text: "Only the DM who posted this call can close it early." });
+    .setColor(isClosed ? 0x99aab5 : 0x57f287)
+    .setFooter({ text: "Only the DM who posted this call can close it early." });
 
   return embed;
 }
@@ -113,36 +139,47 @@ async function getQuestCall(questCallId) {
   return mapQuestCallRow(result.rows[0]);
 }
 
-async function setResponse(questCallId, discordUserId, brackets) {
-  if (!brackets.length) {
-    await pool.query(
+async function setCharacterResponses(questCallId, discordUserId, characters) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
       "DELETE FROM quest_call_responses WHERE quest_call_id = $1 AND discord_user_id = $2",
       [questCallId, discordUserId],
     );
-    return;
+    for (const character of characters) {
+      await client.query(
+        `
+        INSERT INTO quest_call_responses
+          (quest_call_id, discord_user_id, character_id, character_name, character_level, updated_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        `,
+        [questCallId, discordUserId, character.id, character.name, character.level],
+      );
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  await pool.query(
-    `
-    INSERT INTO quest_call_responses (quest_call_id, discord_user_id, brackets, updated_at)
-    VALUES ($1, $2, $3, NOW())
-    ON CONFLICT (quest_call_id, discord_user_id) DO UPDATE
-    SET brackets = EXCLUDED.brackets, updated_at = NOW()
-    `,
-    [questCallId, discordUserId, brackets],
-  );
 }
 
 async function listCallResponses(questCallId) {
   const result = await pool.query(
-    "SELECT * FROM quest_call_responses WHERE quest_call_id = $1 ORDER BY updated_at ASC",
+    "SELECT * FROM quest_call_responses WHERE quest_call_id = $1 ORDER BY character_level ASC, updated_at ASC",
     [questCallId],
   );
-  return result.rows.map((row) => ({
-    discordUserId: row.discord_user_id,
-    brackets: row.brackets,
-    updatedAt: row.updated_at,
-  }));
+  return result.rows.map(mapResponseRow);
+}
+
+async function listUserResponseCharacterIds(questCallId, discordUserId) {
+  const result = await pool.query(
+    "SELECT character_id FROM quest_call_responses WHERE quest_call_id = $1 AND discord_user_id = $2",
+    [questCallId, discordUserId],
+  );
+  return result.rows.map((row) => row.character_id);
 }
 
 async function closeQuestCall(questCallId, reason) {
@@ -179,8 +216,8 @@ function startQuestCallExpiryLoop(client) {
         const closed = await closeQuestCall(call.id, "expired");
         if (!closed) continue; // already closed by a race with a manual close
 
-        const rows = await listCallResponses(call.id);
-        const embed = buildQuestCallEmbed(closed, rows);
+        const responses = await listCallResponses(call.id);
+        const embed = buildQuestCallEmbed(closed, responses);
         const channel = await client.channels.fetch(closed.channelId);
         if (!channel?.messages || !closed.messageId) continue;
 
@@ -194,14 +231,15 @@ function startQuestCallExpiryLoop(client) {
 }
 
 module.exports = {
-  QUEST_LEVEL_BRACKETS,
-  buildQuestCallComponents,
+  buildQuestCallCharacterRow,
   buildQuestCallEmbed,
+  buildQuestCallMessageComponents,
   closeQuestCall,
   createQuestCall,
   getQuestCall,
   listCallResponses,
+  listUserResponseCharacterIds,
+  setCharacterResponses,
   setQuestCallMessageId,
-  setResponse,
   startQuestCallExpiryLoop,
 };
