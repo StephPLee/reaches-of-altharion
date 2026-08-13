@@ -18,14 +18,16 @@ const {
 } = require("./services/bosses");
 const { buildFaqEmbeds, listFaqEntries } = require("./services/faq");
 const {
-  buildQuestCallComponents,
+  buildQuestCallCharacterRow,
   buildQuestCallEmbed,
+  buildQuestCallMessageComponents,
   closeQuestCall,
   createQuestCall,
   getQuestCall,
   listCallResponses,
+  listUserResponseCharacterIds,
+  setCharacterResponses,
   setQuestCallMessageId,
-  setResponse,
 } = require("./services/questCalls");
 const {
   awardScToCharacters,
@@ -34,6 +36,7 @@ const {
   buildRetireCharacterRow,
   buildScRewardCharacterRow,
   findUnapprovedCharacterForDiscordUser,
+  formatCharacterClass,
   formatCharacterName,
   getOwnedActiveWestMarchesCharacter,
   getScRewardCharacterPreference,
@@ -42,6 +45,7 @@ const {
   listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
+  normalizeCharacterLevel,
   retireWestMarchesCharacter,
   upsertScRewardCharacterPreference,
 } = require("./services/westMarches");
@@ -301,8 +305,10 @@ async function handleInteraction(interaction) {
       return;
     }
 
-    if (interaction.customId.startsWith("quest-call-pick:")) {
-      const questCallId = Number(interaction.customId.slice("quest-call-pick:".length));
+    if (interaction.customId.startsWith("quest-call-character-pick:")) {
+      const questCallId = Number(
+        interaction.customId.slice("quest-call-character-pick:".length),
+      );
 
       await interaction.deferUpdate();
       try {
@@ -324,20 +330,39 @@ async function handleInteraction(interaction) {
           return;
         }
 
-        const brackets = interaction.values;
-        await setResponse(questCallId, interaction.user.id, brackets);
+        const selectedCharacterIds = interaction.values;
+        const ownedCharacters = await listOwnedActiveWestMarchesCharacters(
+          interaction.user.id,
+        );
+        const normalizedCharacters = ownedCharacters.map((character) => ({
+          id: character.id,
+          name: formatCharacterName(character),
+          className: formatCharacterClass(character),
+          level: normalizeCharacterLevel(character),
+        }));
+        const selectedCharacters = normalizedCharacters.filter((character) =>
+          selectedCharacterIds.includes(character.id),
+        );
 
-        const rows = await listCallResponses(questCallId);
-        const embed = buildQuestCallEmbed(call, rows);
+        await setCharacterResponses(questCallId, interaction.user.id, selectedCharacters);
+
+        const responses = await listCallResponses(questCallId);
+        const publicChannel = await interaction.client.channels.fetch(call.channelId);
+        if (publicChannel?.messages && call.messageId) {
+          const publicMessage = await publicChannel.messages.fetch(call.messageId);
+          await publicMessage.edit({
+            embeds: [buildQuestCallEmbed(call, responses)],
+            allowedMentions: { parse: [] },
+          });
+        }
+
         await interaction.editReply({
-          embeds: [embed],
-          components: buildQuestCallComponents(questCallId),
-        });
-        await interaction.followUp({
-          content: brackets.length
-            ? `You're marked for **${brackets.join(", ")}** on this quest call.`
+          content: selectedCharacters.length
+            ? `You're offering **${selectedCharacters.map((c) => `${c.name} (Lvl ${c.level || "?"})`).join(", ")}** for this quest call.`
             : "Your response has been cleared.",
-          ephemeral: true,
+          components: [
+            buildQuestCallCharacterRow(questCallId, normalizedCharacters, selectedCharacterIds),
+          ],
         });
       } catch (error) {
         console.error("Failed to update quest call response:", error);
@@ -1683,6 +1708,76 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.isButton()) {
+    if (interaction.customId.startsWith("quest-call-respond:")) {
+      const questCallId = Number(interaction.customId.slice("quest-call-respond:".length));
+
+      if (!isWestMarchesConfigured()) {
+        await interaction.reply({
+          content:
+            "West Marches API access is not configured, so I cannot load your characters yet.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        const call = await getQuestCall(questCallId);
+        if (!call || call.closedAt || new Date(call.expiresAt) <= new Date()) {
+          await interaction.reply({
+            content: "This quest call has ended.",
+            ephemeral: true,
+          });
+          return;
+        }
+
+        await interaction.deferReply({ ephemeral: true });
+
+        const characters = await listOwnedActiveWestMarchesCharacters(interaction.user.id);
+        if (characters.length === 0) {
+          await interaction.editReply(
+            "I could not find any active WestMarches.games characters linked to your Discord account.",
+          );
+          return;
+        }
+
+        const selectedCharacterIds = await listUserResponseCharacterIds(
+          questCallId,
+          interaction.user.id,
+        );
+        const normalizedCharacters = characters.map((character) => ({
+          id: character.id,
+          name: formatCharacterName(character),
+          className: formatCharacterClass(character),
+          level: normalizeCharacterLevel(character),
+        }));
+        const visibleCharacters = normalizedCharacters.slice(0, 25);
+        const overflowText =
+          normalizedCharacters.length > visibleCharacters.length
+            ? `\n\nI found ${normalizedCharacters.length} active characters. Discord menus can only show 25 options, so only the first 25 by name are listed.`
+            : "";
+
+        await interaction.editReply({
+          content: `Choose the character(s) you'd like to bring to this quest.${overflowText}`,
+          components: [
+            buildQuestCallCharacterRow(questCallId, visibleCharacters, selectedCharacterIds),
+          ],
+        });
+      } catch (error) {
+        console.error("Failed to open quest call character picker:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(
+            "Something went wrong while loading your characters. Please try again.",
+          );
+        } else {
+          await interaction.reply({
+            content: "Something went wrong while loading your characters. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+      return;
+    }
+
     if (interaction.customId.startsWith("quest-call-close:")) {
       const questCallId = Number(interaction.customId.slice("quest-call-close:".length));
 
@@ -3245,7 +3340,7 @@ async function handleInteraction(interaction) {
     try {
       const call = await createQuestCall(interaction.channelId, interaction.user.id);
       const embed = buildQuestCallEmbed(call, []);
-      const components = buildQuestCallComponents(call.id);
+      const components = buildQuestCallMessageComponents(call.id);
 
       const message = await interaction.channel.send({
         embeds: [embed],
@@ -3255,7 +3350,7 @@ async function handleInteraction(interaction) {
       await setQuestCallMessageId(call.id, message.id);
 
       await interaction.editReply(
-        "Your quest call has been posted! Players can respond with the level bracket(s) they have a character ready for.",
+        "Your quest call has been posted! Players can respond with the character(s) they'd like to bring.",
       );
     } catch (error) {
       console.error("Failed to process /quest-check:", error);

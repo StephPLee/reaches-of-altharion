@@ -327,7 +327,7 @@ const COMMAND_DEFINITIONS = [
   {
     name: "quest-check",
     description: "Announce that you're available to run a quest right now.",
-    help: "DMs: post a quest call so players can respond with the level bracket(s) they have a character ready for.",
+    help: "DMs: post a quest call so players can respond with the character(s) they'd like to bring, showing interest by level.",
     requiresDmOrRole: true,
   },
   {

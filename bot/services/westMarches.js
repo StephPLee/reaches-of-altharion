@@ -518,6 +518,7 @@ module.exports = {
   listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
   listOwnedCharacterSummaries,
+  normalizeCharacterLevel,
   normalizeCharacterNameSearch,
   retireWestMarchesCharacter,
   upsertScRewardCharacterPreference,
