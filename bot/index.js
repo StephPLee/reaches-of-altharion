@@ -5,6 +5,7 @@ const { registerGuildCommands } = require("./commands");
 const { handleInteraction } = require("./interactions");
 const { handleMessageForSticky } = require("./services/stickyMessages");
 const { handleMessageForCraftWatcher } = require("./services/craftWatcher");
+const { startQuestCallExpiryLoop } = require("./services/questCalls");
 
 const bot = new Client({
   intents: [
@@ -31,6 +32,8 @@ bot.once("clientReady", async () => {
   } catch (error) {
     console.error("Failed to register slash command:", error);
   }
+
+  startQuestCallExpiryLoop(bot);
 });
 
 bot.on("interactionCreate", async (interaction) => {
