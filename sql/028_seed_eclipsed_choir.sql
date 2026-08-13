@@ -10,7 +10,7 @@ INSERT INTO guilds (
 VALUES (
   'Eclipsed Choir',
   'eclipsed-choir',
-  '/img/Eclipsed%20Choir.png',
+  '/img/eclipsed%20choir.png',
   'Eclipsed Choir emblem',
   'A guild newly opened for membership and roster tracking.',
   120,

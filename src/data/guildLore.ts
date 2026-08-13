@@ -291,7 +291,7 @@ export const GUILD_LORE: GuildLoreEntry[] = [
     slug: "eclipsed-choir",
     summary: "A place for those who hear the hum of the void.",
     emblem: {
-      src: "/img/Eclipsed%20Choir.png",
+      src: "/img/eclipsed%20choir.png",
       alt: "Eclipsed Choir emblem",
     },
     lore: [

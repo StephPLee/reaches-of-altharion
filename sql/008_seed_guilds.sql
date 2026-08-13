@@ -19,7 +19,7 @@ VALUES
   ('The Argent Mark','the-argent-mark','/img/Argent%20Mark.webp','The Argent Mark emblem','A ranged guild of contracts, bounties, and precise judgement.',90,true),
   ('The Ashen Veil','the-ashen-veil','/img/Ashen%20Veil.png','The Ashen Veil emblem','A solitary hunter guild focused on initiative, survival, and predatory resilience.',100,true),
   ('Wayfarer''s Respite','wayfarers-respite','/img/wayfinders.png','Wayfarer''s Respite emblem','A wandering guild built around Old Potto, shared drink magic, and roadside refuge.',110,true),
-  ('Eclipsed Choir','eclipsed-choir','/img/Eclipsed%20Choir.png','Eclipsed Choir emblem','A guild newly opened for membership and roster tracking.',120,true)
+  ('Eclipsed Choir','eclipsed-choir','/img/eclipsed%20choir.png','Eclipsed Choir emblem','A guild newly opened for membership and roster tracking.',120,true)
 ON CONFLICT (slug) DO UPDATE
 SET
   name = EXCLUDED.name,
