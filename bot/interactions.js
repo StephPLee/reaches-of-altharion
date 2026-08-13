@@ -18,6 +18,16 @@ const {
 } = require("./services/bosses");
 const { buildFaqEmbeds, listFaqEntries } = require("./services/faq");
 const {
+  buildQuestCallComponents,
+  buildQuestCallEmbed,
+  closeQuestCall,
+  createQuestCall,
+  getQuestCall,
+  listCallResponses,
+  setQuestCallMessageId,
+  setResponse,
+} = require("./services/questCalls");
+const {
   awardScToCharacters,
   approveWestMarchesCharacter,
   buildCharacterListEmbed,
@@ -286,6 +296,54 @@ async function handleInteraction(interaction) {
         await interaction.editReply({
           content: "No set reserved. All sets become available to everyone after 12 hours.",
           components: [],
+        });
+      }
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-call-pick:")) {
+      const questCallId = Number(interaction.customId.slice("quest-call-pick:".length));
+
+      await interaction.deferUpdate();
+      try {
+        const call = await getQuestCall(questCallId);
+        if (!call || call.closedAt) {
+          await interaction.followUp({
+            content: "This quest call has ended.",
+            ephemeral: true,
+          });
+          return;
+        }
+
+        if (new Date(call.expiresAt) <= new Date()) {
+          await closeQuestCall(questCallId, "expired");
+          await interaction.followUp({
+            content: "This quest call just expired.",
+            ephemeral: true,
+          });
+          return;
+        }
+
+        const brackets = interaction.values;
+        await setResponse(questCallId, interaction.user.id, brackets);
+
+        const rows = await listCallResponses(questCallId);
+        const embed = buildQuestCallEmbed(call, rows);
+        await interaction.editReply({
+          embeds: [embed],
+          components: buildQuestCallComponents(questCallId),
+        });
+        await interaction.followUp({
+          content: brackets.length
+            ? `You're marked for **${brackets.join(", ")}** on this quest call.`
+            : "Your response has been cleared.",
+          ephemeral: true,
+        });
+      } catch (error) {
+        console.error("Failed to update quest call response:", error);
+        await interaction.followUp({
+          content: "Something went wrong updating your response. Please try again.",
+          ephemeral: true,
         });
       }
       return;
@@ -1625,6 +1683,55 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.isButton()) {
+    if (interaction.customId.startsWith("quest-call-close:")) {
+      const questCallId = Number(interaction.customId.slice("quest-call-close:".length));
+
+      try {
+        const call = await getQuestCall(questCallId);
+        if (!call) {
+          await interaction.reply({
+            content: "I couldn't find that quest call anymore.",
+            ephemeral: true,
+          });
+          return;
+        }
+        if (call.dmDiscordUserId !== interaction.user.id) {
+          await interaction.reply({
+            content: "Only the DM who posted this call can close it.",
+            ephemeral: true,
+          });
+          return;
+        }
+        if (call.closedAt) {
+          await interaction.reply({
+            content: "This quest call is already closed.",
+            ephemeral: true,
+          });
+          return;
+        }
+
+        await interaction.deferUpdate();
+        const closed = await closeQuestCall(questCallId, "manual");
+        const rows = await listCallResponses(questCallId);
+        const embed = buildQuestCallEmbed(closed, rows);
+        await interaction.editReply({ embeds: [embed], components: [] });
+      } catch (error) {
+        console.error("Failed to close quest call:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content: "Something went wrong. Please try again.",
+            components: [],
+          });
+        } else {
+          await interaction.reply({
+            content: "Something went wrong. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+      return;
+    }
+
     if (!interaction.customId.startsWith("craft-confirm:")) {
       return;
     }
@@ -3121,6 +3228,40 @@ async function handleInteraction(interaction) {
     } catch (error) {
       console.error("Failed to process /post-discord-content:", error);
       await interaction.editReply("Something went wrong while posting content. Please try again.");
+    }
+    return;
+  }
+
+  if (interaction.commandName === "quest-check") {
+    if (!hasDmOrRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "Only DMs can post a quest call.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+    try {
+      const call = await createQuestCall(interaction.channelId, interaction.user.id);
+      const embed = buildQuestCallEmbed(call, []);
+      const components = buildQuestCallComponents(call.id);
+
+      const message = await interaction.channel.send({
+        embeds: [embed],
+        components,
+        allowedMentions: { parse: [] },
+      });
+      await setQuestCallMessageId(call.id, message.id);
+
+      await interaction.editReply(
+        "Your quest call has been posted! Players can respond with the level bracket(s) they have a character ready for.",
+      );
+    } catch (error) {
+      console.error("Failed to process /quest-check:", error);
+      await interaction.editReply(
+        "Something went wrong while posting your quest call. Please try again.",
+      );
     }
     return;
   }

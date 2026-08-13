@@ -325,6 +325,12 @@ const COMMAND_DEFINITIONS = [
         ),
   },
   {
+    name: "quest-check",
+    description: "Announce that you're available to run a quest right now.",
+    help: "DMs: post a quest call so players can respond with the level bracket(s) they have a character ready for.",
+    requiresDmOrRole: true,
+  },
+  {
     name: "post-discord-content",
     description: "Post or refresh mirrored site content to Discord channels.",
     help: "Staff-only. Post or refresh starting graces or character creation content from the site into their Discord channels.",
