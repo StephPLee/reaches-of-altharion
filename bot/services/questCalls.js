@@ -77,11 +77,17 @@ function buildQuestCallEmbed(call, responses) {
       : "**This call has expired.**"
     : `Expires <t:${expiresUnix}:R>.`;
 
+  // Group by level, then by player within that level, so a player offering
+  // several characters at the same level counts once, not once per character.
   const byLevel = new Map();
   for (const response of responses) {
     const key = response.characterLevel > 0 ? response.characterLevel : "unknown";
-    if (!byLevel.has(key)) byLevel.set(key, []);
-    byLevel.get(key).push(response);
+    if (!byLevel.has(key)) byLevel.set(key, new Map());
+    const playersAtLevel = byLevel.get(key);
+    if (!playersAtLevel.has(response.discordUserId)) {
+      playersAtLevel.set(response.discordUserId, []);
+    }
+    playersAtLevel.get(response.discordUserId).push(response.characterName);
   }
 
   const levelKeys = [...byLevel.keys()].sort((a, b) => {
@@ -93,12 +99,12 @@ function buildQuestCallEmbed(call, responses) {
   const interestLines = levelKeys.length
     ? levelKeys
         .map((level) => {
-          const entries = byLevel.get(level);
+          const playersAtLevel = byLevel.get(level);
           const label = level === "unknown" ? "Unknown level" : `Level ${level}`;
-          const names = entries
-            .map((entry) => `<@${entry.discordUserId}> (${entry.characterName})`)
+          const names = [...playersAtLevel.entries()]
+            .map(([discordUserId, characterNames]) => `<@${discordUserId}> (${characterNames.join(", ")})`)
             .join(", ");
-          return `**${label}** (${entries.length}) — ${names}`;
+          return `**${label}** (${playersAtLevel.size}) — ${names}`;
         })
         .join("\n")
     : "_No responses yet._";
