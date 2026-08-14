@@ -214,6 +214,7 @@ const {
   listOwnedActiveCharactersForDiscordUser,
   listRecentAdventures,
 } = require("./westmarches");
+const { syncLevelRolesForCharacterIds } = require("./levelRoles");
 const {
   PurchaseError,
   fulfillRequest,
@@ -238,6 +239,26 @@ const app = express();
 const rateLimitBuckets = new Map();
 const DISCORD_MESSAGE_LIMIT = 2000;
 const ANNOUNCEMENT_CONTENT_LIMIT = 10000;
+
+async function syncLevelRolesAfterExperienceRewards(rewardEntries) {
+  const characterIds = (Array.isArray(rewardEntries) ? rewardEntries : [])
+    .filter((entry) => Number(entry?.experience) > 0)
+    .map((entry) => entry.characterId)
+    .filter((characterId) => typeof characterId === "string" && characterId);
+
+  if (characterIds.length === 0) {
+    return;
+  }
+
+  try {
+    await syncLevelRolesForCharacterIds(characterIds);
+  } catch (error) {
+    console.error(
+      "XP rewards succeeded but Discord level-role synchronization failed:",
+      error,
+    );
+  }
+}
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -3128,6 +3149,7 @@ app.post(
 
     try {
       const rewards = await distributeRewards(rewardPayload);
+      await syncLevelRolesAfterExperienceRewards(rewardPayload.rewards);
       await recordAuditEvent({
         action: "rp_reward_submit",
         status: "success",
@@ -3534,6 +3556,7 @@ app.post(
 
     try {
       const rewards = await distributeRewards(normalizedPayload);
+      await syncLevelRolesAfterExperienceRewards(normalizedPayload.rewards);
 
       await recordAuditEvent({
         action: "westmarches_reward_distribute_batch",
@@ -3618,6 +3641,7 @@ app.post(
       };
 
       const rewards = await distributeRewards(bulkPayload);
+      await syncLevelRolesAfterExperienceRewards(bulkPayload.rewards);
       const [reward] = rewards;
 
       if (

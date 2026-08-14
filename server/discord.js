@@ -88,6 +88,38 @@ async function fetchGuildMember(discordUserId) {
   return response.json();
 }
 
+async function addGuildMemberRole(discordUserId, roleId) {
+  const response = await fetch(
+    `${DISCORD_API_BASE_URL}/guilds/${discordGuildId}/members/${discordUserId}/roles/${roleId}`,
+    {
+      method: "PUT",
+      headers: { Authorization: `Bot ${discordBotToken}` },
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to add Discord role ${roleId} to ${discordUserId}: ${response.status} ${errorText}`,
+    );
+  }
+}
+
+async function removeGuildMemberRole(discordUserId, roleId) {
+  const response = await fetch(
+    `${DISCORD_API_BASE_URL}/guilds/${discordGuildId}/members/${discordUserId}/roles/${roleId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bot ${discordBotToken}` },
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to remove Discord role ${roleId} from ${discordUserId}: ${response.status} ${errorText}`,
+    );
+  }
+}
+
 async function postChannelMessage(channelId, payload) {
   const response = await fetch(
     `${DISCORD_API_BASE_URL}/channels/${channelId}/messages`,
@@ -204,6 +236,7 @@ async function fetchDiscordMessage(channelId, messageId) {
 }
 
 module.exports = {
+  addGuildMemberRole,
   buildAuthorizationUrl: buildAuthorizationUrlWithState,
   deleteChannelMessage,
   editChannelMessage,
@@ -214,4 +247,5 @@ module.exports = {
   fetchGuildRoles,
   memberHasRole,
   postChannelMessage,
+  removeGuildMemberRole,
 };
