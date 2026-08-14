@@ -134,6 +134,10 @@ const {
 
 const { buildFeedbackModal, saveDiscordFeedback } = require("./services/feedback");
 const { buildBookRequestModal, saveDiscordBookRequest } = require("./services/bookRequests");
+const {
+  formatReconciliationSummary,
+  reconcileAllLevelRoles,
+} = require("./services/levelRoles");
 
 const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
 const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
@@ -228,6 +232,28 @@ async function syncMemberGuildRole(member, { addRoleId, removeRoleId } = {}) {
     } catch (error) {
       console.error(`Failed to remove guild role ${removeRoleId} from ${member.id}:`, error);
     }
+  }
+}
+
+async function ensureMemberRole(guild, discordUserId, roleId) {
+  if (!guild || !roleId) {
+    return "unavailable";
+  }
+
+  try {
+    const member = await guild.members.fetch(discordUserId);
+    if (member.roles.cache.has(roleId)) {
+      return "already-assigned";
+    }
+
+    await member.roles.add(roleId, "Character approved");
+    return "assigned";
+  } catch (error) {
+    console.error(
+      `Failed to ensure role ${roleId} for Discord user ${discordUserId}:`,
+      error,
+    );
+    return "failed";
   }
 }
 
@@ -3048,6 +3074,28 @@ async function handleInteraction(interaction) {
     return;
   }
 
+  if (interaction.commandName === "sync-level-roles") {
+    if (!hasRequiredRole(interaction)) {
+      await interaction.reply({
+        content: "You do not have the required role to synchronize level roles.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+    try {
+      const summary = await reconcileAllLevelRoles(interaction.guild);
+      await interaction.editReply(formatReconciliationSummary(summary));
+    } catch (error) {
+      console.error("Failed to reconcile character level roles:", error);
+      await interaction.editReply(
+        "The level-role reconciliation failed before it could complete. Check the bot logs for details.",
+      );
+    }
+    return;
+  }
+
   if (interaction.commandName === "approve-character") {
     if (!hasDmOrRequiredRole(interaction)) {
       await interaction.reply({
@@ -3099,6 +3147,11 @@ async function handleInteraction(interaction) {
 
       const character = result.character;
       const approved = await approveWestMarchesCharacter(character.id);
+      const beginnerRoleStatus = await ensureMemberRole(
+        interaction.guild,
+        targetUser.id,
+        config.beginnerRoleId,
+      );
       await deleteStatRollsByRoller(targetUser.id).catch((err) =>
         console.error("Failed to delete stat rolls for approved user:", err),
       );
@@ -3132,11 +3185,17 @@ async function handleInteraction(interaction) {
         approved?.isApproved === true
           ? "has been approved"
           : "was submitted for approval";
+      const beginnerRoleText =
+        beginnerRoleStatus === "assigned"
+          ? "I've assigned your Beginner [1-4] role."
+          : beginnerRoleStatus === "already-assigned"
+            ? "You already have the Beginner [1-4] role."
+            : `I couldn't assign the Beginner [1-4] role automatically; please grab it from ${beginnerChannelText}.`;
 
       await interaction.editReply({
         content:
           `${targetUser} Your character **${formatCharacterName(character)}** ${approvalConfirmed} by ${interaction.user}!\n` +
-          `Don't forget to grab your Beginner [1-4] role from ${beginnerChannelText} and to add any XP you have from starting at higher than lvl 1.` +
+          `${beginnerRoleText} Don't forget to add any XP you have from starting at higher than lvl 1.` +
           approverRewardText,
         allowedMentions: {
           parse: [],

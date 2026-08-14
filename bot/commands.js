@@ -95,6 +95,13 @@ const COMMAND_DEFINITIONS = [
         ),
   },
   {
+    name: "sync-level-roles",
+    description: "Reconcile character level bracket roles for all players.",
+    help: "Staff-only. Reconcile all level bracket roles and show a private change summary.",
+    requiresRole: true,
+    hideFromHelp: true,
+  },
+  {
     name: "join-guild",
     description: "Join or move one of your characters to a guild.",
     help: "Choose one of your characters and add or move them to a guild roster.",
@@ -382,6 +389,7 @@ function buildHelpMessages(interaction) {
   const canUseDmCommands = hasDmOrRequiredRole(interaction);
   const availableCommands = COMMAND_DEFINITIONS.filter(
     (command) =>
+      !command.hideFromHelp &&
       (!command.requiresRole || canUseRoleCommands) &&
       (!command.requiresDmOrRole || canUseDmCommands),
   );

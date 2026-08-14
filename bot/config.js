@@ -28,6 +28,8 @@ const config = {
   dmRoleId: process.env.DM_ROLE_ID || "",
   guildRosterChannelId: process.env.GUILD_ROSTER_CHANNEL_ID || "",
   bossStatusChannelId: process.env.BOSS_STATUS_CHANNEL_ID || "",
+  beginnerRoleId:
+    process.env.BEGINNER_ROLE_ID || "1417172430539063378",
   beginnerRoleChannelId: process.env.BEGINNER_ROLE_CHANNEL_ID || "",
   startingGracesChannelId: process.env.STARTING_GRACES_CHANNEL_ID || "",
   characterCreationChannelId: process.env.CHARACTER_CREATION_CHANNEL_ID || "",
