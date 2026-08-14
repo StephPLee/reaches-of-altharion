@@ -3195,7 +3195,7 @@ async function handleInteraction(interaction) {
       await interaction.editReply({
         content:
           `${targetUser} Your character **${formatCharacterName(character)}** ${approvalConfirmed} by ${interaction.user}!\n` +
-          `${beginnerRoleText} Don't forget to add any XP you have from starting at higher than lvl 1.` +
+          `${beginnerRoleText} ` +
           approverRewardText,
         allowedMentions: {
           parse: [],
