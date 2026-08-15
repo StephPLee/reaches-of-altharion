@@ -96,8 +96,8 @@ const COMMAND_DEFINITIONS = [
   },
   {
     name: "sync-level-roles",
-    description: "Reconcile character level bracket roles for all players.",
-    help: "Staff-only. Reconcile all level bracket roles and show a private change summary.",
+    description: "Preview and reconcile character level roles for all players.",
+    help: "Staff-only. Preview all bracket-role changes, then approve them in one batch.",
     requiresRole: true,
     hideFromHelp: true,
   },

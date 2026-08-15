@@ -1,4 +1,9 @@
-const { ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder,
+} = require("discord.js");
 const config = require("./config");
 const { buildHelpMessages } = require("./commands");
 const { hasDmOrRequiredRole, hasRequiredRole } = require("./permissions");
@@ -135,12 +140,30 @@ const {
 const { buildFeedbackModal, saveDiscordFeedback } = require("./services/feedback");
 const { buildBookRequestModal, saveDiscordBookRequest } = require("./services/bookRequests");
 const {
+  formatChangeDetails,
+  formatReconciliationPreview,
   formatReconciliationSummary,
+  previewAllLevelRoleChanges,
   reconcileAllLevelRoles,
 } = require("./services/levelRoles");
 
 const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp }
 const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
+
+const pendingLevelRoleSyncs = new Map();
+
+function buildLevelRoleSyncButtons(discordUserId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`level-role-sync-apply:${discordUserId}`)
+      .setLabel("Apply all changes")
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`level-role-sync-cancel:${discordUserId}`)
+      .setLabel("Cancel")
+      .setStyle(ButtonStyle.Secondary),
+  );
+}
 
 function parseSubmissionContent(content, embeds = []) {
   const searchText = [
@@ -1734,6 +1757,76 @@ async function handleInteraction(interaction) {
   }
 
   if (interaction.isButton()) {
+    if (interaction.customId.startsWith("level-role-sync-")) {
+      const [action, ownerId] = interaction.customId
+        .slice("level-role-sync-".length)
+        .split(":");
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "This reconciliation preview belongs to someone else.",
+          ephemeral: true,
+        });
+        return;
+      }
+      if (!hasRequiredRole(interaction)) {
+        await interaction.reply({
+          content: "You no longer have permission to synchronize level roles.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const expiresAt = pendingLevelRoleSyncs.get(ownerId);
+      if (!expiresAt || expiresAt < Date.now()) {
+        pendingLevelRoleSyncs.delete(ownerId);
+        await interaction.update({
+          content: "This preview has expired. Run `/sync-level-roles` again for fresh data.",
+          components: [],
+          attachments: [],
+        });
+        return;
+      }
+
+      pendingLevelRoleSyncs.delete(ownerId);
+      if (action === "cancel") {
+        await interaction.update({
+          content: "Level-role reconciliation cancelled. No roles were changed.",
+          components: [],
+          attachments: [],
+        });
+        return;
+      }
+
+      await interaction.deferUpdate();
+      try {
+        const summary = await reconcileAllLevelRoles(interaction.guild);
+        await interaction.editReply({
+          content: formatReconciliationSummary(summary),
+          components: [],
+          attachments: [],
+          files: summary.changeDetails.length > 0
+            ? [{
+                attachment: Buffer.from(
+                  formatChangeDetails(
+                    summary.changeDetails,
+                    "Applied level-role reconciliation changes",
+                  ),
+                  "utf8",
+                ),
+                name: "level-role-sync-results.txt",
+              }]
+            : [],
+        });
+      } catch (error) {
+        console.error("Failed to apply character level roles:", error);
+        await interaction.editReply({
+          content: "The reconciliation failed before it completed. Check the bot logs for details.",
+          components: [],
+        });
+      }
+      return;
+    }
+
     if (interaction.customId.startsWith("quest-call-respond:")) {
       const questCallId = Number(interaction.customId.slice("quest-call-respond:".length));
 
@@ -3085,8 +3178,31 @@ async function handleInteraction(interaction) {
 
     await interaction.deferReply({ ephemeral: true });
     try {
-      const summary = await reconcileAllLevelRoles(interaction.guild);
-      await interaction.editReply(formatReconciliationSummary(summary));
+      const preview = await previewAllLevelRoleChanges(interaction.guild);
+      if (preview.changes.length > 0) {
+        pendingLevelRoleSyncs.set(
+          interaction.user.id,
+          Date.now() + 15 * 60 * 1000,
+        );
+      }
+      await interaction.editReply({
+        content: formatReconciliationPreview(preview),
+        components: preview.changes.length > 0
+          ? [buildLevelRoleSyncButtons(interaction.user.id)]
+          : [],
+        files: preview.changes.length > 0
+          ? [{
+              attachment: Buffer.from(
+                formatChangeDetails(
+                  preview.changes,
+                  "Proposed level-role reconciliation changes (dry run)",
+                ),
+                "utf8",
+              ),
+              name: "level-role-sync-preview.txt",
+            }]
+          : [],
+      });
     } catch (error) {
       console.error("Failed to reconcile character level roles:", error);
       await interaction.editReply(
