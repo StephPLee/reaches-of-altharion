@@ -6,6 +6,7 @@ const { handleInteraction } = require("./interactions");
 const { handleMessageForSticky } = require("./services/stickyMessages");
 const { handleMessageForCraftWatcher } = require("./services/craftWatcher");
 const { startQuestCallExpiryLoop } = require("./services/questCalls");
+const { updatePlayerMarketplaceMessage } = require("./services/playerMarketplaceDiscord");
 
 const bot = new Client({
   intents: [
@@ -34,6 +35,9 @@ bot.once("clientReady", async () => {
   }
 
   startQuestCallExpiryLoop(bot);
+  updatePlayerMarketplaceMessage(bot).catch((error) => {
+    console.error("Failed to initialise the player marketplace display:", error);
+  });
 });
 
 bot.on("interactionCreate", async (interaction) => {
