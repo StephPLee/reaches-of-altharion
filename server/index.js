@@ -22,10 +22,12 @@ const {
   isProduction,
   marketplaceChannelId,
   marketplaceMessageId,
+  playerMarketplaceChannelId,
   oauthReturnToCookieName,
   oauthStateCookieName,
   oauthStateTtlMinutes,
   playerRoleId,
+  publicSiteUrl,
   port,
   requiredRoleId,
   dmRoleId,
@@ -41,6 +43,7 @@ const {
   westMarchesGoldCurrencyId,
   westMarchesScCurrencyId,
 } = require("./config");
+const { syncPlayerMarketplaceDiscord } = require("../shared/playerMarketplaceDiscord");
 const { recordAuditEvent } = require("./audit");
 const { submitFeedback } = require("../shared/feedback");
 const {
@@ -68,6 +71,17 @@ const {
   updateDiscordStatMessage,
 } = require("./statRolls");
 const { pool } = require("./db");
+
+function updatePlayerMarketplaceDiscord() {
+  return syncPlayerMarketplaceDiscord({
+    pool,
+    channelId: playerMarketplaceChannelId,
+    siteUrl: publicSiteUrl,
+    postMessage: postChannelMessage,
+    editMessage: editChannelMessage,
+    deleteMessage: deleteChannelMessage,
+  });
+}
 const {
   createCalendarEvent,
   deleteCalendarEvent,
@@ -2926,6 +2940,9 @@ app.post(
         currencyType,
         quantity,
       });
+      await updatePlayerMarketplaceDiscord().catch((syncError) => {
+        console.error("Failed to update player marketplace Discord display after purchase:", syncError);
+      });
       await recordAuditEvent({
         action: "marketplace_purchase",
         status: result.creditFailed ? "partial_error" : "success",
@@ -2936,6 +2953,9 @@ app.post(
       });
       res.status(200).json({ listing: result.listing, creditFailed: result.creditFailed });
     } catch (error) {
+      await updatePlayerMarketplaceDiscord().catch((syncError) => {
+        console.error("Failed to refresh player marketplace Discord display after purchase error:", syncError);
+      });
       await recordAuditEvent({
         action: "marketplace_purchase",
         status: "error",
@@ -6865,6 +6885,10 @@ publishDueMarketplaces({
   postChannelMessage,
 }).catch((error) => {
   console.error("Initial marketplace publish check failed:", error);
+});
+
+updatePlayerMarketplaceDiscord().catch((error) => {
+  console.error("Initial player marketplace Discord sync failed:", error);
 });
 
 setInterval(

@@ -75,6 +75,7 @@ const {
   listActiveListingsForDiscordUser,
   listOpenRequestsForDiscordUser,
 } = require("./services/playerMarketplace");
+const { updatePlayerMarketplaceMessage } = require("./services/playerMarketplaceDiscord");
 const {
   buildJoinGuildCharacterRow,
   buildJoinGuildGuildRow,
@@ -1097,6 +1098,9 @@ async function handleInteraction(interaction) {
           content: `Cancelled your listing for **${cancelled.itemName}**.`,
           components: [],
         });
+        updatePlayerMarketplaceMessage(interaction.client).catch((syncError) => {
+          console.error("Failed to update player marketplace display after cancellation:", syncError);
+        });
       } catch (error) {
         console.error("Failed to process /sell cancel select:", error);
         if (interaction.deferred || interaction.replied) {
@@ -1446,6 +1450,9 @@ async function handleInteraction(interaction) {
         await interaction.editReply(
           `Listed ${quantityText}**${item.name}** for **${formatListingPrice(listing)}**${quantity > 1 ? " each" : ""} on the player marketplace.`,
         );
+        updatePlayerMarketplaceMessage(interaction.client).catch((syncError) => {
+          console.error("Failed to update player marketplace display after listing:", syncError);
+        });
       } catch (error) {
         console.error("Failed to process /sell price modal:", error);
         if (interaction.deferred || interaction.replied) {

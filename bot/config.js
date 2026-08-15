@@ -33,6 +33,8 @@ const config = {
   beginnerRoleChannelId: process.env.BEGINNER_ROLE_CHANNEL_ID || "",
   startingGracesChannelId: process.env.STARTING_GRACES_CHANNEL_ID || "",
   characterCreationChannelId: process.env.CHARACTER_CREATION_CHANNEL_ID || "",
+  playerMarketplaceChannelId:
+    process.env.PLAYER_MARKETPLACE_CHANNEL_ID || "1538175219695620207",
   publicSiteUrl: (
     process.env.PUBLIC_SITE_URL || "https://reachesofaltharion.com"
   ).replace(/\/$/, ""),

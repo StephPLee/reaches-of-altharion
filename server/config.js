@@ -72,7 +72,12 @@ module.exports = {
   characterCreationChannelId: process.env.CHARACTER_CREATION_CHANNEL_ID || "",
   marketplaceChannelId: process.env.MARKETPLACE_CHANNEL_ID || "",
   marketplaceMessageId: process.env.MARKETPLACE_MESSAGE_ID || "",
+  playerMarketplaceChannelId:
+    process.env.PLAYER_MARKETPLACE_CHANNEL_ID || "1538175219695620207",
   playerRoleId: process.env.PLAYER_ROLE_ID || "",
+  publicSiteUrl: (
+    process.env.PUBLIC_SITE_URL || "https://reachesofaltharion.com"
+  ).replace(/\/$/, ""),
   discordOauthRedirectUri:
     process.env.DISCORD_OAUTH_REDIRECT_URI ||
     "http://localhost:3001/auth/discord/callback",
