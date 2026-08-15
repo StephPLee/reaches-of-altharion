@@ -23,15 +23,30 @@ function groupCharactersByDiscordUser(characters) {
   return grouped;
 }
 
-async function reconcileMemberLevelRoles(member, characters) {
+function getMemberRoleChanges(member, characters) {
   const desiredRoleIds = getDesiredLevelRoleIds(characters);
   const currentRoleIds = new Set(
     member.roles.cache
       .filter((_role, roleId) => LEVEL_ROLE_IDS.has(roleId))
       .map((role) => role.id),
   );
-  const added = [...desiredRoleIds].filter((roleId) => !currentRoleIds.has(roleId));
-  const removed = [...currentRoleIds].filter((roleId) => !desiredRoleIds.has(roleId));
+  return {
+    added: [...desiredRoleIds].filter((roleId) => !currentRoleIds.has(roleId)),
+    removed: [...currentRoleIds].filter((roleId) => !desiredRoleIds.has(roleId)),
+  };
+}
+
+function describeCharacters(characters) {
+  const descriptions = characters.map((character) => {
+    const status = typeof character?.status === "string" ? character.status : "UNKNOWN";
+    const approval = character?.isApproved === true ? "approved" : "unapproved";
+    return `${character?.name || "Unnamed"} (level ${character?.level ?? "?"}, ${status}, ${approval})`;
+  });
+  return descriptions.join("; ") || "No characters found";
+}
+
+async function reconcileMemberLevelRoles(member, characters) {
+  const { added, removed } = getMemberRoleChanges(member, characters);
   const result = { added: [], removed: [], failures: 0, neededChanges: added.length + removed.length };
 
   if (added.length > 0) {
@@ -70,6 +85,7 @@ async function reconcileAllLevelRoles(guild) {
     rolesRemoved: 0,
     addedByRole: new Map(),
     removedByRole: new Map(),
+    changeDetails: [],
   };
 
   for (const [discordUserId, userCharacters] of charactersByUser) {
@@ -101,6 +117,16 @@ async function reconcileAllLevelRoles(guild) {
       }
       summary.rolesAdded += result.added.length;
       summary.rolesRemoved += result.removed.length;
+      if (result.added.length > 0 || result.removed.length > 0 || result.failures > 0) {
+        summary.changeDetails.push({
+          discordUserId,
+          displayName: member.displayName || member.user?.username || discordUserId,
+          characters: describeCharacters(userCharacters),
+          added: result.added,
+          removed: result.removed,
+          failures: result.failures,
+        });
+      }
       for (const roleId of result.added) {
         summary.addedByRole.set(roleId, (summary.addedByRole.get(roleId) || 0) + 1);
       }
@@ -114,6 +140,85 @@ async function reconcileAllLevelRoles(guild) {
   }
 
   return summary;
+}
+
+async function previewAllLevelRoleChanges(guild) {
+  const characters = await listAllWestMarchesCharacters();
+  const charactersByUser = groupCharactersByDiscordUser(characters);
+  const preview = {
+    characterOwners: charactersByUser.size,
+    membersChecked: 0,
+    membersMissing: 0,
+    failures: 0,
+    rolesAdded: 0,
+    rolesRemoved: 0,
+    changes: [],
+  };
+
+  for (const [discordUserId, userCharacters] of charactersByUser) {
+    try {
+      const member = await guild.members.fetch(discordUserId);
+      preview.membersChecked += 1;
+      const changes = getMemberRoleChanges(member, userCharacters);
+      if (changes.added.length === 0 && changes.removed.length === 0) {
+        continue;
+      }
+      preview.rolesAdded += changes.added.length;
+      preview.rolesRemoved += changes.removed.length;
+      preview.changes.push({
+        discordUserId,
+        displayName: member.displayName || member.user?.username || discordUserId,
+        characters: describeCharacters(userCharacters),
+        ...changes,
+      });
+    } catch (error) {
+      if (error?.code === 10007) {
+        preview.membersMissing += 1;
+      } else {
+        preview.failures += 1;
+        console.error(`Failed to preview level roles for ${discordUserId}:`, error);
+      }
+    }
+  }
+  return preview;
+}
+
+function roleNames(roleIds) {
+  return roleIds
+    .map((roleId) => LEVEL_ROLE_BRACKETS.find((bracket) => bracket.roleId === roleId)?.name || roleId)
+    .join(", ") || "none";
+}
+
+function formatChangeDetails(changes, title) {
+  return [
+    title,
+    "",
+    ...changes.flatMap((change) => [
+      `${change.displayName} (${change.discordUserId})`,
+      `  Characters: ${change.characters}`,
+      `  Add: ${roleNames(change.added)}`,
+      `  Remove: ${roleNames(change.removed)}`,
+      ...(change.failures ? [`  Failed operations: ${change.failures}`] : []),
+      "",
+    ]),
+  ].join("\n");
+}
+
+function formatReconciliationPreview(preview) {
+  return [
+    "**Level-role reconciliation preview**",
+    "No roles have been changed yet.",
+    `Character owners found: **${preview.characterOwners}**`,
+    `Server members checked: **${preview.membersChecked}**`,
+    `Members needing changes: **${preview.changes.length}**`,
+    `Proposed additions: **${preview.rolesAdded}**`,
+    `Proposed removals: **${preview.rolesRemoved}**`,
+    `No longer in server: **${preview.membersMissing}**`,
+    `Preview failures: **${preview.failures}**`,
+    preview.changes.length > 0
+      ? "Review the attached report, then apply all changes with the button below. Character data will be fetched again before applying."
+      : "Everyone checked already has the correct roles.",
+  ].join("\n");
 }
 
 function formatReconciliationSummary(summary) {
@@ -139,7 +244,10 @@ function formatReconciliationSummary(summary) {
 }
 
 module.exports = {
+  formatChangeDetails,
+  formatReconciliationPreview,
   formatReconciliationSummary,
+  previewAllLevelRoleChanges,
   reconcileAllLevelRoles,
   reconcileMemberLevelRoles,
 };
