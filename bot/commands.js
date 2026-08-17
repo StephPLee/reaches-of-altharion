@@ -333,9 +333,17 @@ const COMMAND_DEFINITIONS = [
   },
   {
     name: "quest-check",
-    description: "Announce that you're available to run a quest right now.",
-    help: "DMs: post a quest call so players can respond with the character(s) they'd like to bring, showing interest by level.",
+    description: "Announce that you're available to run a quest, now or at a scheduled time.",
+    help: "DMs: post a quest call (optionally for a future start time) so players can respond with the character(s) they'd like to bring, showing interest by level.",
     requiresDmOrRole: true,
+    buildCommand: (command) =>
+      command.addIntegerOption((option) =>
+        option
+          .setName("hours")
+          .setDescription("Hours until you'll start (0 or omitted = right now). Max 48.")
+          .setMinValue(0)
+          .setMaxValue(48),
+      ),
   },
   {
     name: "post-discord-content",

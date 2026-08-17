@@ -3520,7 +3520,12 @@ async function handleInteraction(interaction) {
 
     await interaction.deferReply({ ephemeral: true });
     try {
-      const call = await createQuestCall(interaction.channelId, interaction.user.id);
+      const hoursUntilStart = interaction.options.getInteger("hours") ?? 0;
+      const call = await createQuestCall(
+        interaction.channelId,
+        interaction.user.id,
+        hoursUntilStart,
+      );
       const embed = buildQuestCallEmbed(call, []);
       const components = buildQuestCallMessageComponents(call.id);
 
