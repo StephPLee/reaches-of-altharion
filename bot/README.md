@@ -69,6 +69,7 @@ Run `sql/046_sticky_messages.sql` to create the sticky message table.
 Run `sql/060_discord_message_id_arrays.sql` so `/post-discord-content` can post long starting graces or wiki sections across multiple messages instead of truncating them.
 Run `sql/061_quest_calls.sql` to create the quest call tables.
 Run `sql/062_quest_call_responses_characters.sql` to move quest call responses from level brackets to specific characters.
+Run `sql/066_quest_calls_starts_at.sql` so `/quest-check` can schedule a future start time instead of only meaning "right now".
 
 ## 3) Environment Variables
 

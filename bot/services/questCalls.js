@@ -18,6 +18,7 @@ function mapQuestCallRow(row) {
         messageId: row.discord_message_id,
         dmDiscordUserId: row.dm_discord_user_id,
         createdAt: row.created_at,
+        startsAt: row.starts_at,
         expiresAt: row.expires_at,
         closedAt: row.closed_at,
         closeReason: row.close_reason,
@@ -69,13 +70,27 @@ function buildQuestCallCharacterRow(questCallId, characters, selectedCharacterId
 
 function buildQuestCallEmbed(call, responses) {
   const isClosed = Boolean(call.closedAt);
+  const startsUnix = Math.floor(new Date(call.startsAt).getTime() / 1000);
   const expiresUnix = Math.floor(new Date(call.expiresAt).getTime() / 1000);
+
+  // A scheduled call's starts_at is set well after created_at; an immediate
+  // call's starts_at is set to (approximately) created_at. Compare against
+  // created_at rather than expires_at, since those two columns mean
+  // different things and shouldn't be coupled for this detection.
+  const isScheduled =
+    new Date(call.startsAt).getTime() - new Date(call.createdAt).getTime() > 60_000;
 
   const statusLine = isClosed
     ? call.closeReason === "manual"
       ? "**This call has been closed by the DM.**"
       : "**This call has expired.**"
-    : `Expires <t:${expiresUnix}:R>.`;
+    : isScheduled
+      ? `Responses close <t:${expiresUnix}:R>, when the quest starts.`
+      : `Expires <t:${expiresUnix}:R>.`;
+
+  const introLine = isScheduled
+    ? `<@${call.dmDiscordUserId}> is planning to run a quest, starting <t:${startsUnix}:R>!`
+    : `<@${call.dmDiscordUserId}> is available to run a quest right now!`;
 
   // Group by level, then by player within that level, so a player offering
   // several characters at the same level counts once, not once per character.
@@ -112,7 +127,7 @@ function buildQuestCallEmbed(call, responses) {
   const embed = new EmbedBuilder()
     .setTitle("Quest Call")
     .setDescription(
-      `<@${call.dmDiscordUserId}> is available to run a quest right now! Click **Respond with a character** below and pick which of your characters you'd like to bring.\n\n${statusLine}\n\n**Interest by level**\n${interestLines}`,
+      `${introLine} Click **Respond with a character** below and pick which of your characters you'd like to bring.\n\n${statusLine}\n\n**Interest by level**\n${interestLines}`,
     )
     .setColor(isClosed ? 0x99aab5 : 0x57f287)
     .setFooter({ text: "Only the DM who posted this call can close it early." });
@@ -120,15 +135,18 @@ function buildQuestCallEmbed(call, responses) {
   return embed;
 }
 
-async function createQuestCall(channelId, dmDiscordUserId) {
-  const expiresAt = new Date(Date.now() + EXPIRY_MS);
+async function createQuestCall(channelId, dmDiscordUserId, hoursUntilStart = 0) {
+  const now = Date.now();
+  const startsAt =
+    hoursUntilStart > 0 ? new Date(now + hoursUntilStart * 60 * 60 * 1000) : new Date(now);
+  const expiresAt = hoursUntilStart > 0 ? startsAt : new Date(now + EXPIRY_MS);
   const result = await pool.query(
     `
-    INSERT INTO quest_calls (discord_channel_id, dm_discord_user_id, expires_at)
-    VALUES ($1, $2, $3)
+    INSERT INTO quest_calls (discord_channel_id, dm_discord_user_id, starts_at, expires_at)
+    VALUES ($1, $2, $3, $4)
     RETURNING *
     `,
-    [channelId, dmDiscordUserId, expiresAt],
+    [channelId, dmDiscordUserId, startsAt, expiresAt],
   );
   return mapQuestCallRow(result.rows[0]);
 }
