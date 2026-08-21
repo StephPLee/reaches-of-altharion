@@ -38,6 +38,35 @@ function buildMarketplaceLines(listings, siteUrl) {
   return lines;
 }
 
+function buildRequestLines(requests, siteUrl) {
+  const url = `${String(siteUrl || "https://reachesofaltharion.com").replace(/\/$/, "")}/marketplace`;
+  const lines = [
+    "# Player Requests",
+    `Items players are currently looking for. [Open the marketplace](${url}) to fulfil a request.`,
+    "",
+  ];
+
+  if (requests.length === 0) {
+    lines.push("*There are no open player requests right now.*");
+    return lines;
+  }
+
+  for (const request of requests) {
+    const quantity = Number(request.quantity) > 1 ? `${request.quantity}x ` : "";
+    const item = escapeDiscordMarkdown(request.item_name);
+    const requester = escapeDiscordMarkdown(
+      request.requester_character_name || "Unknown character",
+    );
+    const price = formatPrice({
+      price_gold: request.offer_price_gold,
+      price_sc: request.offer_price_sc,
+    });
+    lines.push(`- **${quantity}${item}** — **${price}** each — ${requester}`);
+  }
+
+  return lines;
+}
+
 function chunkLines(lines) {
   const chunks = [];
   let current = "";
@@ -62,22 +91,70 @@ async function syncPlayerMarketplaceDiscord({
   editMessage,
   deleteMessage,
 }) {
+  return syncDiscordDisplay({
+    pool,
+    channelId,
+    siteUrl,
+    postMessage,
+    editMessage,
+    deleteMessage,
+    advisoryLockId: 73421091,
+    contentQuery:
+      "SELECT * FROM player_marketplace_listings WHERE status = 'active' ORDER BY item_name ASC, created_at ASC",
+    stateTable: "player_marketplace_discord_messages",
+    buildLines: buildMarketplaceLines,
+  });
+}
+
+async function syncPlayerRequestsDiscord({
+  pool,
+  channelId,
+  siteUrl,
+  postMessage,
+  editMessage,
+  deleteMessage,
+}) {
+  return syncDiscordDisplay({
+    pool,
+    channelId,
+    siteUrl,
+    postMessage,
+    editMessage,
+    deleteMessage,
+    advisoryLockId: 73421092,
+    contentQuery:
+      "SELECT * FROM player_marketplace_requests WHERE status = 'open' ORDER BY item_name ASC, created_at ASC",
+    stateTable: "player_marketplace_request_discord_messages",
+    buildLines: buildRequestLines,
+  });
+}
+
+async function syncDiscordDisplay({
+  pool,
+  channelId,
+  siteUrl,
+  postMessage,
+  editMessage,
+  deleteMessage,
+  advisoryLockId,
+  contentQuery,
+  stateTable,
+  buildLines,
+}) {
   if (!channelId) return [];
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query("SELECT pg_advisory_xact_lock($1)", [73421091]);
-    const [listingsResult, stateResult] = await Promise.all([
+    await client.query("SELECT pg_advisory_xact_lock($1)", [advisoryLockId]);
+    const [contentResult, stateResult] = await Promise.all([
+      client.query(contentQuery),
       client.query(
-        "SELECT * FROM player_marketplace_listings WHERE status = 'active' ORDER BY item_name ASC, created_at ASC",
-      ),
-      client.query(
-        "SELECT message_ids FROM player_marketplace_discord_messages WHERE channel_id = $1",
+        `SELECT message_ids FROM ${stateTable} WHERE channel_id = $1`,
         [channelId],
       ),
     ]);
-    const chunks = chunkLines(buildMarketplaceLines(listingsResult.rows, siteUrl));
+    const chunks = chunkLines(buildLines(contentResult.rows, siteUrl));
     const oldIds = stateResult.rows[0]?.message_ids || [];
     const nextIds = [];
 
@@ -107,7 +184,7 @@ async function syncPlayerMarketplaceDiscord({
       ),
     );
     await client.query(
-      `INSERT INTO player_marketplace_discord_messages (channel_id, message_ids, updated_at)
+      `INSERT INTO ${stateTable} (channel_id, message_ids, updated_at)
        VALUES ($1, $2, NOW())
        ON CONFLICT (channel_id) DO UPDATE SET message_ids = EXCLUDED.message_ids, updated_at = NOW()`,
       [channelId, nextIds],
@@ -122,4 +199,10 @@ async function syncPlayerMarketplaceDiscord({
   }
 }
 
-module.exports = { buildMarketplaceLines, chunkLines, syncPlayerMarketplaceDiscord };
+module.exports = {
+  buildMarketplaceLines,
+  buildRequestLines,
+  chunkLines,
+  syncPlayerMarketplaceDiscord,
+  syncPlayerRequestsDiscord,
+};

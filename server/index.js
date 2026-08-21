@@ -43,7 +43,10 @@ const {
   westMarchesGoldCurrencyId,
   westMarchesScCurrencyId,
 } = require("./config");
-const { syncPlayerMarketplaceDiscord } = require("../shared/playerMarketplaceDiscord");
+const {
+  syncPlayerMarketplaceDiscord,
+  syncPlayerRequestsDiscord,
+} = require("../shared/playerMarketplaceDiscord");
 const { recordAuditEvent } = require("./audit");
 const { submitFeedback } = require("../shared/feedback");
 const {
@@ -74,6 +77,17 @@ const { pool } = require("./db");
 
 function updatePlayerMarketplaceDiscord() {
   return syncPlayerMarketplaceDiscord({
+    pool,
+    channelId: playerMarketplaceChannelId,
+    siteUrl: publicSiteUrl,
+    postMessage: postChannelMessage,
+    editMessage: editChannelMessage,
+    deleteMessage: deleteChannelMessage,
+  });
+}
+
+function updatePlayerRequestsDiscord() {
+  return syncPlayerRequestsDiscord({
     pool,
     channelId: playerMarketplaceChannelId,
     siteUrl: publicSiteUrl,
@@ -3067,6 +3081,9 @@ app.post(
         fulfillerItemId,
         currencyType,
       });
+      await updatePlayerRequestsDiscord().catch((syncError) => {
+        console.error("Failed to update player request Discord display after fulfilment:", syncError);
+      });
       await recordAuditEvent({
         action: "marketplace_request_fulfill",
         status: result.creditFailed ? "partial_error" : "success",
@@ -3077,6 +3094,9 @@ app.post(
       });
       res.status(200).json({ request: result.request, creditFailed: result.creditFailed });
     } catch (error) {
+      await updatePlayerRequestsDiscord().catch((syncError) => {
+        console.error("Failed to refresh player request Discord display after fulfilment error:", syncError);
+      });
       await recordAuditEvent({
         action: "marketplace_request_fulfill",
         status: "error",
@@ -6889,6 +6909,10 @@ publishDueMarketplaces({
 
 updatePlayerMarketplaceDiscord().catch((error) => {
   console.error("Initial player marketplace Discord sync failed:", error);
+});
+
+updatePlayerRequestsDiscord().catch((error) => {
+  console.error("Initial player request Discord sync failed:", error);
 });
 
 setInterval(

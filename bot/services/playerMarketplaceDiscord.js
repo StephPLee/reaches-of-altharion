@@ -1,8 +1,11 @@
 const pool = require("../db");
 const config = require("../config");
-const { syncPlayerMarketplaceDiscord } = require("../../shared/playerMarketplaceDiscord");
+const {
+  syncPlayerMarketplaceDiscord,
+  syncPlayerRequestsDiscord,
+} = require("../../shared/playerMarketplaceDiscord");
 
-async function updatePlayerMarketplaceMessage(discordClient) {
+async function syncDisplay(discordClient, syncFunction) {
   const channelId = config.playerMarketplaceChannelId;
   if (!channelId) return [];
   const channel = await discordClient.channels.fetch(channelId);
@@ -10,7 +13,7 @@ async function updatePlayerMarketplaceMessage(discordClient) {
     throw new Error("The player marketplace channel is not a text channel.");
   }
 
-  return syncPlayerMarketplaceDiscord({
+  return syncFunction({
     pool,
     channelId,
     siteUrl: config.publicSiteUrl,
@@ -26,4 +29,12 @@ async function updatePlayerMarketplaceMessage(discordClient) {
   });
 }
 
-module.exports = { updatePlayerMarketplaceMessage };
+function updatePlayerMarketplaceMessage(discordClient) {
+  return syncDisplay(discordClient, syncPlayerMarketplaceDiscord);
+}
+
+function updatePlayerRequestMessage(discordClient) {
+  return syncDisplay(discordClient, syncPlayerRequestsDiscord);
+}
+
+module.exports = { updatePlayerMarketplaceMessage, updatePlayerRequestMessage };
