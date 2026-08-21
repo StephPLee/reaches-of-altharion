@@ -75,7 +75,10 @@ const {
   listActiveListingsForDiscordUser,
   listOpenRequestsForDiscordUser,
 } = require("./services/playerMarketplace");
-const { updatePlayerMarketplaceMessage } = require("./services/playerMarketplaceDiscord");
+const {
+  updatePlayerMarketplaceMessage,
+  updatePlayerRequestMessage,
+} = require("./services/playerMarketplaceDiscord");
 const {
   buildJoinGuildCharacterRow,
   buildJoinGuildGuildRow,
@@ -1165,6 +1168,9 @@ async function handleInteraction(interaction) {
           content: `Cancelled your request for **${cancelled.itemName}**.`,
           components: [],
         });
+        updatePlayerRequestMessage(interaction.client).catch((syncError) => {
+          console.error("Failed to update player request display after cancellation:", syncError);
+        });
       } catch (error) {
         console.error("Failed to process /request cancel select:", error);
         if (interaction.deferred || interaction.replied) {
@@ -1540,6 +1546,9 @@ async function handleInteraction(interaction) {
         await interaction.editReply(
           `Requested ${quantityText}**${itemName}** for **${formatRequestPrice(request)}**${quantity > 1 ? " each" : ""} on the player marketplace.`,
         );
+        updatePlayerRequestMessage(interaction.client).catch((syncError) => {
+          console.error("Failed to update player request display after creation:", syncError);
+        });
       } catch (error) {
         console.error("Failed to process /request modal:", error);
         if (interaction.deferred || interaction.replied) {
