@@ -3,7 +3,7 @@
     padding: 2.75rem 1.5rem 4rem;
     background:
         linear-gradient(rgba(8, 9, 19, 0.86), rgba(8, 9, 19, 0.92)),
-        url("/img/altharion-background.png");
+        url("/img/altharion-background.webp");
     background-size: cover;
     background-position: center;
     background-attachment: fixed;

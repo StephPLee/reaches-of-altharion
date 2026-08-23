@@ -44,7 +44,7 @@ export const GUILD_LORE: GuildLoreEntry[] = [
       name: "Leader to be named",
       description: ["Leader lore, appearance, and role to be added."],
       image: {
-        src: "/img/guild%20leaders/Golden%20Quill%20-%20AethelddxD.png",
+        src: "/img/guild%20leaders/Golden%20Quill%20-%20AethelddxD.webp",
         alt: "Golden Quill guild leader artwork",
         caption: "Art by AethelddxD.",
       },
@@ -70,7 +70,7 @@ export const GUILD_LORE: GuildLoreEntry[] = [
       name: "Leader to be named",
       description: ["Leader lore, appearance, and role to be added."],
       image: {
-        src: "/img/guild%20leaders/Iron%20Vanguard%20-%20BELONG.png",
+        src: "/img/guild%20leaders/Iron%20Vanguard%20-%20BELONG.webp",
         alt: "Iron Vanguard guild leader artwork",
         caption: "Art by BELONG.",
       },
@@ -95,7 +95,7 @@ export const GUILD_LORE: GuildLoreEntry[] = [
       name: "Leader to be named",
       description: ["Leader lore, appearance, and role to be added."],
       image: {
-        src: "/img/guild%20leaders/Black%20Hand%20-%20Heroes%20of%20Might%20and%20Magic.png",
+        src: "/img/guild%20leaders/Black%20Hand%20-%20Heroes%20of%20Might%20and%20Magic.webp",
         alt: "Black Hand guild leader artwork",
         caption: "Art by Heroes of Might and Magic.",
       },
@@ -121,7 +121,7 @@ export const GUILD_LORE: GuildLoreEntry[] = [
       name: "Leader to be named",
       description: ["Leader lore, appearance, and role to be added."],
       image: {
-        src: "/img/guild%20leaders/Dread%20Legion.jpeg",
+        src: "/img/guild%20leaders/Dread%20Legion.webp",
         alt: "Dread Legion guild leader artwork",
       },
     },
@@ -166,7 +166,7 @@ export const GUILD_LORE: GuildLoreEntry[] = [
       name: "Leader to be named",
       description: ["Leader lore, appearance, and role to be added."],
       image: {
-        src: "/img/guild%20leaders/Verdant%20Accord%20-%20Lichelet.png",
+        src: "/img/guild%20leaders/Verdant%20Accord%20-%20Lichelet.webp",
         alt: "Verdant Accord guild leader artwork",
         caption: "Art by Lichelet.",
       },
@@ -192,7 +192,7 @@ export const GUILD_LORE: GuildLoreEntry[] = [
       name: "Leader to be named",
       description: ["Leader lore, appearance, and role to be added."],
       image: {
-        src: "/img/guild%20leaders/Dragon's%20Den%20of%20Drama%20-%20SnowmanAndOctopus.png",
+        src: "/img/guild%20leaders/Dragon's%20Den%20of%20Drama%20-%20SnowmanAndOctopus.webp",
         alt: "Dragon's Den of Drama guild leader artwork",
         caption: "Art by SnowmanAndOctopus.",
       },

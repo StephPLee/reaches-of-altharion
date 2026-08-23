@@ -89,6 +89,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Weapons", to: "/docs/homebrew/weapons" },
       { label: "Wondrous Items", to: "/docs/homebrew/wondrous-items" },
       { label: "Species", to: "/docs/homebrew/species" },
+      { label: "Feats", to: "/docs/homebrew/feats" },
       { label: "Subclasses", to: "/docs/homebrew/subclasses" },
       { label: "Spells", to: "/docs/homebrew/spells" },
     ],
@@ -101,6 +102,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Avrae Commands", to: "/avrae" },
       { label: "Rewards Calculator", to: "/rewards-calculator" },
       { label: "Stellar Coin Conversion", to: "/stellar-coin-conversion" },
+      { label: "Marketplace", to: "/marketplace" },
     ],
   },
 ];

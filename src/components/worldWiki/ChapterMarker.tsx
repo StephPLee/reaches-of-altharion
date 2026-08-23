@@ -20,6 +20,7 @@ export default function ChapterMarker({ event, isStaff, authApiBaseUrl, onEdit, 
       src={event.imagePath ? resolveMediaUrl(authApiBaseUrl, event.imagePath) : undefined}
       alt={event.title}
       className={styles.chapterImage}
+      loading="lazy"
     />
   );
 

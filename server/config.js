@@ -132,5 +132,4 @@ module.exports = {
     process.env.WEST_MARCHES_EVENT_CURRENCY_ID || "",
   westMarchesEventCurrencyName:
     process.env.WEST_MARCHES_EVENT_CURRENCY_NAME || "",
-  westMarchesRewardChannelId: process.env.WEST_MARCHES_REWARD_CHANNEL_ID || "",
 };

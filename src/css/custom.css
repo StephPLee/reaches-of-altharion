@@ -1,4 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@600;700&display=swap");
+@import "@fontsource/cinzel/latin-600.css";
+@import "@fontsource/cinzel/latin-700.css";
+@import "@fontsource/cormorant-garamond/latin-600.css";
+@import "@fontsource/cormorant-garamond/latin-700.css";
 
 /**
  * Any CSS included here will be global. The classic template
@@ -333,7 +336,7 @@
         0 18px 40px rgba(2, 4, 12, 0.55),
         0 0 0 1px rgba(210, 192, 145, 0.06),
         0 1px 0 rgba(233, 221, 186, 0.06) inset;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(6px);
 }
 
 .custom-calendar-preview__panel::before {
@@ -470,7 +473,7 @@
         0 18px 40px rgba(2, 4, 12, 0.55),
         0 0 0 1px rgba(210, 192, 145, 0.06),
         0 1px 0 rgba(233, 221, 186, 0.06) inset;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(6px);
     overflow-x: hidden;
 }
 
@@ -545,11 +548,21 @@
     padding-top: var(--ifm-navbar-height);
 }
 
+/* .main-wrapper is a flex column (for sticky footers). Its content flex item
+   keeps a default min-width: auto (refusing to shrink below its own content
+   width) and doesn't reliably stretch to the container's width on its own,
+   both of which cause horizontal overflow on narrow screens. */
+.main-wrapper > * {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
 /* Wiki styling (docs pages) */
 .docs-wrapper {
     background:
         linear-gradient(rgba(8, 9, 19, 0.82), rgba(8, 9, 19, 0.88)),
-        url("/img/altharion-background.png");
+        url("/img/altharion-background.webp");
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -558,7 +571,7 @@
 [data-theme="dark"] .main-wrapper {
     background:
         linear-gradient(rgba(8, 9, 19, 0.82), rgba(8, 9, 19, 0.88)),
-        url("/img/altharion-background.png");
+        url("/img/altharion-background.webp");
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
