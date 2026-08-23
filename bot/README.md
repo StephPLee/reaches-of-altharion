@@ -1,6 +1,6 @@
 # CC Link Bot Setup
 
-This bot provides `/help`, `/faq`, `/characters`, `/sc-character`, `/retire`, `/cc-link`, `/magicitem`, `/approve`, `/approve-character`, `/sync-level-roles`, `/homebrew-discussion`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/rp`, `/sticky`, and manual boss fight commands in your Discord server.
+This bot provides `/help`, `/faq`, `/characters`, `/sc-character`, `/retire`, `/cc-link`, `/magicitem`, `/approve`, `/approve-character`, `/sync-level-roles`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/rp`, `/sticky`, and manual boss fight commands in your Discord server.
 
 - `/help` lists the bot commands and what they do.
 - `/faq` shows the frequently asked questions from Postgres.
@@ -12,7 +12,6 @@ This bot provides `/help`, `/faq`, `/characters`, `/sc-character`, `/retire`, `/
 - `/approve` lets staff approve a homebrew link or markdown-backed boon/grace into the site-backed homebrew tables.
 - `/approve-character` lets DMs or staff approve a WestMarches.games character, assigns the player their Beginner role when needed, and awards the approver 2 SC.
 - `/sync-level-roles` lets staff preview every proposed bracket-role change, review a private detailed report, and approve all changes in one batch.
-- `/homebrew-discussion` lets thread creators award SC to users who posted in a workshop thread or reacted to a submission message.
 - `/join-guild` lets players add or move one of their WestMarches.games characters to a guild roster.
 - `/leave-guild` lets players remove one of their WestMarches.games characters from its guild roster.
 - `/post-guild-rosters` lets staff post or refresh the per-guild roster messages.
@@ -103,7 +102,7 @@ npm install
 npm run bot:start
 ```
 
-When the bot starts, it auto-registers `/help`, `/faq`, `/characters`, `/sc-character`, `/retire`, `/cc-link`, `/magicitem`, `/approve`, `/approve-character`, `/sync-level-roles`, `/homebrew-discussion`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/rp`, `/boss-start`, `/boss-post`, `/boss-damage`, `/boss-heal`, `/boss-status`, and `/boss-log` in the configured guild.
+When the bot starts, it auto-registers `/help`, `/faq`, `/characters`, `/sc-character`, `/retire`, `/cc-link`, `/magicitem`, `/approve`, `/approve-character`, `/sync-level-roles`, `/join-guild`, `/leave-guild`, `/post-guild-rosters`, `/rp`, `/boss-start`, `/boss-post`, `/boss-damage`, `/boss-heal`, `/boss-status`, and `/boss-log` in the configured guild.
 
 ## 5) Deploy on Railway
 
@@ -128,7 +127,6 @@ When the bot starts, it auto-registers `/help`, `/faq`, `/characters`, `/sc-char
 - `/approve` writes published rows into `homebrew_entries` and `homebrew_section_items`, avoiding duplicates by matching the target section against the submitted URL or label.
 - `/approve-character` is gated by `REQUIRED_ROLE_ID` or `DM_ROLE_ID`. It approves one unapproved active WestMarches.games character for the mentioned user through the API, ensures the player has the configured `BEGINNER_ROLE_ID`, posts the player reminder, and awards 2 SC to the approver's `/sc-character` default if set, otherwise their highest-level active character. If the user has multiple unapproved active characters, add the optional `character` name.
 - `/sync-level-roles` is gated by `REQUIRED_ROLE_ID`. It first performs a read-only check of every Discord user linked to a WestMarches.games character and provides an ephemeral summary plus a detailed text attachment. Staff can cancel or approve all proposed changes with one button. Approval re-fetches the character data before applying anything, then returns final totals and a results attachment. Level 20 grants both Master and Paragon.
-- `/homebrew-discussion` accepts Discord links to a workshop thread and submission message. It must be run by the workshop thread creator. It collects non-bot users who posted in the thread or reacted to the submission message, excludes the thread creator, deduplicates everyone else, and awards SC to each participant's `/sc-character` default if set, otherwise their highest-level active WestMarches.games character. The optional `subclass` flag changes the reward from 2 SC to 5 SC. Raw IDs still work for users with Developer Mode; if the message option is only an ID, run the command in the same channel as the submission message. Users without an active linked character are listed for manual follow-up.
 - `/join-guild` fetches active characters whose WestMarches.games `user.discordId` matches the Discord user, prompts for a character and guild, stores the roster membership in Postgres, posts a public confirmation, and edits or creates the relevant roster message. If the guild has a `discord_role_id` configured, the bot grants that role to the invoking member (including self-healing if they already have a character in that guild but are somehow missing the role). Moving a character to a different guild also removes the old guild's role, unless the member still has another character rostered there.
 - `/leave-guild` verifies the user's active WestMarches.games characters, removes the selected roster membership, posts a public confirmation, and refreshes the relevant roster message. If the guild has a `discord_role_id` configured, the bot removes that role from the member unless another of their characters is still rostered in the same guild.
 - A guild's Discord role is configured by setting `guilds.discord_role_id` directly in the database (nullable — guilds without one simply skip role sync). The bot needs the **Manage Roles** permission, with its own highest role positioned above any guild role it needs to assign or remove.

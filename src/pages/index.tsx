@@ -45,6 +45,18 @@ type IslandHotspot = {
   mobileLabelY?: number;
 };
 
+const RESPONSIVE_IMAGE_WIDTHS = [480, 768, 1200, 2048];
+
+function buildResponsiveWebp(pngPath: string) {
+  const base = pngPath.replace(/\.png$/, "");
+  return {
+    src: `${base}-2048.webp`,
+    srcSet: RESPONSIVE_IMAGE_WIDTHS.map((w) => `${base}-${w}.webp ${w}w`).join(
+      ", ",
+    ),
+  };
+}
+
 const ISLAND_HOTSPOTS: IslandHotspot[] = [
   {
     id: "solcrata",
@@ -489,7 +501,11 @@ function HomepageHeader() {
           >
             <m.img
               className={styles.mapForeground}
-              src="/img/altharion-no-frame.png"
+              src={buildResponsiveWebp("/img/altharion-no-frame.png").src}
+              srcSet={
+                buildResponsiveWebp("/img/altharion-no-frame.png").srcSet
+              }
+              sizes="100vw"
               alt=""
               animate={{ opacity: isWorldMapMode ? 0 : 1 }}
               transition={{
@@ -535,7 +551,7 @@ function HomepageHeader() {
                 return (
                   <m.div
                     key={island.id}
-                    layout={!shouldReduceMotion}
+                    layout={!shouldReduceMotion && isSelected}
                     className={islandClassName}
                     style={islandStyle}
                     transition={{
@@ -586,7 +602,9 @@ function HomepageHeader() {
                       )}
                       <img
                         className={styles.islandImage}
-                        src={island.image}
+                        src={buildResponsiveWebp(island.image).src}
+                        srcSet={buildResponsiveWebp(island.image).srcSet}
+                        sizes="(max-width: 768px) 60vw, 45vw"
                         alt=""
                       />
                       <AnimatePresence>

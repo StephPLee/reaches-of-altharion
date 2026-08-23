@@ -43,7 +43,7 @@
             rgba(134, 86, 211, 0.18),
             transparent 35%
         ),
-        url("/img/altharion-background.png");
+        url("/img/altharion-background.webp");
     background-size: cover;
     background-position: center;
     transform: translateZ(0) scale(1.08);

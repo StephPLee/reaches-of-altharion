@@ -52,13 +52,6 @@ const config: Config = {
         content: "black-translucent",
       },
     },
-    {
-      tagName: "script",
-      attributes: {
-        src: "/register-sw.js",
-        defer: "true",
-      },
-    },
   ],
   customFields: {
     authApiBaseUrl: process.env.CLIENT_AUTH_API_BASE_URL || "",

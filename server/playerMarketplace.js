@@ -44,11 +44,6 @@ async function listActiveListings() {
   return result.rows.map(mapListingRow);
 }
 
-async function getListing(id) {
-  const result = await pool.query(`SELECT * FROM player_marketplace_listings WHERE id = $1`, [id]);
-  return mapListingRow(result.rows[0]);
-}
-
 async function markListingFailed(client, listingId, reason) {
   await client.query(
     `UPDATE player_marketplace_listings SET status = 'failed', failure_reason = $2, updated_at = NOW() WHERE id = $1`,
@@ -400,7 +395,6 @@ async function fulfillRequest({
 module.exports = {
   PurchaseError,
   fulfillRequest,
-  getListing,
   getOwnedCharacterInventory,
   listActiveListings,
   listOpenRequests,

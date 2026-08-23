@@ -58,7 +58,12 @@ export default function GuildLoreProfile({ slug }: { slug: string }) {
     <>
       <header className={styles.hero}>
         {guild.emblem ? (
-          <img className={styles.emblem} src={guild.emblem.src} alt="" />
+          <img
+            className={styles.emblem}
+            src={guild.emblem.src}
+            alt=""
+            loading="lazy"
+          />
         ) : (
           <span className={styles.emblemFallback} aria-hidden="true">
             {guild.name.slice(0, 1)}

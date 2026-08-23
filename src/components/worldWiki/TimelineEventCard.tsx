@@ -37,6 +37,7 @@ export default function TimelineEventCard({
                 src={resolveMediaUrl(authApiBaseUrl, event.imagePath)}
                 alt={event.title}
                 className={styles.cardImage}
+                loading="lazy"
               />
               <div className={styles.cardFrontOverlay}>
                 <p className={styles.cardFrontTitle}>{event.title}</p>
