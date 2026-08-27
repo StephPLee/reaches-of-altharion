@@ -1734,6 +1734,7 @@ function normalizeSourcebookPayload(body) {
   const {
     listType,
     title,
+    code,
     publisher,
     type,
     edition,
@@ -1753,6 +1754,7 @@ function normalizeSourcebookPayload(body) {
   return {
     listType,
     title: title.trim(),
+    code: typeof code === "string" ? code.trim() : "",
     publisher: typeof publisher === "string" ? publisher.trim() : "",
     type: typeof type === "string" ? type.trim() : "",
     edition: typeof edition === "string" ? edition.trim() : "",

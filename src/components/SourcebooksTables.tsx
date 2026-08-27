@@ -9,6 +9,7 @@ type SourcebookRow = {
   id?: number;
   listType?: "allowed" | "not_allowed";
   title: string;
+  code?: string;
   publisher: string;
   type: string;
   edition: string;
@@ -27,6 +28,7 @@ type SessionUser = {
 type SourcebookFormState = {
   listType: "allowed" | "not_allowed";
   title: string;
+  code: string;
   publisher: string;
   type: string;
   edition: string;
@@ -36,294 +38,343 @@ type SourcebookFormState = {
 const ALLOWED_BOOKS: SourcebookRow[] = [
   {
     title: "Basic Rules (2014)",
+    code: "BR",
     publisher: "Wizards of the Coast",
     type: "Core rules",
     edition: "5e",
   },
   {
     title: "Elemental Evil Player's Companion",
+    code: "EE",
     publisher: "Wizards of the Coast",
     type: "Player supplement",
     edition: "5e",
   },
   {
     title: "Player's Handbook (2014)",
+    code: "PHB",
     publisher: "Wizards of the Coast",
     type: "Core rules",
     edition: "5e",
   },
   {
     title: "Dungeon Master's Guide (2014)",
+    code: "DMG",
     publisher: "Wizards of the Coast",
     type: "Core rules",
     edition: "5e",
   },
   {
     title: "Monster Manual (2014)",
+    code: "MM",
     publisher: "Wizards of the Coast",
     type: "Core rules",
     edition: "5e",
   },
   {
     title: "Sword Coast Adventurer's Guide",
+    code: "SCAG",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5e",
   },
   {
     title: "Xanathar's Guide to Everything",
+    code: "XGtE",
     publisher: "Wizards of the Coast",
     type: "Rules expansion",
     edition: "5e",
   },
   {
     title: "Volo's Guide to Monsters",
+    code: "VGtM",
     publisher: "Wizards of the Coast",
     type: "Monsters / lore",
     edition: "5e",
   },
   {
     title: "Mordenkainen's Tome of Foes",
+    code: "MToF",
     publisher: "Wizards of the Coast",
     type: "Monsters / lore",
     edition: "5e",
   },
   {
     title: "Guildmasters' Guide to Ravnica",
+    code: "GGtR",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5e",
   },
   {
     title: "Acquisitions Incorporated",
+    code: "AI",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5e",
   },
   {
     title: "Eberron: Rising from the Last War",
+    code: "ERftLW",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5e",
   },
   {
     title: "Explorer's Guide to Wildemount",
+    code: "EGtW",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5e",
   },
   {
     title: "Mythic Odysseys of Theros",
+    code: "MOoT",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5e",
   },
   {
     title: "Tasha's Cauldron of Everything",
+    code: "TCoE",
     publisher: "Wizards of the Coast",
     type: "Rules expansion",
     edition: "5e",
   },
   {
     title: "Van Richten's Guide to Ravenloft",
+    code: "VRGtR",
     publisher: "Wizards of the Coast",
     type: "Setting / monsters",
     edition: "5e",
   },
   {
     title: "Fizban's Treasury of Dragons",
+    code: "FToD",
     publisher: "Wizards of the Coast",
     type: "Rules / monsters",
     edition: "5e",
   },
   {
     title: "Strixhaven: A Curriculum of Chaos",
+    code: "SACoC",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5e",
   },
   {
     title: "Mordenkainen Presents: Monsters of the Multiverse",
+    code: "MotM",
     publisher: "Wizards of the Coast",
     type: "Rules / monsters",
     edition: "5e",
   },
   {
     title: "Spelljammer: Adventures in Space",
+    code: "SAiS",
     publisher: "Wizards of the Coast",
     type: "Setting / rules set",
     edition: "5e",
   },
   {
     title: "Bigby Presents: Glory of the Giants",
+    code: "GotG",
     publisher: "Wizards of the Coast",
     type: "Rules expansion",
     edition: "5e",
   },
   {
     title: "Planescape: Adventures in the Multiverse",
+    code: "PaitM",
     publisher: "Wizards of the Coast",
     type: "Setting / rules set",
     edition: "5e",
   },
   {
     title: "The Book of Many Things",
+    code: "TBoMT",
     publisher: "Wizards of the Coast",
     type: "Rules expansion",
     edition: "5e",
   },
   {
     title: "Player's Handbook (2024)",
+    code: "PHB-2024",
     publisher: "Wizards of the Coast",
     type: "Core rules",
     edition: "5.5e",
   },
   {
     title: "Dungeon Master's Guide (2024)",
+    code: "DMG-2024",
     publisher: "Wizards of the Coast",
     type: "Core rules",
     edition: "5.5e",
   },
   {
     title: "Monster Manual (2024)",
+    code: "MM-2024",
     publisher: "Wizards of the Coast",
     type: "Core rules",
     edition: "5.5e",
   },
   {
     title: "Eberron: Forge of the Artificer",
+    code: "EFotA",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5.5e",
   },
   {
-    title: "Heroes of Faerun",
+    title: "Forgotten Realms: Heroes of Faerun",
+    code: "FRHoF",
     publisher: "Wizards of the Coast",
     type: "Setting / player options",
     edition: "5.5e",
   },
   {
-    title: "Adventures in Faerun",
+    title: "Forgotten Realms: Adventures in Faerun",
+    code: "FRAiF",
     publisher: "Wizards of the Coast",
     type: "Setting / rules support",
     edition: "5.5e",
   },
   {
     title: "Tal'Dorei Campaign Setting Reborn",
+    code: "TCSR",
     publisher: "Darrington Press",
     type: "Partnered sourcebook",
     edition: "5e",
   },
   {
     title: "Dungeons of Drakkenheim",
+    code: "DoD",
     publisher: "Ghostfire Gaming",
     type: "Partnered setting book",
     edition: "5e",
   },
   {
     title: "Sebastian Crowe's Guide to Drakkenheim",
+    code: "SCGtD",
     publisher: "Ghostfire Gaming",
     type: "Partnered setting / player options",
     edition: "5e",
   },
   {
     title: "Humblewood Campaign Setting",
+    code: "HCS",
     publisher: "Hit Point Press",
     type: "Partnered setting book",
     edition: "5e",
   },
   {
     title: "Humblewood Tales",
+    code: "HWT",
     publisher: "Hit Point Press",
     type: "Partnered supplement",
     edition: "Mixed",
   },
   {
     title: "Tome of Beasts 1",
+    code: "ToB1",
     publisher: "Kobold Press",
     type: "Partnered monster book",
     edition: "5e",
   },
   {
     title: "Flee, Mortals!",
+    code: "FM",
     publisher: "MCDM",
     type: "Partnered monster book",
     edition: "5e",
   },
   {
     title: "Where Evil Lives",
+    code: "WEL",
     publisher: "MCDM",
     type: "Partnered encounter / monster book",
     edition: "5e",
   },
   {
     title: "Grim Hollow: Player Pack",
+    code: "GHPP",
     publisher: "Ghostfire Gaming",
     type: "Partnered player options",
     edition: "5e",
   },
   {
     title: "Grim Hollow: Player's Guide",
+    code: "GHPG",
     publisher: "Ghostfire Gaming",
     type: "Partnered sourcebook",
     edition: "5.5e",
   },
   {
     title: "Grim Hollow: Campaign Guide",
+    code: "GHCG",
     publisher: "Ghostfire Gaming",
     type: "Partnered setting book",
     edition: "5.5e",
   },
   {
     title: "Tales from the Shadows",
+    code: "TftS",
     publisher: "Kobold Press",
     type: "Partnered sourcebook",
     edition: "5e",
   },
   {
     title: "The Illrigger Revised",
+    code: "TIR",
     publisher: "MCDM",
     type: "Partnered class",
     edition: "5e",
   },
   {
     title: "The Griffon's Saddlebag: Book Two",
+    code: "GSB2",
     publisher: "The Griffon's Saddlebag",
     type: "Partnered item book",
     edition: "5e",
   },
   {
     title: "Heliana's Guide to Monster Hunting: Part 1",
+    code: "HGtMH1",
     publisher: "Loot Tavern",
     type: "Partnered sourcebook",
     edition: "Mixed",
   },
   {
     title: "Obojima: Tales from the Tall Grass",
+    code: "OTftTG",
     publisher: "1985 Games",
     type: "Partnered setting book",
     edition: "5e",
   },
   {
     title: "Valda's Spire of Secrets: Player Pack",
+    code: "VSSPP",
     publisher: "Mage Hand Press",
     type: "Partnered player options",
     edition: "5e",
   },
   {
     title: "Ruins of Symbaroum: Setting Handbook",
+    code: "RoSSH",
     publisher: "Free League",
     type: "Partnered setting book",
     edition: "5e",
   },
   {
     title: "The Crooked Moon Part One: Player Options & Campaign Setting",
+    code: "TCMP1",
     publisher: "Legends of Avantris",
     type: "Partnered sourcebook",
     edition: "Mixed",
   },
   {
     title: "Exploring Eberron (2024)",
+    code: "ExEb",
     publisher: "Visionary Creative / Keith Baker",
     type: "Partnered setting book",
     edition: "5.5e",
@@ -336,7 +387,7 @@ function matchesSearch(row: SourcebookRow, query: string) {
   }
 
   const haystack =
-    `${row.title} ${row.publisher} ${row.type} ${row.edition}`.toLowerCase();
+    `${row.title} ${row.code ?? ""} ${row.publisher} ${row.type} ${row.edition}`.toLowerCase();
   return haystack.includes(query);
 }
 
@@ -353,6 +404,7 @@ function createEmptyForm(
   return {
     listType,
     title: "",
+    code: "",
     publisher: "",
     type: "",
     edition: "",
@@ -380,6 +432,7 @@ function SourcebookTable({
       <thead>
         <tr>
           <th>Title</th>
+          <th>Code</th>
           <th>Publisher</th>
           {showBannedContentLinks ? <th>Banned Content</th> : null}
           {isStaff ? <th>Actions</th> : null}
@@ -389,6 +442,7 @@ function SourcebookTable({
         {books.map((book) => (
           <tr key={book.id ?? `${book.title}-${book.publisher}`}>
             <td>{book.title}</td>
+            <td>{book.code}</td>
             <td>{book.publisher}</td>
             {showBannedContentLinks ? (
               <td>
@@ -579,6 +633,7 @@ export default function SourcebooksTables() {
     setForm({
       listType: book.listType,
       title: book.title,
+      code: book.code ?? "",
       publisher: book.publisher,
       type: book.type,
       edition: book.edition,
@@ -614,6 +669,7 @@ export default function SourcebooksTables() {
           body: JSON.stringify({
             listType: form.listType,
             title: form.title.trim(),
+            code: form.code.trim(),
             publisher: form.publisher.trim(),
             type: form.type.trim(),
             edition: form.edition.trim(),
@@ -710,6 +766,14 @@ export default function SourcebooksTables() {
               value={form.title}
               onChange={(event) => updateFormField("title", event.target.value)}
               required
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Code</span>
+            <input
+              className={styles.input}
+              value={form.code}
+              onChange={(event) => updateFormField("code", event.target.value)}
             />
           </label>
           <label className={styles.field}>
@@ -816,7 +880,7 @@ export default function SourcebooksTables() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by title, publisher, type, or edition"
+            placeholder="Search by title, code, publisher, type, or edition"
           />
           {loading ? (
             <p className={styles.searchHint}>Loading sourcebooks...</p>
