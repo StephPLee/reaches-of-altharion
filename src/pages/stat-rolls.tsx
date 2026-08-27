@@ -64,8 +64,8 @@ function parseStatSearchClause(clause: string): StatRollPredicate | null {
   if (exactCountMatch) {
     const first = Number(exactCountMatch[1]);
     const second = Number(exactCountMatch[2]);
-    const expectedCount = first <= 6 && second > 6 ? first : second;
-    const statValue = first <= 6 && second > 6 ? second : first;
+    const expectedCount = first > 6 ? second : first;
+    const statValue = first > 6 ? first : second;
     return (roll) => countStats(roll, (value) => value === statValue) >= expectedCount;
   }
 

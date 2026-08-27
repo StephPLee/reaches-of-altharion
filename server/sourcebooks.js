@@ -5,6 +5,7 @@ function mapSourcebookRow(row) {
     id: Number(row.id),
     listType: row.list_type,
     title: row.title,
+    code: row.code,
     publisher: row.publisher,
     type: row.book_type,
     edition: row.edition,
@@ -23,6 +24,7 @@ async function listSourcebooks({ includeUnpublished = false } = {}) {
       id,
       list_type,
       title,
+      code,
       publisher,
       book_type,
       edition,
@@ -60,6 +62,7 @@ async function listSourcebooks({ includeUnpublished = false } = {}) {
 async function createSourcebook({
   listType,
   title,
+  code,
   publisher,
   type,
   edition,
@@ -72,6 +75,7 @@ async function createSourcebook({
     INSERT INTO sourcebook_entries (
       list_type,
       title,
+      code,
       publisher,
       book_type,
       edition,
@@ -80,11 +84,12 @@ async function createSourcebook({
       created_by_user_id,
       updated_by_user_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
     RETURNING
       id,
       list_type,
       title,
+      code,
       publisher,
       book_type,
       edition,
@@ -97,6 +102,7 @@ async function createSourcebook({
     [
       listType,
       title,
+      code,
       publisher,
       type,
       edition,
@@ -113,6 +119,7 @@ async function updateSourcebook({
   sourcebookId,
   listType,
   title,
+  code,
   publisher,
   type,
   edition,
@@ -126,18 +133,20 @@ async function updateSourcebook({
     SET
       list_type = $2,
       title = $3,
-      publisher = $4,
-      book_type = $5,
-      edition = $6,
-      sort_order = $7,
-      is_published = $8,
-      updated_by_user_id = $9,
+      code = $4,
+      publisher = $5,
+      book_type = $6,
+      edition = $7,
+      sort_order = $8,
+      is_published = $9,
+      updated_by_user_id = $10,
       updated_at = NOW()
     WHERE id = $1
     RETURNING
       id,
       list_type,
       title,
+      code,
       publisher,
       book_type,
       edition,
@@ -151,6 +160,7 @@ async function updateSourcebook({
       sourcebookId,
       listType,
       title,
+      code,
       publisher,
       type,
       edition,
