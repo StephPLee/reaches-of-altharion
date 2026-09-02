@@ -35,6 +35,7 @@ const {
   setQuestCallMessageId,
 } = require("./services/questCalls");
 const {
+  awardHourlyRewardToCharacter,
   awardScToCharacters,
   approveWestMarchesCharacter,
   buildCharacterListEmbed,
@@ -46,6 +47,7 @@ const {
   getOwnedActiveWestMarchesCharacter,
   getScRewardCharacterPreference,
   getWestMarchesCharacter,
+  grantWestMarchesItem,
   isWestMarchesConfigured,
   listHighestLevelActiveCharactersForDiscordUsers,
   listOwnedActiveWestMarchesCharacters,
@@ -54,6 +56,30 @@ const {
   retireWestMarchesCharacter,
   upsertScRewardCharacterPreference,
 } = require("./services/westMarches");
+const {
+  acquireObjectiveForCharacter,
+  addRenown,
+  buildQuestAcquireCharacterRow,
+  buildQuestListCharacterRow,
+  buildQuestRedeemCharacterRow,
+  buildQuestRedeemObjectivesRow,
+  buildQuestRedeemRarityRow,
+  buildQuestRedeemTierRow,
+  buildQuestRerollCharacterRow,
+  buildQuestRerollObjectiveRow,
+  getAllRenownForCharacter,
+  getRandomPublishedGuildId,
+  incrementRetrainCredit,
+  listActiveObjectivesForCharacter,
+  listCharactersWithActiveObjectives,
+  listCharactersWithCompletedUnredeemedObjectives,
+  listCompletedUnredeemedObjectivesForCharacter,
+  listRedeemedObjectivesForCharacter,
+  markObjectivesRedeemed,
+  parseQuestRerollObjectiveCustomId,
+  rerollObjective,
+} = require("./services/sideQuests");
+const { getRewardRow } = require("../shared/rewardTable");
 const {
   DuplicateActiveListingError,
   buildCancelListingRow,
@@ -155,6 +181,7 @@ const pendingStatRolls = new Map(); // discordUserId → { statLines, timestamp 
 const pendingApprovals = new Map(); // discordUserId → { name, url, threadUrl, submissionUrl }
 
 const pendingLevelRoleSyncs = new Map();
+const pendingSideQuestRedemptions = new Map(); // discordUserId → { characterId, objectiveIds, tier }
 
 function buildLevelRoleSyncButtons(discordUserId) {
   return new ActionRowBuilder().addComponents(
@@ -281,6 +308,136 @@ async function ensureMemberRole(guild, discordUserId, roleId) {
       error,
     );
     return "failed";
+  }
+}
+
+async function resolveSideQuestRedemption({
+  interaction,
+  discordUserId,
+  characterId,
+  objectiveIds,
+  tier,
+  rarity,
+}) {
+  try {
+    const character = await getOwnedActiveWestMarchesCharacter(
+      discordUserId,
+      characterId,
+    );
+
+    if (!character) {
+      await interaction.editReply({
+        content:
+          "I could not find that active character under your Discord account.",
+        components: [],
+      });
+      return;
+    }
+
+    const characterName = formatCharacterName(character);
+    const level = normalizeCharacterLevel(character);
+    const redeemedRows = await markObjectivesRedeemed(objectiveIds);
+
+    if (redeemedRows.length === 0) {
+      await interaction.editReply({
+        content: "Those objectives are no longer available to redeem.",
+        components: [],
+      });
+      return;
+    }
+
+    const resultLines = [
+      `Redeemed ${redeemedRows.length} side-quest objective${redeemedRows.length === 1 ? "" : "s"} for **${characterName}**.`,
+    ];
+
+    try {
+      if (tier === "hours" || tier === "magicitem_plus_hour") {
+        const { experience, gold } = await awardHourlyRewardToCharacter({
+          characterId,
+          discordUserId,
+          hours: 1,
+          level,
+          reason: "Side-quest redemption",
+        });
+        resultLines.push(
+          `Granted **${experience} XP** and **${gold} Gold**.`,
+        );
+      }
+
+      if (tier === "magicitem" || tier === "magicitem_plus_hour") {
+        const rarityInfo = MAGIC_ITEM_RARITIES.find(
+          (entry) => entry.value === rarity,
+        );
+        const item = await getRandomMagicItem(rarity);
+
+        if (item) {
+          await grantWestMarchesItem({
+            characterId,
+            itemName: item.item_label,
+            reason: "Side-quest redemption",
+            discordUserId,
+          });
+          resultLines.push(
+            `Rolled and granted a **${rarityInfo?.label ?? rarity}** item: **${item.item_label}**.`,
+          );
+        } else {
+          resultLines.push(
+            `No published magic items were available for **${rarityInfo?.label ?? rarity}**, so no item was granted.`,
+          );
+        }
+      }
+
+      if (tier === "retrain") {
+        await incrementRetrainCredit({ characterId, characterName });
+        resultLines.push("Banked 1 free retrain credit.");
+      }
+    } catch (rewardError) {
+      console.error(
+        "Side-quest objectives were marked redeemed but granting the reward failed:",
+        rewardError,
+      );
+      resultLines.push(
+        "The objectives were marked redeemed, but granting the reward failed — please contact a developer.",
+      );
+    }
+
+    try {
+      const membership = await getGuildRosterMembership({
+        characterId,
+        characterName,
+        discordUserId,
+      });
+      const rewardRow = getRewardRow(level);
+      const renownPerObjective = Math.round(0.05 * rewardRow.xpPerHour);
+
+      const countByGuildId = new Map();
+      for (const row of redeemedRows) {
+        countByGuildId.set(row.guildId, (countByGuildId.get(row.guildId) || 0) + 1);
+      }
+
+      for (const [guildId, count] of countByGuildId.entries()) {
+        if (membership?.guildId === guildId) {
+          await addRenown({
+            characterId,
+            characterName,
+            guildId,
+            amount: renownPerObjective * count,
+          });
+        }
+      }
+    } catch (renownError) {
+      console.error(
+        "Side-quest reward granted but updating renown failed:",
+        renownError,
+      );
+    }
+
+    await interaction.editReply({
+      content: resultLines.join("\n"),
+      components: [],
+    });
+  } finally {
+    pendingSideQuestRedemptions.delete(discordUserId);
   }
 }
 
@@ -1183,6 +1340,518 @@ async function handleInteraction(interaction) {
             content: "Something went wrong while cancelling that request. Please try again.",
             ephemeral: true,
           });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-acquire-character:")) {
+      const ownerId = interaction.customId.slice(
+        "quest-acquire-character:".length,
+      );
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest acquire` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const character = await getOwnedActiveWestMarchesCharacter(
+          interaction.user.id,
+          characterId,
+        );
+
+        if (!character) {
+          await interaction.editReply({
+            content: "I could not find that active character under your Discord account.",
+            components: [],
+          });
+          return;
+        }
+
+        const characterName = formatCharacterName(character);
+        const membership = await getGuildRosterMembership({
+          characterId: character.id,
+          characterName,
+          discordUserId: interaction.user.id,
+        });
+        const guildId = membership?.guildId ?? (await getRandomPublishedGuildId());
+
+        if (!guildId) {
+          await interaction.editReply({
+            content: "No published guilds are available to draw an objective from yet.",
+            components: [],
+          });
+          return;
+        }
+
+        const result = await acquireObjectiveForCharacter({
+          characterId: character.id,
+          characterName,
+          discordUserId: interaction.user.id,
+          guildId,
+        });
+
+        if (result.status === "cap_reached") {
+          await interaction.editReply({
+            content: `**${characterName}** already has 3 active side-quest objectives. Complete or redeem one before acquiring another.`,
+            components: [],
+          });
+          return;
+        }
+
+        if (result.status === "pool_exhausted") {
+          await interaction.editReply({
+            content: `There are no unclaimed side-quest objectives left for **${characterName}**'s guild right now.`,
+            components: [],
+          });
+          return;
+        }
+
+        await interaction.editReply({
+          content: [
+            `**${characterName}** acquired a new side-quest objective from **${result.objective.guildName}**:`,
+            `**${result.objective.title}**`,
+            result.objective.description,
+          ].join("\n"),
+          components: [],
+        });
+      } catch (error) {
+        console.error("Failed to process /quest acquire select:", error);
+        const errorContent = {
+          content: "Something went wrong while acquiring a side-quest objective. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-reroll-character:")) {
+      const ownerId = interaction.customId.slice(
+        "quest-reroll-character:".length,
+      );
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest reroll` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const objectives = await listActiveObjectivesForCharacter(characterId);
+
+        if (objectives.length === 0) {
+          await interaction.editReply({
+            content: "That character no longer has any active side-quest objectives.",
+            components: [],
+          });
+          return;
+        }
+
+        await interaction.editReply({
+          content: `Choose the objective to reroll for **${objectives[0].characterName}**.`,
+          components: [
+            buildQuestRerollObjectiveRow(interaction.user.id, characterId, objectives),
+          ],
+        });
+      } catch (error) {
+        console.error("Failed to process /quest reroll character select:", error);
+        const errorContent = {
+          content: "Something went wrong while loading that character's objectives. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-reroll-objective:")) {
+      const parsedCustomId = parseQuestRerollObjectiveCustomId(interaction.customId);
+      if (!parsedCustomId || parsedCustomId.ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest reroll` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterSideQuestId = Number(interaction.values[0]);
+        const result = await rerollObjective(characterSideQuestId);
+
+        if (result.status === "not_found") {
+          await interaction.editReply({
+            content: "That objective is no longer active.",
+            components: [],
+          });
+          return;
+        }
+
+        if (result.status === "pool_exhausted") {
+          await interaction.editReply({
+            content: "There are no other unclaimed objectives left for that guild right now.",
+            components: [],
+          });
+          return;
+        }
+
+        await interaction.editReply({
+          content: [
+            `Rerolled to a new objective from **${result.objective.guildName}**:`,
+            `**${result.objective.title}**`,
+            result.objective.description,
+          ].join("\n"),
+          components: [],
+        });
+      } catch (error) {
+        console.error("Failed to process /quest reroll objective select:", error);
+        const errorContent = {
+          content: "Something went wrong while rerolling that objective. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-redeem-character:")) {
+      const ownerId = interaction.customId.slice(
+        "quest-redeem-character:".length,
+      );
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest redeem` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const objectives = await listCompletedUnredeemedObjectivesForCharacter(characterId);
+
+        if (objectives.length === 0) {
+          await interaction.editReply({
+            content: "That character has no completed objectives ready to redeem.",
+            components: [],
+          });
+          return;
+        }
+
+        pendingSideQuestRedemptions.set(interaction.user.id, { characterId });
+
+        await interaction.editReply({
+          content: "Choose 1-3 completed objectives to redeem together.",
+          components: [buildQuestRedeemObjectivesRow(interaction.user.id, objectives)],
+        });
+      } catch (error) {
+        console.error("Failed to process /quest redeem character select:", error);
+        const errorContent = {
+          content: "Something went wrong while loading that character's completed objectives. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-redeem-objectives:")) {
+      const ownerId = interaction.customId.slice(
+        "quest-redeem-objectives:".length,
+      );
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest redeem` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const pending = pendingSideQuestRedemptions.get(interaction.user.id);
+        if (!pending?.characterId) {
+          await interaction.editReply({
+            content: "This redemption session expired. Run `/quest redeem` again.",
+            components: [],
+          });
+          return;
+        }
+
+        const objectiveIds = interaction.values.map(Number);
+        pendingSideQuestRedemptions.set(interaction.user.id, {
+          ...pending,
+          objectiveIds,
+        });
+
+        if (objectiveIds.length === 1) {
+          await resolveSideQuestRedemption({
+            interaction,
+            discordUserId: interaction.user.id,
+            characterId: pending.characterId,
+            objectiveIds,
+            tier: "hours",
+          });
+          return;
+        }
+
+        await interaction.editReply({
+          content: `Choose your reward for redeeming ${objectiveIds.length} objectives.`,
+          components: [
+            buildQuestRedeemTierRow(interaction.user.id, objectiveIds.length),
+          ],
+        });
+      } catch (error) {
+        console.error("Failed to process /quest redeem objectives select:", error);
+        pendingSideQuestRedemptions.delete(interaction.user.id);
+        const errorContent = {
+          content: "Something went wrong while selecting objectives to redeem. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-redeem-tier:")) {
+      const ownerId = interaction.customId.slice("quest-redeem-tier:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest redeem` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const pending = pendingSideQuestRedemptions.get(interaction.user.id);
+        if (!pending?.characterId || !pending?.objectiveIds) {
+          await interaction.editReply({
+            content: "This redemption session expired. Run `/quest redeem` again.",
+            components: [],
+          });
+          return;
+        }
+
+        const tier = interaction.values[0];
+
+        if (tier === "magicitem" || tier === "magicitem_plus_hour") {
+          pendingSideQuestRedemptions.set(interaction.user.id, { ...pending, tier });
+          await interaction.editReply({
+            content: "Choose the rarity for your magic item roll.",
+            components: [buildQuestRedeemRarityRow(interaction.user.id)],
+          });
+          return;
+        }
+
+        await resolveSideQuestRedemption({
+          interaction,
+          discordUserId: interaction.user.id,
+          characterId: pending.characterId,
+          objectiveIds: pending.objectiveIds,
+          tier,
+        });
+      } catch (error) {
+        console.error("Failed to process /quest redeem tier select:", error);
+        pendingSideQuestRedemptions.delete(interaction.user.id);
+        const errorContent = {
+          content: "Something went wrong while choosing your reward. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-redeem-rarity:")) {
+      const ownerId = interaction.customId.slice("quest-redeem-rarity:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest redeem` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const pending = pendingSideQuestRedemptions.get(interaction.user.id);
+        if (!pending?.characterId || !pending?.objectiveIds || !pending?.tier) {
+          await interaction.editReply({
+            content: "This redemption session expired. Run `/quest redeem` again.",
+            components: [],
+          });
+          return;
+        }
+
+        const selectedRarity = interaction.values[0];
+        const rarity = MAGIC_ITEM_RARITIES.find((entry) => entry.value === selectedRarity);
+
+        if (!rarity) {
+          await interaction.editReply({
+            content: "That rarity is not supported.",
+            components: [],
+          });
+          return;
+        }
+
+        await resolveSideQuestRedemption({
+          interaction,
+          discordUserId: interaction.user.id,
+          characterId: pending.characterId,
+          objectiveIds: pending.objectiveIds,
+          tier: pending.tier,
+          rarity: selectedRarity,
+        });
+      } catch (error) {
+        console.error("Failed to process /quest redeem rarity select:", error);
+        pendingSideQuestRedemptions.delete(interaction.user.id);
+        const errorContent = {
+          content: "Something went wrong while rolling your magic item. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-list-character:")) {
+      const ownerId = interaction.customId.slice("quest-list-character:".length);
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest list` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const character = await getOwnedActiveWestMarchesCharacter(
+          interaction.user.id,
+          characterId,
+        );
+
+        if (!character) {
+          await interaction.editReply({
+            content: "I could not find that active character under your Discord account.",
+            components: [],
+          });
+          return;
+        }
+
+        const characterName = formatCharacterName(character);
+        const [active, completed, redeemed, renownRows] = await Promise.all([
+          listActiveObjectivesForCharacter(characterId),
+          listCompletedUnredeemedObjectivesForCharacter(characterId),
+          listRedeemedObjectivesForCharacter(characterId),
+          getAllRenownForCharacter(characterId),
+        ]);
+
+        const lines = [`**${characterName}**'s side quests:`];
+        lines.push(
+          active.length
+            ? `Active (${active.length}/3):\n${active.map((o) => `- ${o.title} (${o.guildName})`).join("\n")}`
+            : "Active: none",
+        );
+        lines.push(
+          completed.length
+            ? `Completed, awaiting redemption:\n${completed.map((o) => `- ${o.title} (${o.guildName})`).join("\n")}`
+            : "Completed, awaiting redemption: none",
+        );
+        lines.push(
+          redeemed.length
+            ? `Recently redeemed:\n${redeemed.map((o) => `- ${o.title} (${o.guildName})`).join("\n")}`
+            : "Recently redeemed: none",
+        );
+
+        if (renownRows.length > 0) {
+          lines.push("Guild renown:");
+          for (const row of renownRows) {
+            const tier =
+              row.renown >= 1000
+                ? " (1000 tier unlocked)"
+                : row.renown >= 500
+                  ? " (500 tier unlocked)"
+                  : row.renown >= 100
+                    ? " (100 tier unlocked)"
+                    : "";
+            lines.push(`- ${row.guildName}: ${row.renown} renown${tier}`);
+          }
+        } else {
+          lines.push("Guild renown: none yet.");
+        }
+
+        await interaction.editReply({
+          content: lines.join("\n"),
+          components: [],
+        });
+      } catch (error) {
+        console.error("Failed to process /quest list character select:", error);
+        const errorContent = {
+          content: "Something went wrong while loading that character's side quests. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
         }
       }
 
@@ -2731,6 +3400,134 @@ async function handleInteraction(interaction) {
           ephemeral: true,
         });
       }
+    }
+
+    return;
+  }
+
+  if (interaction.commandName === "quest") {
+    const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "acquire" || subcommand === "list") {
+      if (!isWestMarchesConfigured()) {
+        await interaction.reply({
+          content: "West Marches API access is not configured, so I cannot load your characters yet.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const characters = await listOwnedActiveWestMarchesCharacters(interaction.user.id);
+        if (characters.length === 0) {
+          await interaction.editReply(
+            "I could not find any active WestMarches.games characters linked to your Discord account.",
+          );
+          return;
+        }
+
+        const visibleCharacters = characters.slice(0, 25);
+        const overflowText =
+          characters.length > visibleCharacters.length
+            ? `\n\nI found ${characters.length} active characters. Discord menus can only show 25 options, so only the first 25 by name are listed.`
+            : "";
+
+        if (subcommand === "acquire") {
+          await interaction.editReply({
+            content: `Choose the character who should acquire a side-quest objective.${overflowText}`,
+            components: [buildQuestAcquireCharacterRow(interaction.user.id, visibleCharacters)],
+          });
+        } else {
+          await interaction.editReply({
+            content: `Choose a character to view their side-quest objectives and guild renown.${overflowText}`,
+            components: [buildQuestListCharacterRow(interaction.user.id, visibleCharacters)],
+          });
+        }
+      } catch (error) {
+        console.error(`Failed to process /quest ${subcommand}:`, error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(
+            "Something went wrong while loading your characters. Please try again.",
+          );
+        } else {
+          await interaction.reply({
+            content: "Something went wrong while loading your characters. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (subcommand === "reroll") {
+      try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const characters = await listCharactersWithActiveObjectives(interaction.user.id);
+        if (characters.length === 0) {
+          await interaction.editReply(
+            "You do not have any characters with active side-quest objectives to reroll.",
+          );
+          return;
+        }
+
+        await interaction.editReply({
+          content: "Choose the character whose objective you want to reroll.",
+          components: [buildQuestRerollCharacterRow(interaction.user.id, characters)],
+        });
+      } catch (error) {
+        console.error("Failed to process /quest reroll:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(
+            "Something went wrong while loading your active objectives. Please try again.",
+          );
+        } else {
+          await interaction.reply({
+            content: "Something went wrong while loading your active objectives. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (subcommand === "redeem") {
+      try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const characters = await listCharactersWithCompletedUnredeemedObjectives(
+          interaction.user.id,
+        );
+        if (characters.length === 0) {
+          await interaction.editReply(
+            "You do not have any completed side-quest objectives ready to redeem yet.",
+          );
+          return;
+        }
+
+        await interaction.editReply({
+          content: "Choose the character whose completed objectives you want to redeem.",
+          components: [buildQuestRedeemCharacterRow(interaction.user.id, characters)],
+        });
+      } catch (error) {
+        console.error("Failed to process /quest redeem:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(
+            "Something went wrong while loading your completed objectives. Please try again.",
+          );
+        } else {
+          await interaction.reply({
+            content: "Something went wrong while loading your completed objectives. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
     }
 
     return;

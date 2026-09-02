@@ -244,6 +244,10 @@ const {
 } = require("./westmarches");
 const { syncLevelRolesForCharacterIds } = require("./levelRoles");
 const {
+  completeObjectives,
+  listActiveObjectivesForCharacters,
+} = require("./sideQuests");
+const {
   PurchaseError,
   fulfillRequest,
   getOwnedCharacterInventory,
@@ -3315,6 +3319,84 @@ app.get(
             ? westMarchesError.message
             : "Failed to load West Marches adventures.",
       });
+    }
+  },
+);
+
+app.get(
+  "/api/rewards/westmarches/side-quests",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (req, res) => {
+    const characterIds =
+      typeof req.query.characterIds === "string"
+        ? req.query.characterIds
+            .split(",")
+            .map((characterId) => characterId.trim())
+            .filter(Boolean)
+        : [];
+
+    try {
+      const objectives = await listActiveObjectivesForCharacters(characterIds);
+      res.json({ objectives });
+    } catch (error) {
+      console.error("Failed to load side-quest objectives:", error);
+      res.status(500).json({ error: "Failed to load side-quest objectives." });
+    }
+  },
+);
+
+app.post(
+  "/api/rewards/westmarches/side-quests/complete",
+  requireTrustedOrigin,
+  requireRewardSubmitSession,
+  async (req, res) => {
+    const characterSideQuestIds = Array.isArray(req.body?.characterSideQuestIds)
+      ? req.body.characterSideQuestIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id) && id > 0)
+      : [];
+
+    if (characterSideQuestIds.length === 0) {
+      res.status(400).json({ error: "characterSideQuestIds is required." });
+      return;
+    }
+
+    try {
+      const completed = await completeObjectives({
+        characterSideQuestIds,
+        dmDiscordUserId: req.staffUser.discordUserId,
+      });
+
+      await recordAuditEvent({
+        action: "side_quest_complete",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          characterSideQuestIds,
+          completedIds: completed.map((entry) => entry.id),
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ completed });
+    } catch (error) {
+      console.error("Failed to complete side-quest objectives:", error);
+
+      await recordAuditEvent({
+        action: "side_quest_complete",
+        status: "error",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: {
+          characterSideQuestIds,
+          error: error instanceof Error ? error.message : "unknown_error",
+        },
+        ...getRequestMetadata(req),
+      });
+
+      res.status(500).json({ error: "Failed to complete side-quest objectives." });
     }
   },
 );

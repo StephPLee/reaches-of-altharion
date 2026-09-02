@@ -150,6 +150,33 @@ const COMMAND_DEFINITIONS = [
         ),
   },
   {
+    name: "quest",
+    description: "Acquire, reroll, and redeem guild side-quest objectives.",
+    help: "Manage your characters' guild side-quest objectives: acquire, reroll, redeem, and list.",
+    buildCommand: (command) =>
+      command
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("acquire")
+            .setDescription("Acquire a random side-quest objective for one of your characters."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("reroll")
+            .setDescription("Reroll one of your characters' active side-quest objectives."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("redeem")
+            .setDescription("Redeem completed side-quest objectives for rewards."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("list")
+            .setDescription("List a character's side-quest objectives and guild renown."),
+        ),
+  },
+  {
     name: "boss-start",
     description: "Start a manual server boss fight.",
     help: "Staff-only. Start a manual server boss fight or count-up progress tracker.",

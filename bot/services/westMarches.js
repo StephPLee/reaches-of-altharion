@@ -6,6 +6,7 @@ const {
 } = require("discord.js");
 const pool = require("../db");
 const { truncateValue } = require("../utils");
+const { getRewardRow } = require("../../shared/rewardTable");
 
 function isWestMarchesConfigured() {
   return Boolean(config.westMarchesApiBaseUrl && config.westMarchesApiKey);
@@ -480,6 +481,45 @@ async function awardScToCharacters({ awards, amount, reason }) {
   return Array.isArray(payload.data) ? payload.data : [];
 }
 
+async function awardHourlyRewardToCharacter({
+  characterId,
+  discordUserId,
+  hours,
+  level,
+  reason,
+}) {
+  if (!config.westMarchesGoldCurrencyId) {
+    throw new Error("missing_gold_currency_id");
+  }
+
+  const rewardRow = getRewardRow(level);
+  const experience = Math.round(hours * rewardRow.xpPerHour);
+  const gold = Math.round(hours * rewardRow.goldPerHour);
+
+  const payload = await westMarchesFetch("/rewards", {
+    method: "POST",
+    body: JSON.stringify({
+      rewards: [
+        {
+          characterId,
+          experience,
+          currencies: {
+            [config.westMarchesGoldCurrencyId]: gold,
+          },
+          reason,
+          discordId: discordUserId,
+        },
+      ],
+    }),
+  });
+
+  return {
+    experience,
+    gold,
+    reward: Array.isArray(payload.data) ? (payload.data[0] ?? null) : null,
+  };
+}
+
 async function grantWestMarchesItem({
   characterId,
   itemName,
@@ -501,6 +541,7 @@ async function grantWestMarchesItem({
 }
 
 module.exports = {
+  awardHourlyRewardToCharacter,
   awardScToCharacters,
   approveWestMarchesCharacter,
   buildCharacterListEmbed,
