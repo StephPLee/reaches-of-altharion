@@ -54,7 +54,7 @@ type Guild = {
 type GuildRoster = {
   guildName: string;
   memberCount: number;
-  members: string[];
+  members: Array<{ name: string; renown: number }>;
 };
 
 type SessionUser = {
@@ -1264,10 +1264,13 @@ export default function GuildsDirectory() {
                             <div className={styles.rosterList}>
                               {rosterMembers.map((member) => (
                                 <div
-                                  key={`${guild.id}-${member}`}
+                                  key={`${guild.id}-${member.name}`}
                                   className={styles.rosterMember}
                                 >
-                                  {member}
+                                  <span>{member.name}</span>
+                                  <span className={styles.rosterMemberRenown}>
+                                    {member.renown} renown
+                                  </span>
                                 </div>
                               ))}
                             </div>

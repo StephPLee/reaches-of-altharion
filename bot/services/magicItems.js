@@ -6,26 +6,31 @@ const MAGIC_ITEM_RARITIES = [
     value: "common",
     label: "Common",
     description: "Roll a random common magic item.",
+    minLevel: 1,
   },
   {
     value: "uncommon",
     label: "Uncommon",
     description: "Roll a random uncommon magic item.",
+    minLevel: 5,
   },
   {
     value: "rare",
     label: "Rare",
     description: "Roll a random rare magic item.",
+    minLevel: 9,
   },
   {
     value: "veryrare",
     label: "Very Rare",
     description: "Roll a random very rare magic item.",
+    minLevel: 13,
   },
   {
     value: "legendary",
     label: "Legendary",
     description: "Roll a random legendary magic item.",
+    minLevel: 20,
   },
 ];
 

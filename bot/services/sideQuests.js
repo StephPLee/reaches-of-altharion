@@ -469,14 +469,18 @@ function buildQuestRedeemTierRow(discordUserId, redeemCount) {
   return new ActionRowBuilder().addComponents(menu);
 }
 
-function buildQuestRedeemRarityRow(discordUserId) {
+function buildQuestRedeemRarityRow(discordUserId, characterLevel) {
+  const eligibleRarities = MAGIC_ITEM_RARITIES.filter(
+    (rarity) => characterLevel >= rarity.minLevel,
+  );
+
   const menu = new StringSelectMenuBuilder()
     .setCustomId(`quest-redeem-rarity:${discordUserId}`)
     .setPlaceholder("Select a rarity...")
     .addOptions(
-      MAGIC_ITEM_RARITIES.map((rarity) => ({
+      eligibleRarities.map((rarity) => ({
         label: rarity.label,
-        description: rarity.description,
+        description: `${rarity.description} (requires level ${rarity.minLevel})`,
         value: rarity.value,
       })),
     );

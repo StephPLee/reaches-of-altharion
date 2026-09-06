@@ -1679,10 +1679,24 @@ async function handleInteraction(interaction) {
         const tier = interaction.values[0];
 
         if (tier === "magicitem" || tier === "magicitem_plus_hour") {
+          const character = await getOwnedActiveWestMarchesCharacter(
+            interaction.user.id,
+            pending.characterId,
+          );
+
+          if (!character) {
+            await interaction.editReply({
+              content: "I could not find that active character under your Discord account.",
+              components: [],
+            });
+            return;
+          }
+
+          const level = normalizeCharacterLevel(character);
           pendingSideQuestRedemptions.set(interaction.user.id, { ...pending, tier });
           await interaction.editReply({
             content: "Choose the rarity for your magic item roll.",
-            components: [buildQuestRedeemRarityRow(interaction.user.id)],
+            components: [buildQuestRedeemRarityRow(interaction.user.id, level)],
           });
           return;
         }
@@ -1739,6 +1753,28 @@ async function handleInteraction(interaction) {
         if (!rarity) {
           await interaction.editReply({
             content: "That rarity is not supported.",
+            components: [],
+          });
+          return;
+        }
+
+        const character = await getOwnedActiveWestMarchesCharacter(
+          interaction.user.id,
+          pending.characterId,
+        );
+
+        if (!character) {
+          await interaction.editReply({
+            content: "I could not find that active character under your Discord account.",
+            components: [],
+          });
+          return;
+        }
+
+        const level = normalizeCharacterLevel(character);
+        if (level < rarity.minLevel) {
+          await interaction.editReply({
+            content: `**${formatCharacterName(character)}** must be at least level ${rarity.minLevel} to roll a **${rarity.label}** item. Your completed objectives are still waiting to be redeemed — run \`/quest redeem\` again.`,
             components: [],
           });
           return;

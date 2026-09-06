@@ -214,9 +214,13 @@ async function listGuildRosters() {
       g.id AS guild_id,
       g.name AS guild_name,
       g.sort_order,
-      m.character_name
+      m.character_name,
+      r.renown
     FROM guilds g
     LEFT JOIN guild_roster_memberships m ON m.guild_id = g.id
+    LEFT JOIN character_guild_renown r
+      ON r.westmarches_character_id = m.westmarches_character_id
+      AND r.guild_id = g.id
     WHERE g.is_published = true
     ORDER BY g.sort_order ASC, LOWER(g.name) ASC, LOWER(m.character_name) ASC NULLS LAST
     `,
@@ -236,7 +240,10 @@ async function listGuildRosters() {
 
     if (row.character_name) {
       const roster = rostersByGuildId.get(guildId);
-      roster.members.push(row.character_name);
+      roster.members.push({
+        name: row.character_name,
+        renown: row.renown ?? 0,
+      });
       roster.memberCount += 1;
     }
   }
