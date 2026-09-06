@@ -67,6 +67,7 @@ const {
   buildQuestRedeemTierRow,
   buildQuestRerollCharacterRow,
   buildQuestRerollObjectiveRow,
+  formatRenownProgress,
   getAllRenownForCharacter,
   getRandomPublishedGuildId,
   incrementRetrainCredit,
@@ -1860,15 +1861,7 @@ async function handleInteraction(interaction) {
         if (renownRows.length > 0) {
           lines.push("Guild renown:");
           for (const row of renownRows) {
-            const tier =
-              row.renown >= 1000
-                ? " (1000 tier unlocked)"
-                : row.renown >= 500
-                  ? " (500 tier unlocked)"
-                  : row.renown >= 100
-                    ? " (100 tier unlocked)"
-                    : "";
-            lines.push(`- ${row.guildName}: ${row.renown} renown${tier}`);
+            lines.push(`- ${row.guildName}: ${formatRenownProgress(row.renown)} renown`);
           }
         } else {
           lines.push("Guild renown: none yet.");

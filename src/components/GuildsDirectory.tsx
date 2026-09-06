@@ -57,6 +57,17 @@ type GuildRoster = {
   members: Array<{ name: string; renown: number }>;
 };
 
+// Keep tiers in sync by hand with RENOWN_TIERS in bot/services/sideQuests.js.
+const RENOWN_TIERS = [100, 500, 1000];
+
+function formatRenownProgress(renown: number): string {
+  const nextTier = RENOWN_TIERS.find((tier) => renown < tier);
+  if (nextTier === undefined) {
+    return "Full";
+  }
+  return `${renown}/${nextTier}`;
+}
+
 type SessionUser = {
   username: string;
   globalName: string | null;
@@ -1261,19 +1272,26 @@ export default function GuildsDirectory() {
                               {guildRostersError}
                             </p>
                           ) : rosterMembers.length > 0 ? (
-                            <div className={styles.rosterList}>
-                              {rosterMembers.map((member) => (
-                                <div
-                                  key={`${guild.id}-${member.name}`}
-                                  className={styles.rosterMember}
-                                >
-                                  <span>{member.name}</span>
-                                  <span className={styles.rosterMemberRenown}>
-                                    {member.renown} renown
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <>
+                              <div className={styles.rosterListHeader}>
+                                <span className={styles.rosterListHeaderRenown}>
+                                  Renown
+                                </span>
+                              </div>
+                              <div className={styles.rosterList}>
+                                {rosterMembers.map((member) => (
+                                  <div
+                                    key={`${guild.id}-${member.name}`}
+                                    className={styles.rosterMember}
+                                  >
+                                    <span>{member.name}</span>
+                                    <span className={styles.rosterMemberRenown}>
+                                      {formatRenownProgress(member.renown)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
                           ) : (
                             <p className={styles.rosterStatus}>
                               No active guild members listed yet.

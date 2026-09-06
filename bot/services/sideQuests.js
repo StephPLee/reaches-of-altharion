@@ -4,6 +4,15 @@ const { formatCharacterName } = require("./westMarches");
 const { MAGIC_ITEM_RARITIES } = require("./magicItems");
 
 const MAX_ACTIVE_OBJECTIVES = 3;
+const RENOWN_TIERS = [100, 500, 1000];
+
+function formatRenownProgress(renown) {
+  const nextTier = RENOWN_TIERS.find((tier) => renown < tier);
+  if (nextTier === undefined) {
+    return `${RENOWN_TIERS[RENOWN_TIERS.length - 1]}/${RENOWN_TIERS[RENOWN_TIERS.length - 1]}`;
+  }
+  return `${renown}/${nextTier}`;
+}
 
 function mapObjectiveRow(row) {
   return row
@@ -504,6 +513,7 @@ function buildQuestListCharacterRow(discordUserId, characters) {
 
 module.exports = {
   MAX_ACTIVE_OBJECTIVES,
+  RENOWN_TIERS,
   acquireObjectiveForCharacter,
   addRenown,
   buildQuestAcquireCharacterRow,
@@ -515,6 +525,7 @@ module.exports = {
   buildQuestRerollCharacterRow,
   buildQuestRerollObjectiveRow,
   countActiveObjectivesForCharacter,
+  formatRenownProgress,
   getAllRenownForCharacter,
   getRandomObjectiveForGuild,
   getRandomPublishedGuildId,

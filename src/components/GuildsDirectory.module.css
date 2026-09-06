@@ -378,6 +378,19 @@
     white-space: nowrap;
 }
 
+.rosterListHeader {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0.35rem 0.35rem 0;
+}
+
+.rosterListHeaderRenown {
+    color: rgba(215, 222, 242, 0.5);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .rosterList {
     display: grid;
     gap: 0;
