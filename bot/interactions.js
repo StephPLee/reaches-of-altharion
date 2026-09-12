@@ -60,6 +60,16 @@ const {
   retireWestMarchesCharacter,
   upsertScRewardCharacterPreference,
 } = require("./services/westMarches");
+const pool = require("./db");
+const {
+  buildFeedbackPromptMessage,
+  buildFeedbackThanksMessage,
+  finalizeFeedbackResponse,
+  getPrompt,
+  getResponse,
+  recordRatingSelection,
+} = require("../shared/dmQuestFeedback");
+const { buildFeedbackCommentModal } = require("./services/dmQuestFeedback");
 const {
   DuplicateActiveListingError,
   buildCancelListingRow,
@@ -1204,6 +1214,36 @@ async function handleInteraction(interaction) {
       return;
     }
 
+    if (interaction.customId.startsWith("dm-feedback-select:")) {
+      const [, promptIdRaw, category] = interaction.customId.split(":");
+      const promptId = Number(promptIdRaw);
+      const prompt = await getPrompt(pool, promptId);
+      if (!prompt || prompt.recipient_discord_user_id !== interaction.user.id) {
+        await interaction.reply({
+          content: "This feedback prompt isn't yours.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+        const rating = Number(interaction.values[0]);
+        await recordRatingSelection(pool, { promptId, category, rating });
+        const response = await getResponse(pool, promptId);
+        const selections = {
+          storytelling: response?.storytelling_rating || null,
+          pacing: response?.pacing_rating || null,
+          avrae: response?.avrae_rating || null,
+        };
+        await interaction.editReply(buildFeedbackPromptMessage({ promptId, selections }));
+      } catch (error) {
+        console.error("Failed to record quest feedback rating:", error);
+      }
+
+      return;
+    }
+
     if (!interaction.customId.startsWith("magicitem:")) {
       return;
     }
@@ -1573,6 +1613,31 @@ async function handleInteraction(interaction) {
             content: "Something went wrong while creating that request. Please try again.",
             ephemeral: true,
           });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("dm-feedback-modal:")) {
+      const promptId = Number(interaction.customId.slice("dm-feedback-modal:".length));
+      const comment = interaction.fields.getTextInputValue("comment");
+
+      try {
+        await interaction.deferReply({ ephemeral: true });
+        await finalizeFeedbackResponse(pool, { promptId, comment });
+        await interaction.editReply("Thanks for your feedback! It'll be shared with your DM anonymously in a bit.");
+        await interaction.message?.edit(buildFeedbackThanksMessage()).catch(() => {});
+      } catch (error) {
+        console.error("Failed to finalize quest feedback:", error);
+        const message =
+          error.statusCode === 400
+            ? error.message
+            : "Something went wrong submitting your feedback. Please try again.";
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(message);
+        } else {
+          await interaction.reply({ content: message, ephemeral: true });
         }
       }
 
@@ -1974,6 +2039,35 @@ async function handleInteraction(interaction) {
           });
         }
       }
+      return;
+    }
+
+    if (interaction.customId.startsWith("dm-feedback-submit:")) {
+      const promptId = Number(interaction.customId.slice("dm-feedback-submit:".length));
+      const prompt = await getPrompt(pool, promptId);
+      if (!prompt || prompt.recipient_discord_user_id !== interaction.user.id) {
+        await interaction.reply({
+          content: "This feedback prompt isn't yours.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const response = await getResponse(pool, promptId);
+      if (
+        !response ||
+        response.storytelling_rating === null ||
+        response.pacing_rating === null ||
+        response.avrae_rating === null
+      ) {
+        await interaction.reply({
+          content: "Please select all three ratings first.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      await interaction.showModal(buildFeedbackCommentModal(promptId));
       return;
     }
 

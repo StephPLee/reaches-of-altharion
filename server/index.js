@@ -50,6 +50,14 @@ const {
 const { recordAuditEvent } = require("./audit");
 const { submitFeedback } = require("../shared/feedback");
 const {
+  buildFeedbackPromptMessage,
+  buildFeedbackSummaryMessage,
+  createFeedbackPrompt,
+  listDueAggregations,
+  markAggregationDelivered,
+  setPromptMessageRef,
+} = require("../shared/dmQuestFeedback");
+const {
   createBookRequest,
   listOpenBookRequests,
   markBookRequestPurchased,
@@ -201,6 +209,7 @@ const {
   fetchGuildRoles,
   memberHasRole,
   postChannelMessage,
+  sendDirectMessage,
 } = require("./discord");
 const {
   syncStartingGraceToDiscord,
@@ -2373,6 +2382,62 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
   };
 }
 
+async function sendQuestFeedbackPrompts({ rewards, adventureId, dmDiscordUserId }) {
+  if (!adventureId || !dmDiscordUserId) return;
+
+  for (const entry of rewards) {
+    const recipientDiscordUserId = entry.discordId;
+    if (!recipientDiscordUserId) continue;
+
+    try {
+      const prompt = await createFeedbackPrompt(pool, {
+        adventureId,
+        dmDiscordUserId,
+        recipientDiscordUserId,
+      });
+      if (!prompt) continue;
+
+      const message = await sendDirectMessage(
+        recipientDiscordUserId,
+        buildFeedbackPromptMessage({ promptId: prompt.id, selections: {} }),
+      );
+      await setPromptMessageRef(pool, prompt.id, {
+        channelId: message.channel_id,
+        messageId: message.id,
+      });
+    } catch (error) {
+      console.error("Failed to send quest feedback prompt:", {
+        adventureId,
+        recipientDiscordUserId,
+        error,
+      });
+    }
+  }
+}
+
+async function deliverDueQuestFeedbackAggregations() {
+  const dueAggregations = await listDueAggregations(pool);
+
+  for (const aggregation of dueAggregations) {
+    try {
+      await sendDirectMessage(
+        aggregation.dmDiscordUserId,
+        buildFeedbackSummaryMessage(aggregation),
+      );
+      await markAggregationDelivered(pool, {
+        adventureId: aggregation.adventureId,
+        dmDiscordUserId: aggregation.dmDiscordUserId,
+      });
+    } catch (error) {
+      console.error("Failed to deliver quest feedback summary:", {
+        adventureId: aggregation.adventureId,
+        dmDiscordUserId: aggregation.dmDiscordUserId,
+        error,
+      });
+    }
+  }
+}
+
 function truncateEmbedDescription(value) {
   if (value.length <= 4096) {
     return value;
@@ -3086,6 +3151,18 @@ app.post(
       await updatePlayerRequestsDiscord().catch((syncError) => {
         console.error("Failed to update player request Discord display after fulfilment:", syncError);
       });
+      await sendDirectMessage(result.request.requesterDiscordUserId, {
+        embeds: [
+          {
+            title: "Your marketplace request was fulfilled!",
+            description: `**${result.request.quantity}x ${result.request.itemName}** was fulfilled by **${result.request.fulfillerCharacterName || "another player"}**.`,
+            url: `${publicSiteUrl}/marketplace`,
+            color: 0x57f287,
+          },
+        ],
+      }).catch((dmError) => {
+        console.error("Failed to DM requester after marketplace fulfilment:", dmError);
+      });
       await recordAuditEvent({
         action: "marketplace_request_fulfill",
         status: result.creditFailed ? "partial_error" : "success",
@@ -3600,6 +3677,14 @@ app.post(
       const rewards = await distributeRewards(normalizedPayload);
       await syncLevelRolesAfterExperienceRewards(normalizedPayload.rewards);
 
+      sendQuestFeedbackPrompts({
+        rewards: normalizedPayload.rewards,
+        adventureId: normalizedPayload.adventureId,
+        dmDiscordUserId: req.staffUser.discordUserId,
+      }).catch((feedbackError) => {
+        console.error("Failed to send quest feedback prompts after reward batch:", feedbackError);
+      });
+
       await recordAuditEvent({
         action: "westmarches_reward_distribute_batch",
         status: "success",
@@ -3685,6 +3770,14 @@ app.post(
       const rewards = await distributeRewards(bulkPayload);
       await syncLevelRolesAfterExperienceRewards(bulkPayload.rewards);
       const [reward] = rewards;
+
+      sendQuestFeedbackPrompts({
+        rewards: normalizedPayload.rewards,
+        adventureId: normalizedPayload.adventureId,
+        dmDiscordUserId: req.staffUser.discordUserId,
+      }).catch((feedbackError) => {
+        console.error("Failed to send quest feedback prompts after reward:", feedbackError);
+      });
 
       if (
         normalizedPayload.adventureId &&
@@ -6940,4 +7033,13 @@ setInterval(
     });
   },
   60 * 1000,
+).unref();
+
+setInterval(
+  () => {
+    deliverDueQuestFeedbackAggregations().catch((error) => {
+      console.error("Quest feedback aggregation delivery failed:", error);
+    });
+  },
+  30 * 60 * 1000,
 ).unref();
