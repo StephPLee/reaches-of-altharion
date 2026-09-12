@@ -143,6 +143,51 @@ async function postChannelMessage(channelId, payload) {
   return response.json();
 }
 
+async function openDirectMessageChannel(discordUserId) {
+  const response = await fetch(`${DISCORD_API_BASE_URL}/users/@me/channels`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bot ${discordBotToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ recipient_id: discordUserId }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to open Discord DM channel: ${response.status} ${errorText}`,
+    );
+  }
+
+  return response.json();
+}
+
+async function sendDirectMessage(discordUserId, payload) {
+  const dmChannel = await openDirectMessageChannel(discordUserId);
+
+  const response = await fetch(
+    `${DISCORD_API_BASE_URL}/channels/${dmChannel.id}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${discordBotToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to send Discord direct message: ${response.status} ${errorText}`,
+    );
+  }
+
+  return response.json();
+}
+
 async function editChannelMessage(channelId, messageId, payload) {
   const response = await fetch(
     `${DISCORD_API_BASE_URL}/channels/${channelId}/messages/${messageId}`,
@@ -248,4 +293,5 @@ module.exports = {
   memberHasRole,
   postChannelMessage,
   removeGuildMemberRole,
+  sendDirectMessage,
 };

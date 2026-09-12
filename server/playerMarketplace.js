@@ -217,6 +217,7 @@ function mapRequestRow(row) {
         status: row.status,
         failureReason: row.failure_reason,
         createdAt: row.created_at,
+        fulfillerCharacterName: row.fulfiller_character_name,
       }
     : null;
 }
