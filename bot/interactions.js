@@ -1237,7 +1237,12 @@ async function handleInteraction(interaction) {
           avrae: response?.avrae_rating || null,
           enjoyment: response?.enjoyment_rating || null,
         };
-        await interaction.editReply(buildFeedbackPromptMessage({ promptId, selections }));
+        await interaction.editReply(buildFeedbackPromptMessage({
+          promptId,
+          selections,
+          adventureTitle: prompt.adventure_title,
+          dmDisplayName: prompt.dm_display_name,
+        }));
       } catch (error) {
         console.error("Failed to record quest feedback rating:", error);
       }

@@ -2433,6 +2433,8 @@ async function sendQuestFeedbackPrompts({ rewards, adventureId, dmDiscordUserId 
         adventureId,
         dmDiscordUserId,
         recipientDiscordUserId,
+        adventureTitle,
+        dmDisplayName,
       });
       if (!prompt) continue;
 

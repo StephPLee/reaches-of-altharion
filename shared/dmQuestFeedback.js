@@ -16,16 +16,16 @@ function isValidRating(rating) {
   return Number.isInteger(rating) && rating >= 1 && rating <= 5;
 }
 
-async function createFeedbackPrompt(pool, { adventureId, dmDiscordUserId, recipientDiscordUserId }) {
+async function createFeedbackPrompt(pool, { adventureId, dmDiscordUserId, recipientDiscordUserId, adventureTitle, dmDisplayName }) {
   if (!adventureId || !dmDiscordUserId || !recipientDiscordUserId) return null;
   if (recipientDiscordUserId === dmDiscordUserId) return null;
 
   const result = await pool.query(
-    `INSERT INTO dm_quest_feedback_prompts (adventure_id, dm_discord_user_id, recipient_discord_user_id)
-     VALUES ($1, $2, $3)
+    `INSERT INTO dm_quest_feedback_prompts (adventure_id, dm_discord_user_id, recipient_discord_user_id, adventure_title, dm_display_name)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (adventure_id, recipient_discord_user_id) DO NOTHING
-     RETURNING id, adventure_id, dm_discord_user_id, recipient_discord_user_id, status, created_at`,
-    [adventureId, dmDiscordUserId, recipientDiscordUserId],
+     RETURNING id, adventure_id, dm_discord_user_id, recipient_discord_user_id, status, created_at, adventure_title, dm_display_name`,
+    [adventureId, dmDiscordUserId, recipientDiscordUserId, adventureTitle || null, dmDisplayName || null],
   );
   return result.rows[0] || null;
 }
