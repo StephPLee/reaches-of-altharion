@@ -2386,7 +2386,18 @@ async function sendQuestFeedbackPrompts({ rewards, adventureId, dmDiscordUserId 
   if (!adventureId || !dmDiscordUserId) return;
 
   for (const entry of rewards) {
-    const recipientDiscordUserId = entry.discordId;
+    let recipientDiscordUserId;
+    try {
+      const character = await getCharacter(entry.characterId);
+      recipientDiscordUserId = character?.user?.discordId;
+    } catch (error) {
+      console.error("Failed to resolve character for quest feedback prompt:", {
+        adventureId,
+        characterId: entry.characterId,
+        error,
+      });
+      continue;
+    }
     if (!recipientDiscordUserId) continue;
 
     try {
