@@ -241,6 +241,7 @@ const {
 } = require("./sessions");
 const {
   distributeRewards,
+  getAdventure,
   getCharacter,
   getEventCurrencyMapping,
   grantCharacterReward,
@@ -2382,8 +2383,35 @@ async function normalizeWestMarchesBulkRewardsPayload(body) {
   };
 }
 
+async function resolveGuildMemberDisplayName(discordUserId) {
+  try {
+    const member = await fetchGuildMember(discordUserId);
+    return member?.nick || member?.user?.global_name || member?.user?.username || null;
+  } catch (error) {
+    console.error("Failed to resolve guild member display name:", { discordUserId, error });
+    return null;
+  }
+}
+
+async function resolveAdventureTitle(adventureId) {
+  try {
+    const adventure = await getAdventure(adventureId);
+    return typeof adventure?.title === "string" && adventure.title.trim()
+      ? adventure.title.trim()
+      : null;
+  } catch (error) {
+    console.error("Failed to resolve adventure title:", { adventureId, error });
+    return null;
+  }
+}
+
 async function sendQuestFeedbackPrompts({ rewards, adventureId, dmDiscordUserId }) {
   if (!adventureId || !dmDiscordUserId) return;
+
+  const [adventureTitle, dmDisplayName] = await Promise.all([
+    resolveAdventureTitle(adventureId),
+    resolveGuildMemberDisplayName(dmDiscordUserId),
+  ]);
 
   for (const entry of rewards) {
     let recipientDiscordUserId;
@@ -2410,7 +2438,7 @@ async function sendQuestFeedbackPrompts({ rewards, adventureId, dmDiscordUserId 
 
       const message = await sendDirectMessage(
         recipientDiscordUserId,
-        buildFeedbackPromptMessage({ promptId: prompt.id, selections: {} }),
+        buildFeedbackPromptMessage({ promptId: prompt.id, selections: {}, adventureTitle, dmDisplayName }),
       );
       await setPromptMessageRef(pool, prompt.id, {
         channelId: message.channel_id,
@@ -2431,9 +2459,10 @@ async function deliverDueQuestFeedbackAggregations() {
 
   for (const aggregation of dueAggregations) {
     try {
+      const adventureTitle = await resolveAdventureTitle(aggregation.adventureId);
       await sendDirectMessage(
         aggregation.dmDiscordUserId,
-        buildFeedbackSummaryMessage(aggregation),
+        buildFeedbackSummaryMessage({ ...aggregation, adventureTitle }),
       );
       await markAggregationDelivered(pool, {
         adventureId: aggregation.adventureId,

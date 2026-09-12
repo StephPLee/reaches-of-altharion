@@ -150,7 +150,7 @@ function buildRatingSelectRow(promptId, category, selectedRating) {
   };
 }
 
-function buildFeedbackPromptMessage({ promptId, selections = {} }) {
+function buildFeedbackPromptMessage({ promptId, selections = {}, adventureTitle, dmDisplayName }) {
   const components = RATING_CATEGORIES.map((category) =>
     buildRatingSelectRow(promptId, category, selections[category.key] || null),
   );
@@ -167,11 +167,18 @@ function buildFeedbackPromptMessage({ promptId, selections = {} }) {
     ],
   });
 
+  const detailsLines = [
+    adventureTitle ? `**Quest:** ${adventureTitle}` : null,
+    dmDisplayName ? `**DM:** ${dmDisplayName}` : null,
+  ].filter(Boolean);
+  const detailsText = detailsLines.length > 0 ? `${detailsLines.join("\n")}\n\n` : "";
+
   return {
     embeds: [
       {
         title: "How was your quest?",
         description:
+          detailsText +
           "You just received a reward for a quest! Your DM would love to know how it went.\n\n" +
           "Rate each category below, then hit **Submit feedback**. Your responses are combined with everyone else's " +
           "and sent to your DM anonymously after 24 hours — they won't see who said what.",
@@ -195,17 +202,18 @@ function buildFeedbackThanksMessage() {
   };
 }
 
-function buildFeedbackSummaryMessage({ adventureId, responseCount, avgStorytelling, avgPacing, avgAvrae, avgEnjoyment, comments }) {
+function buildFeedbackSummaryMessage({ adventureId, adventureTitle, responseCount, avgStorytelling, avgPacing, avgAvrae, avgEnjoyment, comments }) {
   const formatAvg = (value) => (value === null || value === undefined ? "n/a" : `${Number(value).toFixed(1)} / 5`);
   const commentsText =
     comments.length > 0 ? comments.map((comment) => `> ${comment}`).join("\n\n") : "*No written comments this round.*";
+  const questLabel = adventureTitle ? `**${adventureTitle}**` : `adventure \`${adventureId}\``;
 
   return {
     embeds: [
       {
         title: "Quest feedback summary",
         description:
-          `Anonymous feedback from **${responseCount}** player${responseCount === 1 ? "" : "s"} for adventure \`${adventureId}\`.\n\n` +
+          `Anonymous feedback from **${responseCount}** player${responseCount === 1 ? "" : "s"} for ${questLabel}.\n\n` +
           `**Storytelling & Immersion:** ${formatAvg(avgStorytelling)}\n` +
           `**Balance & Pacing:** ${formatAvg(avgPacing)}\n` +
           `**Rules Knowledge & Avrae Proficiency:** ${formatAvg(avgAvrae)}\n` +
