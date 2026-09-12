@@ -23,6 +23,12 @@ const {
 } = require("./services/bosses");
 const { buildFaqEmbeds, listFaqEntries } = require("./services/faq");
 const {
+  buildLookupResultEmbed,
+  getLookupEntryByKey,
+  searchLookupCandidates,
+  searchLookupEntries,
+} = require("./services/lookup");
+const {
   buildQuestCallCharacterRow,
   buildQuestCallEmbed,
   buildQuestCallMessageComponents,
@@ -285,6 +291,15 @@ async function ensureMemberRole(guild, discordUserId, roleId) {
 }
 
 async function handleInteraction(interaction) {
+  if (interaction.isAutocomplete()) {
+    if (interaction.commandName === "lookup") {
+      const focused = interaction.options.getFocused();
+      const choices = await searchLookupEntries(focused);
+      await interaction.respond(choices);
+    }
+    return;
+  }
+
   if (interaction.isStringSelectMenu()) {
     if (interaction.customId.startsWith("rollstats-pick:")) {
       const ownerId = interaction.customId.slice("rollstats-pick:".length);
@@ -2050,6 +2065,36 @@ async function handleInteraction(interaction) {
   }
   if (interaction.commandName === "book-request") {
     await interaction.showModal(buildBookRequestModal());
+    return;
+  }
+  if (interaction.commandName === "lookup") {
+    const key = interaction.options.getString("name", true);
+    const entry = await getLookupEntryByKey(key);
+
+    if (entry) {
+      await interaction.reply({ embeds: [buildLookupResultEmbed(entry)] });
+      return;
+    }
+
+    const fallbackMatches = await searchLookupCandidates(key);
+
+    if (fallbackMatches.length === 1) {
+      const resolved = await getLookupEntryByKey(fallbackMatches[0].key);
+      if (resolved) {
+        await interaction.reply({ embeds: [buildLookupResultEmbed(resolved)] });
+        return;
+      }
+    }
+
+    await interaction.reply({
+      content: fallbackMatches.length
+        ? `I couldn't find an exact match for "${key}". Did you mean: ${fallbackMatches
+            .slice(0, 5)
+            .map((match) => `**${match.title}** (${match.category})`)
+            .join(", ")}? Try \`/lookup\` again and pick one of the suggestions.`
+        : `No results found for "${key}".`,
+      ephemeral: true,
+    });
     return;
   }
   if (interaction.commandName === "magicitem") {
