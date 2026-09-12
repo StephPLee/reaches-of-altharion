@@ -2,12 +2,14 @@ const RATING_CATEGORY_COLUMNS = {
   storytelling: "storytelling_rating",
   pacing: "pacing_rating",
   avrae: "avrae_rating",
+  enjoyment: "enjoyment_rating",
 };
 
 const RATING_CATEGORIES = [
-  { key: "storytelling", label: "Storytelling" },
+  { key: "storytelling", label: "Storytelling & Immersion" },
   { key: "pacing", label: "Balance & Pacing" },
-  { key: "avrae", label: "Avrae Proficiency" },
+  { key: "avrae", label: "Rules Knowledge & Avrae Proficiency" },
+  { key: "enjoyment", label: "Enjoyment & Inclusivity" },
 ];
 
 function isValidRating(rating) {
@@ -72,9 +74,10 @@ async function finalizeFeedbackResponse(pool, { promptId, comment }) {
     !response ||
     response.storytelling_rating === null ||
     response.pacing_rating === null ||
-    response.avrae_rating === null
+    response.avrae_rating === null ||
+    response.enjoyment_rating === null
   ) {
-    const error = new Error("Please select all three ratings before submitting.");
+    const error = new Error("Please select all four ratings before submitting.");
     error.statusCode = 400;
     throw error;
   }
@@ -100,6 +103,7 @@ async function listDueAggregations(pool, { olderThanHours = 24 } = {}) {
        AVG(r.storytelling_rating) AS "avgStorytelling",
        AVG(r.pacing_rating) AS "avgPacing",
        AVG(r.avrae_rating) AS "avgAvrae",
+       AVG(r.enjoyment_rating) AS "avgEnjoyment",
        ARRAY_REMOVE(ARRAY_AGG(NULLIF(BTRIM(r.comment), '')), NULL) AS comments
      FROM dm_quest_feedback_prompts p
      JOIN dm_quest_feedback_responses r ON r.prompt_id = p.id
@@ -191,7 +195,7 @@ function buildFeedbackThanksMessage() {
   };
 }
 
-function buildFeedbackSummaryMessage({ adventureId, responseCount, avgStorytelling, avgPacing, avgAvrae, comments }) {
+function buildFeedbackSummaryMessage({ adventureId, responseCount, avgStorytelling, avgPacing, avgAvrae, avgEnjoyment, comments }) {
   const formatAvg = (value) => (value === null || value === undefined ? "n/a" : `${Number(value).toFixed(1)} / 5`);
   const commentsText =
     comments.length > 0 ? comments.map((comment) => `> ${comment}`).join("\n\n") : "*No written comments this round.*";
@@ -202,9 +206,10 @@ function buildFeedbackSummaryMessage({ adventureId, responseCount, avgStorytelli
         title: "Quest feedback summary",
         description:
           `Anonymous feedback from **${responseCount}** player${responseCount === 1 ? "" : "s"} for adventure \`${adventureId}\`.\n\n` +
-          `**Storytelling:** ${formatAvg(avgStorytelling)}\n` +
+          `**Storytelling & Immersion:** ${formatAvg(avgStorytelling)}\n` +
           `**Balance & Pacing:** ${formatAvg(avgPacing)}\n` +
-          `**Avrae Proficiency:** ${formatAvg(avgAvrae)}\n\n` +
+          `**Rules Knowledge & Avrae Proficiency:** ${formatAvg(avgAvrae)}\n` +
+          `**Enjoyment & Inclusivity:** ${formatAvg(avgEnjoyment)}\n\n` +
           `**Comments:**\n${commentsText}`,
         color: 0xfee75c,
       },

@@ -1235,6 +1235,7 @@ async function handleInteraction(interaction) {
           storytelling: response?.storytelling_rating || null,
           pacing: response?.pacing_rating || null,
           avrae: response?.avrae_rating || null,
+          enjoyment: response?.enjoyment_rating || null,
         };
         await interaction.editReply(buildFeedbackPromptMessage({ promptId, selections }));
       } catch (error) {
@@ -2058,10 +2059,11 @@ async function handleInteraction(interaction) {
         !response ||
         response.storytelling_rating === null ||
         response.pacing_rating === null ||
-        response.avrae_rating === null
+        response.avrae_rating === null ||
+        response.enjoyment_rating === null
       ) {
         await interaction.reply({
-          content: "Please select all three ratings first.",
+          content: "Please select all four ratings first.",
           ephemeral: true,
         });
         return;
