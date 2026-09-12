@@ -8,7 +8,7 @@ const RATING_CATEGORY_COLUMNS = {
 const RATING_CATEGORIES = [
   { key: "storytelling", label: "Storytelling & Immersion" },
   { key: "pacing", label: "Balance & Pacing" },
-  { key: "avrae", label: "Rules & Avrae Understanding" },
+  { key: "avrae", label: "Rules & Avrae" },
   { key: "enjoyment", label: "Enjoyment & Inclusivity" },
 ];
 
@@ -167,19 +167,15 @@ function buildFeedbackPromptMessage({ promptId, selections = {}, adventureTitle,
     ],
   });
 
-  const detailsLines = [
-    adventureTitle ? `**Quest:** ${adventureTitle}` : null,
-    dmDisplayName ? `**DM:** ${dmDisplayName}` : null,
-  ].filter(Boolean);
-  const detailsText = detailsLines.length > 0 ? `${detailsLines.join("\n")}\n\n` : "";
+  const questPhrase = adventureTitle ? `for **${adventureTitle}**` : "for a quest";
+  const dmPhrase = dmDisplayName ? `**${dmDisplayName}**` : "Your DM";
 
   return {
     embeds: [
       {
         title: "How was your quest?",
         description:
-          detailsText +
-          "You just received a reward for a quest! Your DM would love to know how it went.\n\n" +
+          `You just received a reward ${questPhrase}! ${dmPhrase} would love to know how it went.\n\n` +
           "Rate each category below, then hit **Submit feedback**. Your responses are combined with everyone else's " +
           "and sent to your DM anonymously after 24 hours — they won't see who said what.",
         color: 0x5865f2,
@@ -216,7 +212,7 @@ function buildFeedbackSummaryMessage({ adventureId, adventureTitle, responseCoun
           `Anonymous feedback from **${responseCount}** player${responseCount === 1 ? "" : "s"} for ${questLabel}.\n\n` +
           `**Storytelling & Immersion:** ${formatAvg(avgStorytelling)}\n` +
           `**Balance & Pacing:** ${formatAvg(avgPacing)}\n` +
-          `**Rules & Avrae Understanding:** ${formatAvg(avgAvrae)}\n` +
+          `**Rules & Avrae:** ${formatAvg(avgAvrae)}\n` +
           `**Enjoyment & Inclusivity:** ${formatAvg(avgEnjoyment)}\n\n` +
           `**Comments:**\n${commentsText}`,
         color: 0xfee75c,
