@@ -167,19 +167,15 @@ function buildFeedbackPromptMessage({ promptId, selections = {}, adventureTitle,
     ],
   });
 
-  const detailsLines = [
-    adventureTitle ? `**Quest:** ${adventureTitle}` : null,
-    dmDisplayName ? `**DM:** ${dmDisplayName}` : null,
-  ].filter(Boolean);
-  const detailsText = detailsLines.length > 0 ? `${detailsLines.join("\n")}\n\n` : "";
+  const questPhrase = adventureTitle ? `for **${adventureTitle}**` : "for a quest";
+  const dmPhrase = dmDisplayName ? `**${dmDisplayName}**` : "Your DM";
 
   return {
     embeds: [
       {
         title: "How was your quest?",
         description:
-          detailsText +
-          "You just received a reward for a quest! Your DM would love to know how it went.\n\n" +
+          `You just received a reward ${questPhrase}! ${dmPhrase} would love to know how it went.\n\n` +
           "Rate each category below, then hit **Submit feedback**. Your responses are combined with everyone else's " +
           "and sent to your DM anonymously after 24 hours — they won't see who said what.",
         color: 0x5865f2,
