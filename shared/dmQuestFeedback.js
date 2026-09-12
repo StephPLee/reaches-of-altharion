@@ -8,7 +8,7 @@ const RATING_CATEGORY_COLUMNS = {
 const RATING_CATEGORIES = [
   { key: "storytelling", label: "Storytelling & Immersion" },
   { key: "pacing", label: "Balance & Pacing" },
-  { key: "avrae", label: "Rules & Avrae Understanding" },
+  { key: "avrae", label: "Rules & Avrae" },
   { key: "enjoyment", label: "Enjoyment & Inclusivity" },
 ];
 
@@ -212,7 +212,7 @@ function buildFeedbackSummaryMessage({ adventureId, adventureTitle, responseCoun
           `Anonymous feedback from **${responseCount}** player${responseCount === 1 ? "" : "s"} for ${questLabel}.\n\n` +
           `**Storytelling & Immersion:** ${formatAvg(avgStorytelling)}\n` +
           `**Balance & Pacing:** ${formatAvg(avgPacing)}\n` +
-          `**Rules & Avrae Understanding:** ${formatAvg(avgAvrae)}\n` +
+          `**Rules & Avrae:** ${formatAvg(avgAvrae)}\n` +
           `**Enjoyment & Inclusivity:** ${formatAvg(avgEnjoyment)}\n\n` +
           `**Comments:**\n${commentsText}`,
         color: 0xfee75c,
