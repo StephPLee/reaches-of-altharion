@@ -439,18 +439,21 @@ function buildQuestRedeemObjectivesRow(discordUserId, objectives) {
 }
 
 function buildQuestRedeemTierRow(discordUserId, redeemCount) {
+  const hourLabel = `${redeemCount} Hour${redeemCount === 1 ? "" : "s"}`;
+  const hourDescription = `Grant ${redeemCount} hour${redeemCount === 1 ? "" : "s"} of XP and Gold at the character's level.`;
+
   const options =
     redeemCount >= 3
       ? [
           {
             value: "hours",
-            label: "1 Hour Reward",
-            description: "Grant 1 hour of XP and Gold at the character's level.",
+            label: `${hourLabel} Reward`,
+            description: hourDescription,
           },
           {
             value: "magicitem_plus_hour",
-            label: "Magic Item + 1 Hour Reward",
-            description: "Roll a magic item and grant 1 hour of XP and Gold.",
+            label: `Magic Item + ${hourLabel} Reward`,
+            description: `Roll a magic item and grant ${redeemCount} hour${redeemCount === 1 ? "" : "s"} of XP and Gold.`,
           },
           {
             value: "retrain",
@@ -461,8 +464,8 @@ function buildQuestRedeemTierRow(discordUserId, redeemCount) {
       : [
           {
             value: "hours",
-            label: "1 Hour Reward",
-            description: "Grant 1 hour of XP and Gold at the character's level.",
+            label: `${hourLabel} Reward`,
+            description: hourDescription,
           },
           {
             value: "magicitem",

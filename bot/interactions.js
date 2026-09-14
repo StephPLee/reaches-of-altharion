@@ -372,7 +372,7 @@ async function resolveSideQuestRedemption({
         const { experience, gold } = await awardHourlyRewardToCharacter({
           characterId,
           discordUserId,
-          hours: 1,
+          hours: redeemedRows.length,
           level,
           reason: "Side-quest redemption",
         });
