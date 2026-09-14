@@ -4,6 +4,13 @@ const RULE_TYPES = new Set([
   "final_participant_fixed",
   "sc_percentage",
   "event_quest_fixed",
+  "quest_bonus_percent",
+]);
+
+const RULE_TYPES_REQUIRING_CURRENCY = new Set([
+  "final_participant_fixed",
+  "sc_percentage",
+  "event_quest_fixed",
 ]);
 
 function mapEvent(row) {
@@ -19,6 +26,7 @@ function mapEvent(row) {
         fixedAmount: Number(row.fixed_amount),
         nonEventScPercent: Number(row.non_event_sc_percent),
         eventScPercent: Number(row.event_sc_percent),
+        xpGoldBonusPercent: Number(row.xp_gold_bonus_percent),
         enabled: row.enabled,
         calendarEventId: row.calendar_event_id ? Number(row.calendar_event_id) : null,
         createdAt: row.created_at,
@@ -37,6 +45,8 @@ function normalizeEventInput(value) {
   const fixedAmount = Number(value?.fixedAmount ?? 0);
   const nonEventScPercent = Number(value?.nonEventScPercent ?? 0);
   const eventScPercent = Number(value?.eventScPercent ?? 0);
+  const xpGoldBonusPercent = Number(value?.xpGoldBonusPercent ?? 0);
+  const requiresCurrency = RULE_TYPES_REQUIRING_CURRENCY.has(ruleType);
   const calendarStartDate = /^\d{4}-\d{2}-\d{2}$/.test(value?.calendarStartDate || "")
     ? value.calendarStartDate
     : Number.isFinite(startsAt.getTime())
@@ -48,8 +58,12 @@ function normalizeEventInput(value) {
       ? endsAt.toISOString().slice(0, 10)
       : "";
 
-  if (!name || !currencyId || !currencyName) {
-    return { error: "Event name, currency name, and currency ID are required." };
+  if (!name || (requiresCurrency && (!currencyId || !currencyName))) {
+    return {
+      error: requiresCurrency
+        ? "Event name, currency name, and currency ID are required."
+        : "Event name is required.",
+    };
   }
   if (!RULE_TYPES.has(ruleType)) {
     return { error: "Choose a supported event reward rule." };
@@ -57,7 +71,10 @@ function normalizeEventInput(value) {
   if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime()) || endsAt <= startsAt) {
     return { error: "Choose a valid event start and end time." };
   }
-  if (![fixedAmount, nonEventScPercent, eventScPercent].every(Number.isInteger) || [fixedAmount, nonEventScPercent, eventScPercent].some((entry) => entry < 0)) {
+  if (
+    ![fixedAmount, nonEventScPercent, eventScPercent, xpGoldBonusPercent].every(Number.isInteger) ||
+    [fixedAmount, nonEventScPercent, eventScPercent, xpGoldBonusPercent].some((entry) => entry < 0)
+  ) {
     return { error: "Reward amounts and percentages must be non-negative whole numbers." };
   }
   if ((ruleType === "event_quest_fixed" || ruleType === "final_participant_fixed") && fixedAmount === 0) {
@@ -66,17 +83,21 @@ function normalizeEventInput(value) {
   if (ruleType === "sc_percentage" && nonEventScPercent === 0 && eventScPercent === 0) {
     return { error: "At least one SC percentage must be greater than zero." };
   }
+  if (ruleType === "quest_bonus_percent" && xpGoldBonusPercent === 0) {
+    return { error: "Quest bonus percent must be greater than zero." };
+  }
 
   return {
     name,
-    currencyId,
-    currencyName,
+    currencyId: requiresCurrency ? currencyId : null,
+    currencyName: requiresCurrency ? currencyName : null,
     startsAt,
     endsAt,
     ruleType,
     fixedAmount,
     nonEventScPercent,
     eventScPercent,
+    xpGoldBonusPercent,
     enabled: value?.enabled !== false,
     calendarStartDate,
     calendarEndDate,
@@ -128,10 +149,14 @@ function describeEventRule(event) {
   if (event.ruleType === "sc_percentage") {
     return `${event.nonEventScPercent}% of SC for normal quests and ${event.eventScPercent}% for event quests, paid as ${event.currencyName}.`;
   }
+  if (event.ruleType === "quest_bonus_percent") {
+    return `+${event.xpGoldBonusPercent}% XP, Gold, and SC for event quests.`;
+  }
   return `${event.fixedAmount} ${event.currencyName} per event quest.`;
 }
 
 async function insertCalendarEvent(client, event, userId, slugSuffix) {
+  const currencyLine = event.currencyName ? `Event currency: ${event.currencyName}. ` : "";
   const result = await client.query(
     `INSERT INTO calendar_events
      (title, slug, start_date, end_date, category, summary, details,
@@ -144,7 +169,7 @@ async function insertCalendarEvent(client, event, userId, slugSuffix) {
       event.calendarStartDate,
       event.calendarEndDate,
       describeEventRule(event),
-      `Event currency: ${event.currencyName}. ${describeEventRule(event)}`,
+      `${currencyLine}${describeEventRule(event)}`,
       userId || null,
     ],
   );
@@ -161,11 +186,11 @@ async function createRewardEvent(input, createdByDiscordUserId, createdByUserId)
     const result = await client.query(
       `INSERT INTO reward_events
        (name, currency_id, currency_name, starts_at, ends_at, rule_type,
-        fixed_amount, non_event_sc_percent, event_sc_percent, enabled, created_by_discord_user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        fixed_amount, non_event_sc_percent, event_sc_percent, xp_gold_bonus_percent, enabled, created_by_discord_user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
       [event.name, event.currencyId, event.currencyName, event.startsAt, event.endsAt,
        event.ruleType, event.fixedAmount, event.nonEventScPercent,
-       event.eventScPercent, event.enabled, createdByDiscordUserId || null],
+       event.eventScPercent, event.xpGoldBonusPercent, event.enabled, createdByDiscordUserId || null],
     );
     const rewardEventId = Number(result.rows[0].id);
     const calendarEventId = await insertCalendarEvent(
@@ -197,11 +222,12 @@ async function updateRewardEvent(id, input, updatedByUserId) {
     const result = await client.query(
       `UPDATE reward_events SET name=$2, currency_id=$3, currency_name=$4,
        starts_at=$5, ends_at=$6, rule_type=$7, fixed_amount=$8,
-       non_event_sc_percent=$9, event_sc_percent=$10, enabled=$11, updated_at=NOW()
+       non_event_sc_percent=$9, event_sc_percent=$10, xp_gold_bonus_percent=$11,
+       enabled=$12, updated_at=NOW()
        WHERE id=$1 RETURNING *`,
       [id, event.name, event.currencyId, event.currencyName, event.startsAt,
        event.endsAt, event.ruleType, event.fixedAmount, event.nonEventScPercent,
-       event.eventScPercent, event.enabled],
+       event.eventScPercent, event.xpGoldBonusPercent, event.enabled],
     );
     if (!result.rows[0]) {
       await client.query("ROLLBACK");
@@ -211,6 +237,7 @@ async function updateRewardEvent(id, input, updatedByUserId) {
       ? Number(result.rows[0].calendar_event_id)
       : null;
     if (calendarEventId) {
+      const currencyLine = event.currencyName ? `Event currency: ${event.currencyName}. ` : "";
       const calendarResult = await client.query(
         `UPDATE calendar_events SET title=$2, start_date=$3, end_date=$4,
          category='Server Event', summary=$5, details=$6,
@@ -218,7 +245,7 @@ async function updateRewardEvent(id, input, updatedByUserId) {
          WHERE id=$1 RETURNING id`,
         [calendarEventId, event.name, event.calendarStartDate,
          event.calendarEndDate, describeEventRule(event),
-         `Event currency: ${event.currencyName}. ${describeEventRule(event)}`,
+         `${currencyLine}${describeEventRule(event)}`,
          updatedByUserId || null],
       );
       if (!calendarResult.rows[0]) calendarEventId = null;

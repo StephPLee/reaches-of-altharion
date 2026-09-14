@@ -3521,6 +3521,10 @@ app.post(
 );
 
 async function resolveRewardEventCurrencyInput(body) {
+  if (body?.ruleType === "quest_bonus_percent") {
+    return { ...body, currencyId: "", currencyName: "" };
+  }
+
   const requestedName =
     typeof body?.currencyName === "string"
       ? body.currencyName.trim().replace(/\s+/g, " ")

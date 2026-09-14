@@ -45,10 +45,15 @@ type RewardEvent = {
   currencyName: string;
   startsAt: string;
   endsAt: string;
-  ruleType: "final_participant_fixed" | "sc_percentage" | "event_quest_fixed";
+  ruleType:
+    | "final_participant_fixed"
+    | "sc_percentage"
+    | "event_quest_fixed"
+    | "quest_bonus_percent";
   fixedAmount: number;
   nonEventScPercent: number;
   eventScPercent: number;
+  xpGoldBonusPercent: number;
   enabled: boolean;
 };
 
@@ -100,6 +105,7 @@ export default function AdminPage(): ReactNode {
   const [eventFixedAmount, setEventFixedAmount] = useState("5");
   const [eventNonQuestPercent, setEventNonQuestPercent] = useState("50");
   const [eventQuestPercent, setEventQuestPercent] = useState("100");
+  const [eventXpGoldBonusPercent, setEventXpGoldBonusPercent] = useState("50");
   const [eventEnabled, setEventEnabled] = useState(true);
   const [eventMessage, setEventMessage] = useState("");
   const [eventError, setEventError] = useState("");
@@ -478,13 +484,14 @@ export default function AdminPage(): ReactNode {
   function editRewardEvent(event: RewardEvent) {
     setEditingRewardEventId(event.id);
     setEventName(event.name);
-    setEventCurrencyName(event.currencyName);
+    setEventCurrencyName(event.currencyName || "");
     setEventStartsAt(toLocalInput(event.startsAt));
     setEventEndsAt(toLocalInput(event.endsAt));
     setEventRuleType(event.ruleType);
     setEventFixedAmount(String(event.fixedAmount));
     setEventNonQuestPercent(String(event.nonEventScPercent));
     setEventQuestPercent(String(event.eventScPercent));
+    setEventXpGoldBonusPercent(String(event.xpGoldBonusPercent));
     setEventEnabled(event.enabled);
     setEventMessage("");
     setEventError("");
@@ -500,12 +507,18 @@ export default function AdminPage(): ReactNode {
     setEventFixedAmount("5");
     setEventNonQuestPercent("50");
     setEventQuestPercent("100");
+    setEventXpGoldBonusPercent("50");
     setEventEnabled(true);
   }
 
   async function saveRewardEvent() {
-    if (!eventCurrencyName.trim() || !eventStartsAt || !eventEndsAt) {
-      setEventError("Enter a currency name and event start/end times.");
+    const requiresCurrency = eventRuleType !== "quest_bonus_percent";
+    if ((requiresCurrency && !eventCurrencyName.trim()) || !eventStartsAt || !eventEndsAt) {
+      setEventError(
+        requiresCurrency
+          ? "Enter a currency name and event start/end times."
+          : "Enter event start/end times.",
+      );
       return;
     }
     setIsSavingEvent(true);
@@ -520,7 +533,7 @@ export default function AdminPage(): ReactNode {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: eventName,
-            currencyName: eventCurrencyName.trim(),
+            currencyName: requiresCurrency ? eventCurrencyName.trim() : "",
             startsAt: new Date(eventStartsAt).toISOString(),
             endsAt: new Date(eventEndsAt).toISOString(),
             calendarStartDate: eventStartsAt.slice(0, 10),
@@ -529,6 +542,7 @@ export default function AdminPage(): ReactNode {
             fixedAmount: Number(eventFixedAmount),
             nonEventScPercent: Number(eventNonQuestPercent),
             eventScPercent: Number(eventQuestPercent),
+            xpGoldBonusPercent: Number(eventXpGoldBonusPercent),
             enabled: eventEnabled,
           }),
         },
@@ -741,16 +755,18 @@ export default function AdminPage(): ReactNode {
                     <label htmlFor="reward-event-name">Event Name</label>
                     <input id="reward-event-name" className={styles.input} value={eventName} onChange={(event) => setEventName(event.target.value)} />
                   </div>
-                  <div className={styles.field}>
-                    <label htmlFor="reward-event-currency">Event Currency</label>
-                    <input
-                      id="reward-event-currency"
-                      className={styles.input}
-                      value={eventCurrencyName}
-                      onChange={(event) => setEventCurrencyName(event.target.value)}
-                      placeholder="Enter the currency name exactly as it appears in West Marches"
-                    />
-                  </div>
+                  {eventRuleType !== "quest_bonus_percent" ? (
+                    <div className={styles.field}>
+                      <label htmlFor="reward-event-currency">Event Currency</label>
+                      <input
+                        id="reward-event-currency"
+                        className={styles.input}
+                        value={eventCurrencyName}
+                        onChange={(event) => setEventCurrencyName(event.target.value)}
+                        placeholder="Enter the currency name exactly as it appears in West Marches"
+                      />
+                    </div>
+                  ) : null}
                   <div className={styles.field}>
                     <label htmlFor="reward-event-start">Starts</label>
                     <input id="reward-event-start" className={styles.input} type="datetime-local" value={eventStartsAt} onChange={(event) => setEventStartsAt(event.target.value)} />
@@ -765,6 +781,7 @@ export default function AdminPage(): ReactNode {
                       <option value="event_quest_fixed">Fixed amount per event quest</option>
                       <option value="sc_percentage">Percentage of SC</option>
                       <option value="final_participant_fixed">Fixed amount to unique participants at event end</option>
+                      <option value="quest_bonus_percent">Bonus % of normal XP/Gold/SC (no currency needed)</option>
                     </select>
                   </div>
                   {eventRuleType === "sc_percentage" ? (
@@ -778,6 +795,11 @@ export default function AdminPage(): ReactNode {
                         <input id="reward-event-quest-percent" className={styles.input} type="number" min="0" value={eventQuestPercent} onChange={(event) => setEventQuestPercent(event.target.value)} />
                       </div>
                     </>
+                  ) : eventRuleType === "quest_bonus_percent" ? (
+                    <div className={styles.field}>
+                      <label htmlFor="reward-event-bonus-percent">Bonus % of Normal XP/Gold/SC</label>
+                      <input id="reward-event-bonus-percent" className={styles.input} type="number" min="0" value={eventXpGoldBonusPercent} onChange={(event) => setEventXpGoldBonusPercent(event.target.value)} />
+                    </div>
                   ) : (
                     <div className={styles.field}>
                       <label htmlFor="reward-event-fixed">{eventRuleType === "final_participant_fixed" ? "Final Amount per Unique Participant" : "Amount per Event Quest"}</label>
@@ -806,7 +828,7 @@ export default function AdminPage(): ReactNode {
                       <div key={event.id} className={styles.historyItem}>
                         <div>
                           <strong>{event.name}</strong>
-                          <p className={styles.meta}>{new Date(event.startsAt).toLocaleString()} – {new Date(event.endsAt).toLocaleString()} · {event.currencyName} · {event.enabled ? "enabled" : "disabled"}</p>
+                          <p className={styles.meta}>{new Date(event.startsAt).toLocaleString()} – {new Date(event.endsAt).toLocaleString()} · {event.currencyName || `+${event.xpGoldBonusPercent}% bonus`} · {event.enabled ? "enabled" : "disabled"}</p>
                         </div>
                         <div className={styles.actions}>
                           <button type="button" className={styles.button} onClick={() => editRewardEvent(event)}>Edit</button>
