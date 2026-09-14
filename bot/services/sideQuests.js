@@ -20,6 +20,7 @@ function mapObjectiveRow(row) {
         id: Number(row.id),
         title: row.title,
         description: row.description,
+        flavorText: row.flavor_text,
         guildName: row.guild_name,
       }
     : null;
@@ -28,7 +29,7 @@ function mapObjectiveRow(row) {
 async function getRandomObjectiveForGuild(guildId, characterId) {
   const result = await pool.query(
     `
-    SELECT o.id, o.title, o.description, g.name AS guild_name
+    SELECT o.id, o.title, o.description, o.flavor_text, g.name AS guild_name
     FROM side_quest_objectives o
     JOIN guilds g ON g.id = o.guild_id
     WHERE o.guild_id = $1

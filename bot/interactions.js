@@ -1418,6 +1418,9 @@ async function handleInteraction(interaction) {
         await interaction.editReply({
           content: [
             `**${characterName}** acquired a new side-quest objective from **${result.objective.guildName}**:`,
+            "",
+            `*${result.objective.flavorText}*`,
+            "",
             `**${result.objective.title}**`,
             result.objective.description,
           ].join("\n"),
@@ -1522,6 +1525,9 @@ async function handleInteraction(interaction) {
         await interaction.editReply({
           content: [
             `Rerolled to a new objective from **${result.objective.guildName}**:`,
+            "",
+            `*${result.objective.flavorText}*`,
+            "",
             `**${result.objective.title}**`,
             result.objective.description,
           ].join("\n"),
