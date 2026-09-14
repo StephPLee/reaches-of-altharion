@@ -1414,7 +1414,7 @@ async function handleInteraction(interaction) {
       );
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/quest acquire` command so the menu belongs to you.",
+          content: "Use your own `/objective acquire` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1488,7 +1488,7 @@ async function handleInteraction(interaction) {
           components: [],
         });
       } catch (error) {
-        console.error("Failed to process /quest acquire select:", error);
+        console.error("Failed to process /objective acquire select:", error);
         const errorContent = {
           content: "Something went wrong while acquiring a side-quest objective. Please try again.",
           components: [],
@@ -1509,7 +1509,7 @@ async function handleInteraction(interaction) {
       );
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/quest reroll` command so the menu belongs to you.",
+          content: "Use your own `/objective reroll` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1536,7 +1536,7 @@ async function handleInteraction(interaction) {
           ],
         });
       } catch (error) {
-        console.error("Failed to process /quest reroll character select:", error);
+        console.error("Failed to process /objective reroll character select:", error);
         const errorContent = {
           content: "Something went wrong while loading that character's objectives. Please try again.",
           components: [],
@@ -1555,7 +1555,7 @@ async function handleInteraction(interaction) {
       const parsedCustomId = parseQuestRerollObjectiveCustomId(interaction.customId);
       if (!parsedCustomId || parsedCustomId.ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/quest reroll` command so the menu belongs to you.",
+          content: "Use your own `/objective reroll` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1595,7 +1595,7 @@ async function handleInteraction(interaction) {
           components: [],
         });
       } catch (error) {
-        console.error("Failed to process /quest reroll objective select:", error);
+        console.error("Failed to process /objective reroll objective select:", error);
         const errorContent = {
           content: "Something went wrong while rerolling that objective. Please try again.",
           components: [],
@@ -1616,7 +1616,7 @@ async function handleInteraction(interaction) {
       );
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/quest redeem` command so the menu belongs to you.",
+          content: "Use your own `/objective redeem` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1643,7 +1643,7 @@ async function handleInteraction(interaction) {
           components: [buildQuestRedeemObjectivesRow(interaction.user.id, objectives)],
         });
       } catch (error) {
-        console.error("Failed to process /quest redeem character select:", error);
+        console.error("Failed to process /objective redeem character select:", error);
         const errorContent = {
           content: "Something went wrong while loading that character's completed objectives. Please try again.",
           components: [],
@@ -1664,7 +1664,7 @@ async function handleInteraction(interaction) {
       );
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/quest redeem` command so the menu belongs to you.",
+          content: "Use your own `/objective redeem` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1676,7 +1676,7 @@ async function handleInteraction(interaction) {
         const pending = pendingSideQuestRedemptions.get(interaction.user.id);
         if (!pending?.characterId) {
           await interaction.editReply({
-            content: "This redemption session expired. Run `/quest redeem` again.",
+            content: "This redemption session expired. Run `/objective redeem` again.",
             components: [],
           });
           return;
@@ -1706,7 +1706,7 @@ async function handleInteraction(interaction) {
           ],
         });
       } catch (error) {
-        console.error("Failed to process /quest redeem objectives select:", error);
+        console.error("Failed to process /objective redeem objectives select:", error);
         pendingSideQuestRedemptions.delete(interaction.user.id);
         const errorContent = {
           content: "Something went wrong while selecting objectives to redeem. Please try again.",
@@ -1726,7 +1726,7 @@ async function handleInteraction(interaction) {
       const ownerId = interaction.customId.slice("quest-redeem-tier:".length);
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/quest redeem` command so the menu belongs to you.",
+          content: "Use your own `/objective redeem` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1738,7 +1738,7 @@ async function handleInteraction(interaction) {
         const pending = pendingSideQuestRedemptions.get(interaction.user.id);
         if (!pending?.characterId || !pending?.objectiveIds) {
           await interaction.editReply({
-            content: "This redemption session expired. Run `/quest redeem` again.",
+            content: "This redemption session expired. Run `/objective redeem` again.",
             components: [],
           });
           return;
@@ -1777,7 +1777,7 @@ async function handleInteraction(interaction) {
           tier,
         });
       } catch (error) {
-        console.error("Failed to process /quest redeem tier select:", error);
+        console.error("Failed to process /objective redeem tier select:", error);
         pendingSideQuestRedemptions.delete(interaction.user.id);
         const errorContent = {
           content: "Something went wrong while choosing your reward. Please try again.",
@@ -1797,7 +1797,7 @@ async function handleInteraction(interaction) {
       const ownerId = interaction.customId.slice("quest-redeem-rarity:".length);
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/quest redeem` command so the menu belongs to you.",
+          content: "Use your own `/objective redeem` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1809,7 +1809,7 @@ async function handleInteraction(interaction) {
         const pending = pendingSideQuestRedemptions.get(interaction.user.id);
         if (!pending?.characterId || !pending?.objectiveIds || !pending?.tier) {
           await interaction.editReply({
-            content: "This redemption session expired. Run `/quest redeem` again.",
+            content: "This redemption session expired. Run `/objective redeem` again.",
             components: [],
           });
           return;
@@ -1842,7 +1842,7 @@ async function handleInteraction(interaction) {
         const level = normalizeCharacterLevel(character);
         if (level < rarity.minLevel) {
           await interaction.editReply({
-            content: `**${formatCharacterName(character)}** must be at least level ${rarity.minLevel} to roll a **${rarity.label}** item. Your completed objectives are still waiting to be redeemed — run \`/quest redeem\` again.`,
+            content: `**${formatCharacterName(character)}** must be at least level ${rarity.minLevel} to roll a **${rarity.label}** item. Your completed objectives are still waiting to be redeemed — run \`/objective redeem\` again.`,
             components: [],
           });
           return;
@@ -1857,7 +1857,7 @@ async function handleInteraction(interaction) {
           rarity: selectedRarity,
         });
       } catch (error) {
-        console.error("Failed to process /quest redeem rarity select:", error);
+        console.error("Failed to process /objective redeem rarity select:", error);
         pendingSideQuestRedemptions.delete(interaction.user.id);
         const errorContent = {
           content: "Something went wrong while rolling your magic item. Please try again.",
@@ -1877,7 +1877,7 @@ async function handleInteraction(interaction) {
       const ownerId = interaction.customId.slice("quest-list-character:".length);
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
-          content: "Use your own `/quest list` command so the menu belongs to you.",
+          content: "Use your own `/objective list` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1939,7 +1939,7 @@ async function handleInteraction(interaction) {
           components: [],
         });
       } catch (error) {
-        console.error("Failed to process /quest list character select:", error);
+        console.error("Failed to process /objective list character select:", error);
         const errorContent = {
           content: "Something went wrong while loading that character's side quests. Please try again.",
           components: [],
@@ -3586,7 +3586,7 @@ async function handleInteraction(interaction) {
     return;
   }
 
-  if (interaction.commandName === "quest") {
+  if (interaction.commandName === "objective") {
     const subcommand = interaction.options.getSubcommand();
 
     if (subcommand === "acquire" || subcommand === "list") {
@@ -3627,7 +3627,7 @@ async function handleInteraction(interaction) {
           });
         }
       } catch (error) {
-        console.error(`Failed to process /quest ${subcommand}:`, error);
+        console.error(`Failed to process /objective ${subcommand}:`, error);
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply(
             "Something went wrong while loading your characters. Please try again.",
@@ -3660,7 +3660,7 @@ async function handleInteraction(interaction) {
           components: [buildQuestRerollCharacterRow(interaction.user.id, characters)],
         });
       } catch (error) {
-        console.error("Failed to process /quest reroll:", error);
+        console.error("Failed to process /objective reroll:", error);
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply(
             "Something went wrong while loading your active objectives. Please try again.",
@@ -3695,7 +3695,7 @@ async function handleInteraction(interaction) {
           components: [buildQuestRedeemCharacterRow(interaction.user.id, characters)],
         });
       } catch (error) {
-        console.error("Failed to process /quest redeem:", error);
+        console.error("Failed to process /objective redeem:", error);
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply(
             "Something went wrong while loading your completed objectives. Please try again.",
