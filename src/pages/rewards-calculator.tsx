@@ -85,6 +85,7 @@ type WestMarchesStatus = {
 
 type RewardTarget = "player" | "dm" | "rp" | "manual";
 
+// Keep this table in sync by hand with REWARD_TABLE in shared/rewardTable.js.
 const REWARD_TABLE: RewardRow[] = [
   {
     level: 1,
@@ -317,6 +318,183 @@ function getAuthApiBaseUrl(siteConfig): string {
 
 function formatCharacterOption(character: WestMarchesCharacter) {
   return character.name.trim();
+}
+
+type SideQuestObjective = {
+  id: number;
+  westMarchesCharacterId: string;
+  characterName: string;
+  title: string;
+  description: string;
+};
+
+function SideQuestCompletionPanel({
+  authApiBaseUrl,
+  characterIds,
+  getCharacterLabel,
+}: {
+  authApiBaseUrl: string;
+  characterIds: string[];
+  getCharacterLabel: (characterId: string) => string;
+}): ReactNode {
+  const [objectives, setObjectives] = useState<SideQuestObjective[]>([]);
+  const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const characterIdsKey = characterIds.join(",");
+
+  useEffect(() => {
+    if (characterIds.length === 0) {
+      setObjectives([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadObjectives() {
+      try {
+        setIsLoading(true);
+        setLoadError("");
+
+        const response = await fetch(
+          `${authApiBaseUrl}/api/rewards/westmarches/side-quests?characterIds=${characterIds
+            .map(encodeURIComponent)
+            .join(",")}`,
+          { credentials: "include" },
+        );
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            payload.error || "Failed to load side-quest objectives.",
+          );
+        }
+
+        if (!cancelled) {
+          setObjectives(
+            Array.isArray(payload.objectives) ? payload.objectives : [],
+          );
+          setCheckedIds(new Set());
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load side-quest objectives.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadObjectives();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authApiBaseUrl, characterIdsKey]);
+
+  function toggleObjective(id: number) {
+    setCheckedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  async function saveCompletions() {
+    if (checkedIds.size === 0) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setSaveError("");
+      setSaveMessage("");
+
+      const response = await fetch(
+        `${authApiBaseUrl}/api/rewards/westmarches/side-quests/complete`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ characterSideQuestIds: [...checkedIds] }),
+        },
+      );
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to save completions.");
+      }
+
+      setObjectives((current) =>
+        current.filter((objective) => !checkedIds.has(objective.id)),
+      );
+      setCheckedIds(new Set());
+      setSaveMessage("Completions saved.");
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Failed to save completions.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  if (characterIds.length === 0) {
+    return <p className={styles.muted}>No party selected yet.</p>;
+  }
+
+  if (isLoading) {
+    return <p className={styles.muted}>Loading side-quest objectives...</p>;
+  }
+
+  if (loadError) {
+    return <p className={styles.errorText}>{loadError}</p>;
+  }
+
+  if (objectives.length === 0) {
+    return <p className={styles.muted}>No active objectives for this party.</p>;
+  }
+
+  return (
+    <div className={styles.field}>
+      {objectives.map((objective) => (
+        <label key={objective.id} className={styles.toggleRow}>
+          <input
+            type="checkbox"
+            checked={checkedIds.has(objective.id)}
+            onChange={() => toggleObjective(objective.id)}
+          />
+          <span>
+            {getCharacterLabel(objective.westMarchesCharacterId)} — {objective.title}
+            <small>{objective.description}</small>
+          </span>
+        </label>
+      ))}
+      <button
+        type="button"
+        className={styles.actionButton}
+        disabled={checkedIds.size === 0 || isSaving}
+        onClick={saveCompletions}
+      >
+        {isSaving ? "Saving..." : "Save completions"}
+      </button>
+      {saveMessage ? <p className={styles.successText}>{saveMessage}</p> : null}
+      {saveError ? <p className={styles.errorText}>{saveError}</p> : null}
+    </div>
+  );
 }
 
 const MIN_PARTY_CHIP_FONT_SCALE = 0.62;
@@ -1678,6 +1856,21 @@ export default function RewardsCalculatorPage(): ReactNode {
                     setManualReason,
                     manualDefaultReason,
                   )}
+                </section>
+              ) : null}
+
+              {user?.canSubmitRewards && selectedPlayerAdventure ? (
+                <section className={styles.panel}>
+                  <Heading as="h2">Side Quest Completions</Heading>
+                  <p className={styles.muted}>
+                    Mark which active side-quest objectives this party
+                    completed during the session.
+                  </p>
+                  <SideQuestCompletionPanel
+                    authApiBaseUrl={authApiBaseUrl}
+                    characterIds={selectedPlayerCharacterIds}
+                    getCharacterLabel={getCharacterLabel}
+                  />
                 </section>
               ) : null}
 

@@ -50,6 +50,7 @@ const sidebars: SidebarsConfig = {
       items: [
         "homebrew/starting-graces",
         "homebrew/boons",
+        "homebrew/capstones",
         "homebrew/guilds",
         "homebrew/weapons",
         "homebrew/wondrous-items",

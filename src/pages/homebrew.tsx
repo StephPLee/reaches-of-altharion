@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   Award,
+  Crown,
   Flame,
   Gem,
   Gift,
@@ -30,6 +31,13 @@ const GROUPS: SectionLinkGroup[] = [
         description: "Powerful rewards earned through play.",
         hint: "Browse boons",
         to: "/docs/homebrew/boons",
+      },
+      {
+        icon: Crown,
+        title: "New Capstones",
+        description: "Bonus level-20 features for characters who monoclass to 20.",
+        hint: "Browse capstones",
+        to: "/docs/homebrew/capstones",
       },
       {
         icon: Users,
