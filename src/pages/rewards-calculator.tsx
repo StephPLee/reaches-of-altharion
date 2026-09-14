@@ -453,7 +453,7 @@ function SideQuestCompletionPanel({
   }
 
   if (characterIds.length === 0) {
-    return <p className={styles.muted}>No party selected yet.</p>;
+    return <p className={styles.muted}>No character selected yet.</p>;
   }
 
   if (isLoading) {
@@ -465,7 +465,7 @@ function SideQuestCompletionPanel({
   }
 
   if (objectives.length === 0) {
-    return <p className={styles.muted}>No active objectives for this party.</p>;
+    return <p className={styles.muted}>No active objectives found.</p>;
   }
 
   return (
@@ -1859,6 +1859,21 @@ export default function RewardsCalculatorPage(): ReactNode {
                 </section>
               ) : null}
 
+              {user?.canSubmitRewards && manualCharacterId ? (
+                <section className={styles.panel}>
+                  <Heading as="h2">Side Quest Completion</Heading>
+                  <p className={styles.muted}>
+                    Mark one of this character's active side-quest
+                    objectives as completed.
+                  </p>
+                  <SideQuestCompletionPanel
+                    authApiBaseUrl={authApiBaseUrl}
+                    characterIds={[manualCharacterId]}
+                    getCharacterLabel={getCharacterLabel}
+                  />
+                </section>
+              ) : null}
+
               {user?.canSubmitRewards && selectedPlayerAdventure ? (
                 <section className={styles.panel}>
                   <Heading as="h2">Side Quest Completions</Heading>
@@ -1932,6 +1947,21 @@ export default function RewardsCalculatorPage(): ReactNode {
                     )
                   : null}
               </section>
+
+              {user?.canSubmitRewards && dmCharacterId ? (
+                <section className={styles.panel}>
+                  <Heading as="h2">Side Quest Completion</Heading>
+                  <p className={styles.muted}>
+                    Mark one of this character's active side-quest
+                    objectives as completed.
+                  </p>
+                  <SideQuestCompletionPanel
+                    authApiBaseUrl={authApiBaseUrl}
+                    characterIds={[dmCharacterId]}
+                    getCharacterLabel={getCharacterLabel}
+                  />
+                </section>
+              ) : null}
 
               <section className={styles.panel}>
                 <Heading as="h2">RP Rewards</Heading>
