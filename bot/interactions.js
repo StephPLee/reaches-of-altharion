@@ -369,10 +369,14 @@ async function resolveSideQuestRedemption({
 
     try {
       if (tier === "hours" || tier === "magicitem_plus_hour") {
+        // The magic-item combo always grants a flat 1 hour on top of the
+        // item roll; only the standalone "hours" tier scales with how many
+        // objectives were redeemed together.
+        const hours = tier === "hours" ? redeemedRows.length : 1;
         const { experience, gold } = await awardHourlyRewardToCharacter({
           characterId,
           discordUserId,
-          hours: redeemedRows.length,
+          hours,
           level,
           reason: "Side-quest redemption",
         });

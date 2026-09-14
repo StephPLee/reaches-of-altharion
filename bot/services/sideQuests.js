@@ -441,38 +441,39 @@ function buildQuestRedeemObjectivesRow(discordUserId, objectives) {
 function buildQuestRedeemTierRow(discordUserId, redeemCount) {
   const hourLabel = `${redeemCount} Hour${redeemCount === 1 ? "" : "s"}`;
   const hourDescription = `Grant ${redeemCount} hour${redeemCount === 1 ? "" : "s"} of XP and Gold at the character's level.`;
+  const hoursOption = {
+    value: "hours",
+    label: `${hourLabel} Reward`,
+    description: hourDescription,
+  };
 
-  const options =
-    redeemCount >= 3
-      ? [
-          {
-            value: "hours",
-            label: `${hourLabel} Reward`,
-            description: hourDescription,
-          },
-          {
-            value: "magicitem_plus_hour",
-            label: `Magic Item + ${hourLabel} Reward`,
-            description: `Roll a magic item and grant ${redeemCount} hour${redeemCount === 1 ? "" : "s"} of XP and Gold.`,
-          },
-          {
-            value: "retrain",
-            label: "Retrain Credit",
-            description: "Bank one free retrain credit for later use.",
-          },
-        ]
-      : [
-          {
-            value: "hours",
-            label: `${hourLabel} Reward`,
-            description: hourDescription,
-          },
-          {
-            value: "magicitem",
-            label: "Magic Item Roll",
-            description: "Roll a random magic item at a rarity of your choice.",
-          },
-        ];
+  let options;
+  if (redeemCount >= 3) {
+    options = [
+      hoursOption,
+      {
+        value: "magicitem_plus_hour",
+        label: "Magic Item + 1 Hour Reward",
+        description: "Roll a magic item and grant a flat 1 hour of XP and Gold.",
+      },
+      {
+        value: "retrain",
+        label: "Retrain Credit",
+        description: "Bank one free retrain credit for later use.",
+      },
+    ];
+  } else if (redeemCount === 2) {
+    options = [
+      hoursOption,
+      {
+        value: "magicitem",
+        label: "Magic Item Roll",
+        description: "Roll a random magic item at a rarity of your choice.",
+      },
+    ];
+  } else {
+    options = [hoursOption];
+  }
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId(`quest-redeem-tier:${discordUserId}`)
