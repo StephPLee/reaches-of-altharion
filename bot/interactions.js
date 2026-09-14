@@ -1487,6 +1487,10 @@ async function handleInteraction(interaction) {
           ].join("\n"),
           components: [],
         });
+        await interaction.followUp({
+          content: `**${characterName}** has obtained an objective from **${result.objective.guildName}**.`,
+          ephemeral: false,
+        });
       } catch (error) {
         console.error("Failed to process /objective acquire select:", error);
         const errorContent = {
@@ -3598,8 +3602,11 @@ async function handleInteraction(interaction) {
         return;
       }
 
+      const isPublicList =
+        subcommand === "list" && interaction.options.getString("visibility") === "public";
+
       try {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: !isPublicList });
 
         const characters = await listOwnedActiveWestMarchesCharacters(interaction.user.id);
         if (characters.length === 0) {

@@ -186,7 +186,16 @@ const COMMAND_DEFINITIONS = [
         .addSubcommand((subcommand) =>
           subcommand
             .setName("list")
-            .setDescription("List a character's side-quest objectives and guild renown."),
+            .setDescription("List a character's side-quest objectives and guild renown.")
+            .addStringOption((option) =>
+              option
+                .setName("visibility")
+                .setDescription("Who should see the objective list?")
+                .addChoices(
+                  { name: "Private", value: "private" },
+                  { name: "Public", value: "public" },
+                ),
+            ),
         ),
   },
   {
