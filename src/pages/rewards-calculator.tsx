@@ -63,10 +63,15 @@ type RewardEvent = {
   currencyName: string;
   startsAt: string;
   endsAt: string;
-  ruleType: "final_participant_fixed" | "sc_percentage" | "event_quest_fixed";
+  ruleType:
+    | "final_participant_fixed"
+    | "sc_percentage"
+    | "event_quest_fixed"
+    | "quest_bonus_percent";
   fixedAmount: number;
   nonEventScPercent: number;
   eventScPercent: number;
+  xpGoldBonusPercent: number;
   enabled: boolean;
 };
 
@@ -944,25 +949,37 @@ export default function RewardsCalculatorPage(): ReactNode {
     clampNumber(safeQuestLevel + dmBonusLevel, 1, 22),
   );
   const rpRewardRow = getRewardRow(safeRpLevel);
+  const activeEvent = westMarchesStatus?.activeEvent || null;
   const eventCurrencyName =
     westMarchesStatus?.currencyMappings.event?.name?.trim() || "";
   const hasEventCurrency = Boolean(eventCurrencyName);
+  const questBonusPercent =
+    activeEvent?.ruleType === "quest_bonus_percent"
+      ? activeEvent.xpGoldBonusPercent
+      : 0;
+  const hasQuestBonusEvent = questBonusPercent > 0;
+  const showEventToggle = hasEventCurrency || hasQuestBonusEvent;
+
+  // Event quests granted through a "quest_bonus_percent" event get a flat
+  // bonus on top of the normal quest reward, instead of relying on a
+  // separately configured event currency.
+  const eventBonusMultiplier =
+    isEventRelated && hasQuestBonusEvent ? 1 + questBonusPercent / 100 : 1;
 
   const basePlayerXp = questDuration * playerRewardRow.xpPerHour;
   const basePlayerGold = questDuration * playerRewardRow.goldPerHour;
   const basePlayerSc = Math.trunc(safeHours);
-  const playerXp = basePlayerXp;
-  const playerGold = basePlayerGold;
-  const playerSc = basePlayerSc;
+  const playerXp = basePlayerXp * eventBonusMultiplier;
+  const playerGold = basePlayerGold * eventBonusMultiplier;
+  const playerSc = Math.round(basePlayerSc * eventBonusMultiplier);
 
   const baseDmXp = questDuration * dmRewardRow.xpPerHour;
   const baseDmGold = questDuration * dmRewardRow.goldPerHour;
   const dmScMultiplier = safeQuestLevel < 10 ? 2 : 1;
   const baseDmSc = Math.trunc(safeHours) * 2 * dmScMultiplier;
-  const dmXp = baseDmXp;
-  const dmGold = baseDmGold;
-  const dmSc = baseDmSc;
-  const activeEvent = westMarchesStatus?.activeEvent || null;
+  const dmXp = baseDmXp * eventBonusMultiplier;
+  const dmGold = baseDmGold * eventBonusMultiplier;
+  const dmSc = Math.round(baseDmSc * eventBonusMultiplier);
   function getEventCurrencyAmount(sc: number): number {
     if (!activeEvent) return 0;
     if (activeEvent.ruleType === "event_quest_fixed") {
@@ -982,9 +999,11 @@ export default function RewardsCalculatorPage(): ReactNode {
   const rpXp = Math.round((rpDuration * rpRewardRow.xpPerHour) / 3);
   const rpGold = Math.round((rpDuration * rpRewardRow.goldPerHour) / 3);
 
-  const eventReasonText = activeEvent
-    ? `, ${activeEvent.name}${isEventRelated ? " event quest" : ""}`
-    : "";
+  const eventReasonText = isEventRelated
+    ? `, event quest${hasQuestBonusEvent ? ` (+${questBonusPercent}% bonus)` : ""}${activeEvent ? ` — ${activeEvent.name}` : ""}`
+    : activeEvent
+      ? `, ${activeEvent.name}`
+      : "";
   const dmScReasonText = dmScMultiplier > 1 ? ", below level 10 DM SC x2" : "";
   const playerDefaultReason = `Quest rewards: ${safeHours}h ${safeMinutes}m, level ${safeQuestLevel}, ${safePlayers} player${safePlayers === 1 ? "" : "s"}${eventReasonText}`;
   const dmDefaultReason = `DM rewards: ${safeHours}h ${safeMinutes}m, base level ${safeQuestLevel}, DM bonus +${dmBonusLevel}${dmScReasonText}${eventReasonText}`;
@@ -1730,7 +1749,7 @@ export default function RewardsCalculatorPage(): ReactNode {
                     />
                   </div>
                 </div>
-                {hasEventCurrency ? (
+                {showEventToggle ? (
                   <label className={styles.toggleRow} htmlFor="event-related">
                     <input
                       id="event-related"
@@ -1743,7 +1762,9 @@ export default function RewardsCalculatorPage(): ReactNode {
                     <span>
                       Event quest
                       <small>
-                        Mark this adventure as an event quest.
+                        {hasQuestBonusEvent
+                          ? `Grants a +${questBonusPercent}% bonus to XP, Gold, and SC for this reward.`
+                          : "Mark this adventure as an event quest."}
                       </small>
                     </span>
                   </label>
