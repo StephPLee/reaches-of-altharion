@@ -163,7 +163,7 @@ const COMMAND_DEFINITIONS = [
         ),
   },
   {
-    name: "quest",
+    name: "objective",
     description: "Acquire, reroll, and redeem guild side-quest objectives.",
     help: "Manage your characters' guild side-quest objectives: acquire, reroll, redeem, and list.",
     buildCommand: (command) =>
