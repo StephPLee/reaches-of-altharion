@@ -37,6 +37,19 @@ const COMMAND_DEFINITIONS = [
     help: "Open a rarity dropdown and roll a random magic item.",
   },
   {
+    name: "lookup",
+    description: "Look up a starting grace, boon, feat, spell, and more from the site.",
+    help: "Search starting graces, boons, capstones, feats, spells, species, weapons, wondrous items, subclasses, guild perks, and magic items, then view the full entry.",
+    buildCommand: (command) =>
+      command.addStringOption((option) =>
+        option
+          .setName("name")
+          .setDescription("Start typing a name to search.")
+          .setRequired(true)
+          .setAutocomplete(true),
+      ),
+  },
+  {
     name: "characters",
     description: "List your WestMarches.games characters.",
     help: "List your WestMarches.games characters with their class and level.",

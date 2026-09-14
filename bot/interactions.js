@@ -23,6 +23,12 @@ const {
 } = require("./services/bosses");
 const { buildFaqEmbeds, listFaqEntries } = require("./services/faq");
 const {
+  buildLookupResultEmbed,
+  getLookupEntryByKey,
+  searchLookupCandidates,
+  searchLookupEntries,
+} = require("./services/lookup");
+const {
   buildQuestCallCharacterRow,
   buildQuestCallEmbed,
   buildQuestCallMessageComponents,
@@ -56,6 +62,16 @@ const {
   retireWestMarchesCharacter,
   upsertScRewardCharacterPreference,
 } = require("./services/westMarches");
+const pool = require("./db");
+const {
+  buildFeedbackPromptMessage,
+  buildFeedbackThanksMessage,
+  finalizeFeedbackResponse,
+  getPrompt,
+  getResponse,
+  recordRatingSelection,
+} = require("../shared/dmQuestFeedback");
+const { buildFeedbackCommentModal } = require("./services/dmQuestFeedback");
 const {
   acquireObjectiveForCharacter,
   addRenown,
@@ -443,6 +459,15 @@ async function resolveSideQuestRedemption({
 }
 
 async function handleInteraction(interaction) {
+  if (interaction.isAutocomplete()) {
+    if (interaction.commandName === "lookup") {
+      const focused = interaction.options.getFocused();
+      const choices = await searchLookupEntries(focused);
+      await interaction.respond(choices);
+    }
+    return;
+  }
+
   if (interaction.isStringSelectMenu()) {
     if (interaction.customId.startsWith("rollstats-pick:")) {
       const ownerId = interaction.customId.slice("rollstats-pick:".length);
@@ -1354,6 +1379,13 @@ async function handleInteraction(interaction) {
       if (ownerId !== interaction.user.id) {
         await interaction.reply({
           content: "Use your own `/quest acquire` command so the menu belongs to you.",
+    if (interaction.customId.startsWith("dm-feedback-select:")) {
+      const [, promptIdRaw, category] = interaction.customId.split(":");
+      const promptId = Number(promptIdRaw);
+      const prompt = await getPrompt(pool, promptId);
+      if (!prompt || prompt.recipient_discord_user_id !== interaction.user.id) {
+        await interaction.reply({
+          content: "This feedback prompt isn't yours.",
           ephemeral: true,
         });
         return;
@@ -1888,6 +1920,23 @@ async function handleInteraction(interaction) {
         } else {
           await interaction.reply({ ...errorContent, ephemeral: true });
         }
+        const rating = Number(interaction.values[0]);
+        await recordRatingSelection(pool, { promptId, category, rating });
+        const response = await getResponse(pool, promptId);
+        const selections = {
+          storytelling: response?.storytelling_rating || null,
+          pacing: response?.pacing_rating || null,
+          avrae: response?.avrae_rating || null,
+          enjoyment: response?.enjoyment_rating || null,
+        };
+        await interaction.editReply(buildFeedbackPromptMessage({
+          promptId,
+          selections,
+          adventureTitle: prompt.adventure_title,
+          dmDisplayName: prompt.dm_display_name,
+        }));
+      } catch (error) {
+        console.error("Failed to record quest feedback rating:", error);
       }
 
       return;
@@ -2262,6 +2311,31 @@ async function handleInteraction(interaction) {
             content: "Something went wrong while creating that request. Please try again.",
             ephemeral: true,
           });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("dm-feedback-modal:")) {
+      const promptId = Number(interaction.customId.slice("dm-feedback-modal:".length));
+      const comment = interaction.fields.getTextInputValue("comment");
+
+      try {
+        await interaction.deferReply({ ephemeral: true });
+        await finalizeFeedbackResponse(pool, { promptId, comment });
+        await interaction.editReply("Thanks for your feedback! It'll be shared with your DM anonymously in a bit.");
+        await interaction.message?.edit(buildFeedbackThanksMessage()).catch(() => {});
+      } catch (error) {
+        console.error("Failed to finalize quest feedback:", error);
+        const message =
+          error.statusCode === 400
+            ? error.message
+            : "Something went wrong submitting your feedback. Please try again.";
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(message);
+        } else {
+          await interaction.reply({ content: message, ephemeral: true });
         }
       }
 
@@ -2666,6 +2740,36 @@ async function handleInteraction(interaction) {
       return;
     }
 
+    if (interaction.customId.startsWith("dm-feedback-submit:")) {
+      const promptId = Number(interaction.customId.slice("dm-feedback-submit:".length));
+      const prompt = await getPrompt(pool, promptId);
+      if (!prompt || prompt.recipient_discord_user_id !== interaction.user.id) {
+        await interaction.reply({
+          content: "This feedback prompt isn't yours.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const response = await getResponse(pool, promptId);
+      if (
+        !response ||
+        response.storytelling_rating === null ||
+        response.pacing_rating === null ||
+        response.avrae_rating === null ||
+        response.enjoyment_rating === null
+      ) {
+        await interaction.reply({
+          content: "Please select all four ratings first.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      await interaction.showModal(buildFeedbackCommentModal(promptId));
+      return;
+    }
+
     if (!interaction.customId.startsWith("craft-confirm:")) {
       return;
     }
@@ -2754,6 +2858,36 @@ async function handleInteraction(interaction) {
   }
   if (interaction.commandName === "book-request") {
     await interaction.showModal(buildBookRequestModal());
+    return;
+  }
+  if (interaction.commandName === "lookup") {
+    const key = interaction.options.getString("name", true);
+    const entry = await getLookupEntryByKey(key);
+
+    if (entry) {
+      await interaction.reply({ embeds: [buildLookupResultEmbed(entry)] });
+      return;
+    }
+
+    const fallbackMatches = await searchLookupCandidates(key);
+
+    if (fallbackMatches.length === 1) {
+      const resolved = await getLookupEntryByKey(fallbackMatches[0].key);
+      if (resolved) {
+        await interaction.reply({ embeds: [buildLookupResultEmbed(resolved)] });
+        return;
+      }
+    }
+
+    await interaction.reply({
+      content: fallbackMatches.length
+        ? `I couldn't find an exact match for "${key}". Did you mean: ${fallbackMatches
+            .slice(0, 5)
+            .map((match) => `**${match.title}** (${match.category})`)
+            .join(", ")}? Try \`/lookup\` again and pick one of the suggestions.`
+        : `No results found for "${key}".`,
+      ephemeral: true,
+    });
     return;
   }
   if (interaction.commandName === "magicitem") {

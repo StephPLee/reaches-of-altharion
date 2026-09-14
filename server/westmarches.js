@@ -231,6 +231,11 @@ async function getCharacter(characterId) {
   return payload.data ?? null;
 }
 
+async function getAdventure(adventureId) {
+  const payload = await westMarchesFetch(`/adventures/${adventureId}`);
+  return payload.data ?? null;
+}
+
 function isActiveCharacter(character) {
   const normalizedStatus =
     typeof character?.status === "string"
@@ -457,6 +462,7 @@ async function distributeRewards({ rewards, adventureId = "" }) {
 
 module.exports = {
   distributeRewards,
+  getAdventure,
   getCharacter,
   grantCharacterReward,
   isWestMarchesConfigured,
