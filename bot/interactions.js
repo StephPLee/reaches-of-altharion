@@ -438,12 +438,16 @@ async function resolveSideQuestRedemption({
 
       for (const [guildId, count] of countByGuildId.entries()) {
         if (membership?.guildId === guildId) {
+          const renownGranted = renownPerObjective * count;
           await addRenown({
             characterId,
             characterName,
             guildId,
-            amount: renownPerObjective * count,
+            amount: renownGranted,
           });
+          resultLines.push(
+            `Gained **${renownGranted} renown** with **${membership.guildName}**.`,
+          );
         }
       }
     } catch (renownError) {
