@@ -1372,13 +1372,6 @@ async function handleInteraction(interaction) {
       return;
     }
 
-    if (interaction.customId.startsWith("quest-acquire-character:")) {
-      const ownerId = interaction.customId.slice(
-        "quest-acquire-character:".length,
-      );
-      if (ownerId !== interaction.user.id) {
-        await interaction.reply({
-          content: "Use your own `/quest acquire` command so the menu belongs to you.",
     if (interaction.customId.startsWith("dm-feedback-select:")) {
       const [, promptIdRaw, category] = interaction.customId.split(":");
       const promptId = Number(promptIdRaw);
@@ -1386,6 +1379,42 @@ async function handleInteraction(interaction) {
       if (!prompt || prompt.recipient_discord_user_id !== interaction.user.id) {
         await interaction.reply({
           content: "This feedback prompt isn't yours.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+        const rating = Number(interaction.values[0]);
+        await recordRatingSelection(pool, { promptId, category, rating });
+        const response = await getResponse(pool, promptId);
+        const selections = {
+          storytelling: response?.storytelling_rating || null,
+          pacing: response?.pacing_rating || null,
+          avrae: response?.avrae_rating || null,
+          enjoyment: response?.enjoyment_rating || null,
+        };
+        await interaction.editReply(buildFeedbackPromptMessage({
+          promptId,
+          selections,
+          adventureTitle: prompt.adventure_title,
+          dmDisplayName: prompt.dm_display_name,
+        }));
+      } catch (error) {
+        console.error("Failed to record quest feedback rating:", error);
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-acquire-character:")) {
+      const ownerId = interaction.customId.slice(
+        "quest-acquire-character:".length,
+      );
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/quest acquire` command so the menu belongs to you.",
           ephemeral: true,
         });
         return;
@@ -1920,23 +1949,6 @@ async function handleInteraction(interaction) {
         } else {
           await interaction.reply({ ...errorContent, ephemeral: true });
         }
-        const rating = Number(interaction.values[0]);
-        await recordRatingSelection(pool, { promptId, category, rating });
-        const response = await getResponse(pool, promptId);
-        const selections = {
-          storytelling: response?.storytelling_rating || null,
-          pacing: response?.pacing_rating || null,
-          avrae: response?.avrae_rating || null,
-          enjoyment: response?.enjoyment_rating || null,
-        };
-        await interaction.editReply(buildFeedbackPromptMessage({
-          promptId,
-          selections,
-          adventureTitle: prompt.adventure_title,
-          dmDisplayName: prompt.dm_display_name,
-        }));
-      } catch (error) {
-        console.error("Failed to record quest feedback rating:", error);
       }
 
       return;
