@@ -1919,7 +1919,7 @@ async function handleInteraction(interaction) {
         const lines = [`**${characterName}**'s side quests:`];
         lines.push(
           active.length
-            ? `Active (${active.length}/3):\n${active.map((o) => `- ${o.title} (${o.guildName})`).join("\n")}`
+            ? `Active (${active.length}/3):\n${active.map((o) => `- ${o.title} (${o.guildName}) — ${o.description}`).join("\n")}`
             : "Active: none",
         );
         lines.push(
