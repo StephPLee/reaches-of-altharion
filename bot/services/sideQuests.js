@@ -195,6 +195,41 @@ async function rerollObjective(characterSideQuestId) {
   return { status: "ok", objective };
 }
 
+async function abandonObjective(characterSideQuestId) {
+  const existingResult = await pool.query(
+    `
+    SELECT c.id, c.character_name, o.title, g.name AS guild_name
+    FROM character_side_quests c
+    JOIN side_quest_objectives o ON o.id = c.side_quest_objective_id
+    JOIN guilds g ON g.id = c.guild_id
+    WHERE c.id = $1
+      AND c.status = 'active'
+    `,
+    [characterSideQuestId],
+  );
+  const existing = existingResult.rows[0];
+  if (!existing) {
+    return { status: "not_found" };
+  }
+
+  await pool.query(
+    `
+    UPDATE character_side_quests
+    SET status = 'abandoned',
+        abandoned_at = NOW()
+    WHERE id = $1
+    `,
+    [characterSideQuestId],
+  );
+
+  return {
+    status: "ok",
+    title: existing.title,
+    guildName: existing.guild_name,
+    characterName: existing.character_name,
+  };
+}
+
 async function listCompletedUnredeemedObjectivesForCharacter(characterId) {
   const result = await pool.query(
     `
@@ -406,6 +441,53 @@ function parseQuestRerollObjectiveCustomId(customId) {
   };
 }
 
+function buildQuestAbandonCharacterRow(discordUserId, characters) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`quest-abandon-character:${discordUserId}`)
+    .setPlaceholder("Choose your character...")
+    .addOptions(
+      characters.slice(0, 25).map((character) => ({
+        label: character.name.slice(0, 100),
+        value: character.id,
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+function buildQuestAbandonObjectiveRow(discordUserId, characterId, objectives) {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId(`quest-abandon-objective:${discordUserId}:${characterId}`)
+    .setPlaceholder("Choose the objective to abandon...")
+    .addOptions(
+      objectives.slice(0, 25).map((objective) => ({
+        label: objective.title.slice(0, 100),
+        description: objective.guildName.slice(0, 100),
+        value: String(objective.characterSideQuestId),
+      })),
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+function parseQuestAbandonObjectiveCustomId(customId) {
+  const prefix = "quest-abandon-objective:";
+  if (!customId.startsWith(prefix)) {
+    return null;
+  }
+
+  const remainder = customId.slice(prefix.length);
+  const separatorIndex = remainder.indexOf(":");
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  return {
+    ownerId: remainder.slice(0, separatorIndex),
+    characterId: remainder.slice(separatorIndex + 1),
+  };
+}
+
 function buildQuestRedeemCharacterRow(discordUserId, characters) {
   const menu = new StringSelectMenuBuilder()
     .setCustomId(`quest-redeem-character:${discordUserId}`)
@@ -519,8 +601,11 @@ function buildQuestListCharacterRow(discordUserId, characters) {
 module.exports = {
   MAX_ACTIVE_OBJECTIVES,
   RENOWN_TIERS,
+  abandonObjective,
   acquireObjectiveForCharacter,
   addRenown,
+  buildQuestAbandonCharacterRow,
+  buildQuestAbandonObjectiveRow,
   buildQuestAcquireCharacterRow,
   buildQuestListCharacterRow,
   buildQuestRedeemCharacterRow,
@@ -541,6 +626,7 @@ module.exports = {
   listCompletedUnredeemedObjectivesForCharacter,
   listRedeemedObjectivesForCharacter,
   markObjectivesRedeemed,
+  parseQuestAbandonObjectiveCustomId,
   parseQuestRerollObjectiveCustomId,
   rerollObjective,
 };
