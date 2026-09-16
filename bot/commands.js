@@ -164,8 +164,8 @@ const COMMAND_DEFINITIONS = [
   },
   {
     name: "objective",
-    description: "Acquire, reroll, and redeem guild side-quest objectives.",
-    help: "Manage your characters' guild side-quest objectives: acquire, reroll, redeem, and list.",
+    description: "Acquire, reroll, abandon, and redeem guild side-quest objectives.",
+    help: "Manage your characters' guild side-quest objectives: acquire, reroll, abandon, redeem, and list.",
     buildCommand: (command) =>
       command
         .addSubcommand((subcommand) =>
@@ -177,6 +177,11 @@ const COMMAND_DEFINITIONS = [
           subcommand
             .setName("reroll")
             .setDescription("Reroll one of your characters' active side-quest objectives."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("abandon")
+            .setDescription("Abandon one of your characters' active side-quest objectives."),
         )
         .addSubcommand((subcommand) =>
           subcommand

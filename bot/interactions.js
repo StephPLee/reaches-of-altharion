@@ -73,8 +73,11 @@ const {
 } = require("../shared/dmQuestFeedback");
 const { buildFeedbackCommentModal } = require("./services/dmQuestFeedback");
 const {
+  abandonObjective,
   acquireObjectiveForCharacter,
   addRenown,
+  buildQuestAbandonCharacterRow,
+  buildQuestAbandonObjectiveRow,
   buildQuestAcquireCharacterRow,
   buildQuestListCharacterRow,
   buildQuestRedeemCharacterRow,
@@ -93,6 +96,7 @@ const {
   listCompletedUnredeemedObjectivesForCharacter,
   listRedeemedObjectivesForCharacter,
   markObjectivesRedeemed,
+  parseQuestAbandonObjectiveCustomId,
   parseQuestRerollObjectiveCustomId,
   rerollObjective,
 } = require("./services/sideQuests");
@@ -1610,6 +1614,98 @@ async function handleInteraction(interaction) {
         console.error("Failed to process /objective reroll objective select:", error);
         const errorContent = {
           content: "Something went wrong while rerolling that objective. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-abandon-character:")) {
+      const ownerId = interaction.customId.slice(
+        "quest-abandon-character:".length,
+      );
+      if (ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/objective abandon` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterId = interaction.values[0];
+        const objectives = await listActiveObjectivesForCharacter(characterId);
+
+        if (objectives.length === 0) {
+          await interaction.editReply({
+            content: "That character no longer has any active side-quest objectives.",
+            components: [],
+          });
+          return;
+        }
+
+        await interaction.editReply({
+          content: `Choose the objective to abandon for **${objectives[0].characterName}**.`,
+          components: [
+            buildQuestAbandonObjectiveRow(interaction.user.id, characterId, objectives),
+          ],
+        });
+      } catch (error) {
+        console.error("Failed to process /objective abandon character select:", error);
+        const errorContent = {
+          content: "Something went wrong while loading that character's objectives. Please try again.",
+          components: [],
+        };
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(errorContent);
+        } else {
+          await interaction.reply({ ...errorContent, ephemeral: true });
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.customId.startsWith("quest-abandon-objective:")) {
+      const parsedCustomId = parseQuestAbandonObjectiveCustomId(interaction.customId);
+      if (!parsedCustomId || parsedCustomId.ownerId !== interaction.user.id) {
+        await interaction.reply({
+          content: "Use your own `/objective abandon` command so the menu belongs to you.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      try {
+        await interaction.deferUpdate();
+
+        const characterSideQuestId = Number(interaction.values[0]);
+        const result = await abandonObjective(characterSideQuestId);
+
+        if (result.status === "not_found") {
+          await interaction.editReply({
+            content: "That objective is no longer active.",
+            components: [],
+          });
+          return;
+        }
+
+        await interaction.editReply({
+          content: `Abandoned **${result.title}** (**${result.guildName}**) for **${result.characterName}**.`,
+          components: [],
+        });
+      } catch (error) {
+        console.error("Failed to process /objective abandon objective select:", error);
+        const errorContent = {
+          content: "Something went wrong while abandoning that objective. Please try again.",
           components: [],
         };
         if (interaction.deferred || interaction.replied) {
@@ -3676,6 +3772,39 @@ async function handleInteraction(interaction) {
         });
       } catch (error) {
         console.error("Failed to process /objective reroll:", error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(
+            "Something went wrong while loading your active objectives. Please try again.",
+          );
+        } else {
+          await interaction.reply({
+            content: "Something went wrong while loading your active objectives. Please try again.",
+            ephemeral: true,
+          });
+        }
+      }
+
+      return;
+    }
+
+    if (subcommand === "abandon") {
+      try {
+        await interaction.deferReply({ ephemeral: true });
+
+        const characters = await listCharactersWithActiveObjectives(interaction.user.id);
+        if (characters.length === 0) {
+          await interaction.editReply(
+            "You do not have any characters with active side-quest objectives to abandon.",
+          );
+          return;
+        }
+
+        await interaction.editReply({
+          content: "Choose the character whose objective you want to abandon.",
+          components: [buildQuestAbandonCharacterRow(interaction.user.id, characters)],
+        });
+      } catch (error) {
+        console.error("Failed to process /objective abandon:", error);
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply(
             "Something went wrong while loading your active objectives. Please try again.",
