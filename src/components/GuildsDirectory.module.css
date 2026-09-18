@@ -527,6 +527,7 @@
     margin: 0 !important;
     max-width: none !important;
     text-align: left !important;
+    white-space: pre-line;
 }
 
 .upgradeText strong {
