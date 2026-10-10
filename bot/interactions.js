@@ -2440,10 +2440,11 @@ async function handleInteraction(interaction) {
     if (interaction.customId.startsWith("dm-feedback-modal:")) {
       const promptId = Number(interaction.customId.slice("dm-feedback-modal:".length));
       const comment = interaction.fields.getTextInputValue("comment");
+      const [sideQuestAnswer] = interaction.fields.getStringSelectValues("side-quest");
 
       try {
         await interaction.deferReply({ ephemeral: true });
-        await finalizeFeedbackResponse(pool, { promptId, comment });
+        await finalizeFeedbackResponse(pool, { promptId, comment, sideQuestAnswer });
         await interaction.editReply("Thanks for your feedback! It'll be shared with your DM anonymously in a bit.");
         await interaction.message?.edit(buildFeedbackThanksMessage()).catch(() => {});
       } catch (error) {
