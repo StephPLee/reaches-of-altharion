@@ -68,7 +68,15 @@ async function recordRatingSelection(pool, { promptId, category, rating }) {
   return result.rows[0];
 }
 
-async function finalizeFeedbackResponse(pool, { promptId, comment }) {
+// sideQuestAnswer is "none" (no side quests completed) or a 1-5 rating string from the modal select.
+function parseSideQuestAnswer(sideQuestAnswer) {
+  if (sideQuestAnswer === "none") return { completed: false, rating: null };
+  const rating = Number(sideQuestAnswer);
+  if (isValidRating(rating)) return { completed: true, rating };
+  return { completed: null, rating: null };
+}
+
+async function finalizeFeedbackResponse(pool, { promptId, comment, sideQuestAnswer }) {
   const response = await getResponse(pool, promptId);
   if (
     !response ||
@@ -83,10 +91,13 @@ async function finalizeFeedbackResponse(pool, { promptId, comment }) {
   }
 
   const normalizedComment = typeof comment === "string" && comment.trim() ? comment.trim() : null;
+  const sideQuest = parseSideQuestAnswer(sideQuestAnswer);
 
   await pool.query(
-    `UPDATE dm_quest_feedback_responses SET comment = $2, updated_at = NOW() WHERE prompt_id = $1`,
-    [promptId, normalizedComment],
+    `UPDATE dm_quest_feedback_responses
+     SET comment = $2, side_quest_completed = $3, side_quest_rating = $4, updated_at = NOW()
+     WHERE prompt_id = $1`,
+    [promptId, normalizedComment, sideQuest.completed, sideQuest.rating],
   );
   await pool.query(
     `UPDATE dm_quest_feedback_prompts SET status = 'submitted' WHERE id = $1`,
@@ -104,6 +115,8 @@ async function listDueAggregations(pool, { olderThanHours = 24 } = {}) {
        AVG(r.pacing_rating) AS "avgPacing",
        AVG(r.avrae_rating) AS "avgAvrae",
        AVG(r.enjoyment_rating) AS "avgEnjoyment",
+       COUNT(*) FILTER (WHERE r.side_quest_completed) AS "sideQuestCount",
+       AVG(r.side_quest_rating) AS "avgSideQuest",
        ARRAY_REMOVE(ARRAY_AGG(NULLIF(BTRIM(r.comment), '')), NULL) AS comments
      FROM dm_quest_feedback_prompts p
      JOIN dm_quest_feedback_responses r ON r.prompt_id = p.id
@@ -198,8 +211,24 @@ function buildFeedbackThanksMessage() {
   };
 }
 
-function buildFeedbackSummaryMessage({ adventureId, adventureTitle, responseCount, avgStorytelling, avgPacing, avgAvrae, avgEnjoyment, comments }) {
+function buildFeedbackSummaryMessage({
+  adventureId,
+  adventureTitle,
+  responseCount,
+  avgStorytelling,
+  avgPacing,
+  avgAvrae,
+  avgEnjoyment,
+  sideQuestCount,
+  avgSideQuest,
+  comments,
+}) {
   const formatAvg = (value) => (value === null || value === undefined ? "n/a" : `${Number(value).toFixed(1)} / 5`);
+  const sideQuestPlayers = Number(sideQuestCount) || 0;
+  const sideQuestText =
+    sideQuestPlayers > 0
+      ? `${formatAvg(avgSideQuest)} (${sideQuestPlayers} player${sideQuestPlayers === 1 ? "" : "s"} completed one)`
+      : "n/a (none completed)";
   const commentsText =
     comments.length > 0 ? comments.map((comment) => `> ${comment}`).join("\n\n") : "*No written comments this round.*";
   const questLabel = adventureTitle ? `**${adventureTitle}**` : `adventure \`${adventureId}\``;
@@ -213,7 +242,8 @@ function buildFeedbackSummaryMessage({ adventureId, adventureTitle, responseCoun
           `**Storytelling & Immersion:** ${formatAvg(avgStorytelling)}\n` +
           `**Balance & Pacing:** ${formatAvg(avgPacing)}\n` +
           `**Rules & Avrae:** ${formatAvg(avgAvrae)}\n` +
-          `**Enjoyment & Inclusivity:** ${formatAvg(avgEnjoyment)}\n\n` +
+          `**Enjoyment & Inclusivity:** ${formatAvg(avgEnjoyment)}\n` +
+          `**Side Quests:** ${sideQuestText}\n\n` +
           `**Comments:**\n${commentsText}`,
         color: 0xfee75c,
       },
