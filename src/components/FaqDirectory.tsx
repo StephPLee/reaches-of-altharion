@@ -31,7 +31,7 @@ function getAuthApiBaseUrl(siteConfig): string {
 
 function renderInlineMarkdown(value: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const pattern = /(`([^`]+)`)|\[([^\]]+)\]\(([^)]+)\)/g;
+  const pattern = /(`([^`]+)`)|\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -48,6 +48,8 @@ function renderInlineMarkdown(value: string): ReactNode[] {
           {match[3]}
         </a>,
       );
+    } else if (match[5]) {
+      nodes.push(<strong key={`${match.index}-bold`}>{match[5]}</strong>);
     }
 
     lastIndex = pattern.lastIndex;
@@ -73,7 +75,7 @@ function parseTableRow(line: string) {
     .map((cell) => cell.trim());
 }
 
-function renderMarkdownBlock(markdown: string) {
+export function renderMarkdownBlock(markdown: string) {
   const lines = markdown.split(/\r?\n/);
   const blocks: ReactNode[] = [];
 
@@ -81,6 +83,22 @@ function renderMarkdownBlock(markdown: string) {
     const line = lines[index];
 
     if (!line.trim()) {
+      continue;
+    }
+
+    if (line.trim().startsWith(">")) {
+      const quoteLines: string[] = [];
+      while (index < lines.length && lines[index].trim().startsWith(">")) {
+        quoteLines.push(lines[index].trim().replace(/^>\s?/, ""));
+        index += 1;
+      }
+
+      index -= 1;
+      blocks.push(
+        <blockquote key={`quote-${index}`}>
+          <p>{renderInlineMarkdown(quoteLines.join(" "))}</p>
+        </blockquote>,
+      );
       continue;
     }
 
@@ -128,7 +146,8 @@ function renderMarkdownBlock(markdown: string) {
     while (
       lines[index + 1] &&
       lines[index + 1].trim() &&
-      !lines[index + 1].trim().startsWith("|")
+      !lines[index + 1].trim().startsWith("|") &&
+      !lines[index + 1].trim().startsWith(">")
     ) {
       index += 1;
       paragraphLines.push(lines[index].trim());

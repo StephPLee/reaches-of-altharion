@@ -172,6 +172,56 @@ async function syncStartingGraceToDiscord(grace, channelId) {
   );
 }
 
+// Mirrors a single errata entry to the Discord errata list. Errata that have
+// never been posted (e.g. the seeded list that already exists on Discord) are
+// only posted when `postIfMissing` is set, so edits don't repost old entries.
+async function syncErrataToDiscord(errata, channelId, { postIfMissing }) {
+  if (!channelId) {
+    return;
+  }
+
+  const dbResult = await pool.query(
+    "SELECT discord_message_ids FROM errata WHERE id = $1",
+    [errata.id],
+  );
+  if (dbResult.rows.length === 0) {
+    return;
+  }
+
+  const existingMessageIds = dbResult.rows[0].discord_message_ids || [];
+  if (existingMessageIds.length === 0 && !postIfMissing) {
+    return;
+  }
+
+  const body = `**${errata.title}**\n${errata.content.trim()}`;
+  const parts = packTokens(
+    body.split(/\n{2,}/).filter((paragraph) => paragraph.trim()),
+    "\n\n",
+    DISCORD_MSG_LIMIT,
+  );
+
+  const finalMessageIds = await syncMessageParts(
+    channelId,
+    existingMessageIds,
+    parts,
+  );
+
+  await pool.query("UPDATE errata SET discord_message_ids = $1 WHERE id = $2", [
+    finalMessageIds,
+    errata.id,
+  ]);
+}
+
+async function deleteErrataFromDiscord(messageIds, channelId) {
+  if (!channelId) {
+    return;
+  }
+
+  for (const messageId of messageIds) {
+    await deleteChannelMessage(channelId, messageId).catch(() => {});
+  }
+}
+
 async function syncWikiPageToDiscord(page, channelId) {
   if (!channelId) {
     return;
@@ -221,7 +271,9 @@ async function syncWikiPageToDiscord(page, channelId) {
 }
 
 module.exports = {
+  deleteErrataFromDiscord,
   parseMarkdownH2Sections,
+  syncErrataToDiscord,
   syncStartingGraceToDiscord,
   syncWikiPageToDiscord,
 };

@@ -38,6 +38,7 @@
 - `DISCORD_TOKEN`
 - `DISCORD_GUILD_ID`
 - `CALENDAR_ANNOUNCEMENT_CHANNEL_ID` (optional, posts new calendar events to this channel)
+- `ERRATA_CHANNEL_ID` (optional, posts newly added errata to this channel and keeps edits/deletes in sync)
 - `MARKETPLACE_CHANNEL_ID` (optional, posts scheduled marketplace updates to this channel)
 - `MARKETPLACE_MESSAGE_ID` (optional, edits an existing marketplace message instead of creating the first one)
 - `PLAYER_ROLE_ID` (optional, pings this role when a scheduled marketplace publishes)
@@ -56,6 +57,8 @@ Run [sql/047_timeline_event_image.sql](C:/Users/Steph/reaches-of-altharion/sql/0
 Run [sql/048_timeline_chapter_marker.sql](C:/Users/Steph/reaches-of-altharion/sql/048_timeline_chapter_marker.sql) to add the `is_chapter_marker` column to `timeline_events`.
 Run [sql/058_capstones_schema.sql](C:/Users/Steph/reaches-of-altharion/sql/058_capstones_schema.sql) and [sql/059_seed_capstones.sql](C:/Users/Steph/reaches-of-altharion/sql/059_seed_capstones.sql) before using the New Capstones homebrew section.
 Run [sql/060_discord_message_id_arrays.sql](C:/Users/Steph/reaches-of-altharion/sql/060_discord_message_id_arrays.sql) so starting graces and wiki sections that no longer fit in one Discord message can be posted across several instead of getting truncated.
+
+Run [sql/081_errata_schema.sql](C:/Users/Steph/reaches-of-altharion/sql/081_errata_schema.sql) before using the Errata page. It seeds the existing errata list without reposting it to Discord.
 
 ## Production notes
 

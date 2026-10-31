@@ -17,6 +17,7 @@ const {
   authRateLimitWindowMs,
   calendarAnnouncementChannelId,
   startingGracesChannelId,
+  errataChannelId,
   characterCreationChannelId,
   cookieSecure,
   isProduction,
@@ -212,9 +213,17 @@ const {
   sendDirectMessage,
 } = require("./discord");
 const {
+  deleteErrataFromDiscord,
+  syncErrataToDiscord,
   syncStartingGraceToDiscord,
   syncWikiPageToDiscord,
 } = require("./discordSync");
+const {
+  createErrata,
+  deleteErrata,
+  listErrata,
+  updateErrata,
+} = require("./errata");
 const { fetchDdbCharacter } = require("./ddbCharacters");
 const { fetchDicecloudCharacter } = require("./dicecloudCharacters");
 const { fetchBestiaryBuilderBestiary } = require("./bestiaryBuilder");
@@ -1649,6 +1658,143 @@ app.patch("/api/admin/faq", async (req, res) => {
   } catch (faqError) {
     console.error("Failed to update FAQ content:", faqError);
     res.status(500).json({ error: "Failed to update FAQ content." });
+  }
+});
+
+function normalizeErrataPayload(body) {
+  const { title, content } = body ?? {};
+  if (
+    typeof title !== "string" ||
+    !title.trim() ||
+    typeof content !== "string" ||
+    !content.trim()
+  ) {
+    return { error: "Errata title and content are required." };
+  }
+
+  return { title: title.trim(), content: content.trim() };
+}
+
+function isUniqueViolation(error) {
+  return error?.code === "23505";
+}
+
+app.get("/api/errata", async (_req, res) => {
+  try {
+    res.json({ errata: await listErrata() });
+  } catch (errataError) {
+    console.error("Failed to load errata:", errataError);
+    res.status(500).json({ error: "Failed to load errata." });
+  }
+});
+
+app.post("/api/admin/errata", async (req, res) => {
+  const payload = normalizeErrataPayload(req.body);
+  if ("error" in payload) {
+    res.status(400).json({ error: payload.error });
+    return;
+  }
+
+  try {
+    const errata = await createErrata(payload);
+    await recordAuditEvent({
+      action: "errata_create",
+      status: "success",
+      userId: req.staffUser.id,
+      discordUserId: req.staffUser.discordUserId,
+      metadata: { errataId: errata.id, title: errata.title },
+      ...getRequestMetadata(req),
+    });
+
+    res.status(201).json({ errata });
+
+    syncErrataToDiscord(errata, errataChannelId, { postIfMissing: true }).catch(
+      (err) => console.error("Failed to post errata to Discord:", err),
+    );
+  } catch (errataError) {
+    if (isUniqueViolation(errataError)) {
+      res.status(409).json({ error: "An errata with that title already exists." });
+      return;
+    }
+    console.error("Failed to create errata:", errataError);
+    res.status(500).json({ error: "Failed to create errata." });
+  }
+});
+
+app.patch("/api/admin/errata/:errataId", async (req, res) => {
+  const errataId = Number(req.params.errataId);
+  const payload = normalizeErrataPayload(req.body);
+  if (!Number.isInteger(errataId) || errataId <= 0) {
+    res.status(400).json({ error: "Invalid errata id." });
+    return;
+  }
+  if ("error" in payload) {
+    res.status(400).json({ error: payload.error });
+    return;
+  }
+
+  try {
+    const errata = await updateErrata({ errataId, ...payload });
+    if (!errata) {
+      res.status(404).json({ error: "Errata not found." });
+      return;
+    }
+
+    await recordAuditEvent({
+      action: "errata_update",
+      status: "success",
+      userId: req.staffUser.id,
+      discordUserId: req.staffUser.discordUserId,
+      metadata: { errataId: errata.id, title: errata.title },
+      ...getRequestMetadata(req),
+    });
+
+    res.json({ errata });
+
+    syncErrataToDiscord(errata, errataChannelId, { postIfMissing: false }).catch(
+      (err) => console.error("Failed to sync errata to Discord:", err),
+    );
+  } catch (errataError) {
+    if (isUniqueViolation(errataError)) {
+      res.status(409).json({ error: "An errata with that title already exists." });
+      return;
+    }
+    console.error("Failed to update errata:", errataError);
+    res.status(500).json({ error: "Failed to update errata." });
+  }
+});
+
+app.delete("/api/admin/errata/:errataId", async (req, res) => {
+  const errataId = Number(req.params.errataId);
+  if (!Number.isInteger(errataId) || errataId <= 0) {
+    res.status(400).json({ error: "Invalid errata id." });
+    return;
+  }
+
+  try {
+    const discordMessageIds = await deleteErrata(errataId);
+    if (!discordMessageIds) {
+      res.status(404).json({ error: "Errata not found." });
+      return;
+    }
+
+    await recordAuditEvent({
+      action: "errata_delete",
+      status: "success",
+      userId: req.staffUser.id,
+      discordUserId: req.staffUser.discordUserId,
+      metadata: { errataId },
+      ...getRequestMetadata(req),
+    });
+
+    res.status(204).end();
+
+    deleteErrataFromDiscord(discordMessageIds, errataChannelId).catch((err) =>
+      console.error("Failed to delete errata from Discord:", err),
+    );
+  } catch (errataError) {
+    console.error("Failed to delete errata:", errataError);
+    res.status(500).json({ error: "Failed to delete errata." });
   }
 });
 
