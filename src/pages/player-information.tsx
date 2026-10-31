@@ -61,6 +61,13 @@ const GROUPS: SectionLinkGroup[] = [
         to: "/docs/errata",
       },
       {
+        icon: Library,
+        title: "Library",
+        description: "See which characters know a spell you want to copy.",
+        hint: "Search spells",
+        to: "/docs/library",
+      },
+      {
         icon: ShieldAlert,
         title: "Banned Content",
         description:

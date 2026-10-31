@@ -64,6 +64,7 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Character Creation", to: "/character-creation" },
       { label: "FAQ", to: "/docs/faq" },
       { label: "Errata", to: "/docs/errata" },
+      { label: "Library", to: "/docs/library" },
       { label: "Sourcebooks", to: "/docs/sourcebooks" },
       { label: "Banned Content", to: "/docs/banned-content" },
       { label: "Transformations", to: "/docs/transformations" },

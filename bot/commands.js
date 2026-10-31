@@ -386,6 +386,19 @@ const COMMAND_DEFINITIONS = [
         ),
   },
   {
+    name: "spellbook",
+    description: "Add your character's spells to the site's spell library.",
+    help: "Run Avrae's `!sb all`, then pass a link to its reply to save that character's spells to the Library page. Running it again replaces that character's list.",
+    buildCommand: (command) =>
+      command.addStringOption((option) =>
+        option
+          .setName("message-link")
+          .setDescription("Discord link to Avrae's !sb all reply.")
+          .setRequired(true)
+          .setMaxLength(500),
+      ),
+  },
+  {
     name: "quest-check",
     description: "Announce that you're available to run a quest, now or at a scheduled time.",
     help: "DMs: post a quest call (optionally for a future start time) so players can respond with the character(s) they'd like to bring, showing interest by level.",

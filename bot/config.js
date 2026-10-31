@@ -51,6 +51,7 @@ const config = {
     process.env.GOOGLE_SHEETS_FEEDBACK_WEBHOOK_URL || "",
   googleSheetsFeedbackWebhookSecret:
     process.env.GOOGLE_SHEETS_FEEDBACK_WEBHOOK_SECRET || "",
+  avraeBotUserId: process.env.AVRAE_BOT_USER_ID || "261302296103747584",
 };
 
 

@@ -60,6 +60,8 @@ Run [sql/060_discord_message_id_arrays.sql](C:/Users/Steph/reaches-of-altharion/
 
 Run [sql/081_errata_schema.sql](C:/Users/Steph/reaches-of-altharion/sql/081_errata_schema.sql) before using the Errata page. It seeds the existing errata list without reposting it to Discord.
 
+Run [sql/082_spell_library_schema.sql](C:/Users/Steph/reaches-of-altharion/sql/082_spell_library_schema.sql) before using the Library page or the `/spellbook` bot command.
+
 ## Production notes
 
 - Set `COOKIE_SECURE=true`
