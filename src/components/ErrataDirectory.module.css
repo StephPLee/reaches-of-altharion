@@ -1,0 +1,31 @@
+.entryHeader {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.entryHeader h3 {
+  flex: 1 1 auto;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  text-align: left;
+  color: #d2c091 !important;
+}
+
+.entryActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.resultCount,
+.hint {
+  margin: 0;
+  color: rgba(210, 192, 145, 0.82);
+  font-size: 0.9rem;
+}
+
+.empty {
+  margin: 0.8rem 0 0;
+}

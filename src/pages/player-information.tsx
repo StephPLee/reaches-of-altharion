@@ -6,6 +6,7 @@ import {
   Library,
   MessageCircleQuestion,
   MessageSquarePlus,
+  ScrollText,
   ShieldAlert,
   WandSparkles,
 } from "lucide-react";
@@ -51,6 +52,13 @@ const GROUPS: SectionLinkGroup[] = [
           "Approved books and content sources for character options.",
         hint: "Browse sources",
         to: "/docs/sourcebooks",
+      },
+      {
+        icon: ScrollText,
+        title: "Errata",
+        description: "Server specific rulings on feats, spells, and items.",
+        hint: "Search rulings",
+        to: "/docs/errata",
       },
       {
         icon: ShieldAlert,

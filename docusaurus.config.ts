@@ -162,6 +162,10 @@ const config: Config = {
               label: "FAQ",
             },
             {
+              to: "/docs/errata",
+              label: "Errata",
+            },
+            {
               to: "/docs/sourcebooks",
               label: "Sourcebooks",
             },
