@@ -339,7 +339,10 @@ export default function SpellLibrary() {
             </p>
           ) : (
             levelSections.map((section) => (
-              <section className={faqStyles.category} key={section.level}>
+              <section
+                className={`${faqStyles.category} ${styles.levelSection}`}
+                key={section.level}
+              >
                 <div className={faqStyles.categoryHeader}>
                   <h2 className={faqStyles.categoryTitle}>
                     {formatLevel(section.level)}
@@ -349,9 +352,11 @@ export default function SpellLibrary() {
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <th>Spell</th>
+                        <th className={styles.spellColumn}>Spell</th>
                         <th>Known by</th>
-                        {isStaff ? <th aria-label="Actions" /> : null}
+                        {isStaff ? (
+                          <th className={styles.actionColumn} aria-label="Actions" />
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody>{section.spells.map(renderSpellRow)}</tbody>
