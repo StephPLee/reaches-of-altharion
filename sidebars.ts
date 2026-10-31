@@ -12,6 +12,7 @@ const sidebars: SidebarsConfig = {
       items: [
         "faq",
         "errata",
+        "library",
         "sourcebooks",
         "banned-content",
         "transformations",

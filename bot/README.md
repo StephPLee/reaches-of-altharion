@@ -16,6 +16,7 @@ This bot provides `/help`, `/faq`, `/characters`, `/sc-character`, `/retire`, `/
 - `/leave-guild` lets players remove one of their WestMarches.games characters from its guild roster.
 - `/post-guild-rosters` lets staff post or refresh the per-guild roster messages.
 - `/rp` tracks active roleplay time in the current channel or thread.
+- `/spellbook` saves a character's spells from Avrae's `!sb all` reply to the site's spell Library page.
 - `/sticky set` and `/sticky remove` let staff pin a message that automatically reposts to the bottom of the current channel or thread whenever new messages come in.
 - `/boss-start` lets staff start a manual server boss fight.
 - `/boss-post` lets staff post a fresh public boss status message.
@@ -94,6 +95,7 @@ PUBLIC_SITE_URL=https://reachesofaltharion.com
 `GUILD_ROSTER_CHANNEL_ID` is optional; if it is blank, the first roster post is created in the channel where `/join-guild` is completed.
 `BOSS_STATUS_CHANNEL_ID` is optional; if it is blank, the boss status post is created in the channel where `/boss-start` or `/boss-post` is used.
 `PUBLIC_SITE_URL` is used for repo-hosted boss images. The default boss image is `/img/events/direbunny.jpg`, which resolves to `${PUBLIC_SITE_URL}/img/events/direbunny.jpg`.
+`AVRAE_BOT_USER_ID` is optional and only needs changing if `/spellbook` should accept embeds from a different Avrae bot account.
 
 ## 4) Install and run locally
 
@@ -134,6 +136,7 @@ When the bot starts, it auto-registers `/help`, `/faq`, `/characters`, `/sc-char
 - Characters can only join, leave, or change guild once every 7 days after their first bot-driven roster change. Cooldowns persist after leaving, so a character cannot leave and immediately join a different guild. Imported roster rows are not backfilled with a cooldown timestamp, so existing memberships are not blocked immediately.
 - `/rp start`, `/rp pause`, `/rp resume`, `/rp end`, and `/rp status` track one open RP timer per channel or thread. The starter or staff can pause, resume, or end it, and each command posts a public update where it was used.
 - `/sticky set` posts (or replaces) a sticky message in the current channel or thread and stores it in `sticky_messages`. Whenever a new message appears in a channel with an active sticky, the bot deletes and reposts the sticky a few seconds later so it settles at the bottom, without touching the message that triggered it or interfering with other commands. `/sticky remove` deletes the stored sticky and its posted message.
+- `/spellbook message-link` fetches the linked message, checks it was posted by Avrae (`AVRAE_BOT_USER_ID`, default `261302296103747584`), and saves the levelled spells (cantrips are skipped) to `library_spells` and `library_spellbooks`. Running it again for the same character replaces that character's list. The reply lists any spells that were new to the library. Staff can hide spells or remove a spellbook from the Library page.
 - `/boss-start` deactivates any previous active boss, creates a new boss at full HP, or creates a count-up progress tracker starting at 0. Use `mode: count-up`; set `target: none` for an infinite target shown as `Progress: value / ∞`.
 - `/boss-post` posts a fresh public boss status embed and makes that new message the one refreshed by later boss HP updates.
 - `/boss-damage` and `/boss-heal` write entries to `event_boss_damage_log`, update `event_bosses.current_hp`, and refresh the stored public boss status message. `/boss-damage` multiplies the entered damage by quest level: 18-20 = 1x, 14-17 = 3x, 9-13 = 5x, and 4-8 = 10x. For count-up trackers, damage adds progress and healing removes progress for corrections. New damage log entries include the base damage, multiplier, and quest level.

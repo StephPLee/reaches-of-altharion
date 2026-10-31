@@ -224,6 +224,11 @@ const {
   listErrata,
   updateErrata,
 } = require("./errata");
+const {
+  deleteLibrarySpellbook,
+  listLibrarySpells,
+  setLibrarySpellHidden,
+} = require("./spellLibrary");
 const { fetchDdbCharacter } = require("./ddbCharacters");
 const { fetchDicecloudCharacter } = require("./dicecloudCharacters");
 const { fetchBestiaryBuilderBestiary } = require("./bestiaryBuilder");
@@ -1795,6 +1800,80 @@ app.delete("/api/admin/errata/:errataId", async (req, res) => {
   } catch (errataError) {
     console.error("Failed to delete errata:", errataError);
     res.status(500).json({ error: "Failed to delete errata." });
+  }
+});
+
+app.get("/api/spell-library", async (req, res) => {
+  try {
+    const { isStaff } = await getViewerRoles(req);
+    res.json({ spells: await listLibrarySpells({ includeHidden: isStaff }) });
+  } catch (libraryError) {
+    console.error("Failed to load spell library:", libraryError);
+    res.status(500).json({ error: "Failed to load the spell library." });
+  }
+});
+
+app.patch("/api/admin/spell-library/spells/:spellId", async (req, res) => {
+  const spellId = Number(req.params.spellId);
+  if (!Number.isInteger(spellId) || spellId <= 0) {
+    res.status(400).json({ error: "Invalid spell id." });
+    return;
+  }
+  if (typeof req.body?.isHidden !== "boolean") {
+    res.status(400).json({ error: "isHidden must be true or false." });
+    return;
+  }
+
+  try {
+    const spell = await setLibrarySpellHidden({ spellId, isHidden: req.body.isHidden });
+    if (!spell) {
+      res.status(404).json({ error: "Spell not found." });
+      return;
+    }
+
+    await recordAuditEvent({
+      action: spell.isHidden ? "spell_library_hide" : "spell_library_unhide",
+      status: "success",
+      userId: req.staffUser.id,
+      discordUserId: req.staffUser.discordUserId,
+      metadata: { spellId: spell.id, name: spell.name },
+      ...getRequestMetadata(req),
+    });
+
+    res.json({ spell });
+  } catch (libraryError) {
+    console.error("Failed to update spell library spell:", libraryError);
+    res.status(500).json({ error: "Failed to update the spell." });
+  }
+});
+
+app.delete("/api/admin/spell-library/spellbooks/:spellbookId", async (req, res) => {
+  const spellbookId = Number(req.params.spellbookId);
+  if (!Number.isInteger(spellbookId) || spellbookId <= 0) {
+    res.status(400).json({ error: "Invalid spellbook id." });
+    return;
+  }
+
+  try {
+    const characterName = await deleteLibrarySpellbook(spellbookId);
+    if (characterName === null) {
+      res.status(404).json({ error: "Spellbook not found." });
+      return;
+    }
+
+    await recordAuditEvent({
+      action: "spell_library_spellbook_delete",
+      status: "success",
+      userId: req.staffUser.id,
+      discordUserId: req.staffUser.discordUserId,
+      metadata: { spellbookId, characterName },
+      ...getRequestMetadata(req),
+    });
+
+    res.status(204).end();
+  } catch (libraryError) {
+    console.error("Failed to delete spell library spellbook:", libraryError);
+    res.status(500).json({ error: "Failed to remove the spellbook." });
   }
 });
 
