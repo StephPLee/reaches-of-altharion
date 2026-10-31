@@ -102,7 +102,7 @@ const {
 } = require("./services/sideQuests");
 const { saveSpellbook } = require("./services/spellLibrary");
 const { getRewardRow } = require("../shared/rewardTable");
-const { parseAvraeSpellbookEmbed } = require("../shared/spellLibrary");
+const { parseAvraeSpellbookEmbeds } = require("../shared/spellLibrary");
 const {
   DuplicateActiveListingError,
   buildCancelListingRow,
@@ -240,6 +240,80 @@ function parseSubmissionContent(content, embeds = []) {
   const threadUrl = extractUrl(/\*{0,2}Link to Workshop Discussion:\*{0,2}(.+)/i);
 
   return { name, url, threadUrl };
+}
+
+// Fetches the Avrae message behind a /spellbook link. `label` names the link
+// in error messages ("that message", "the second message").
+async function fetchAvraeSpellbookMessage(interaction, messageUrl, label) {
+  const idMatch = messageUrl.match(/channels\/\d+\/(\d+)\/(\d+)/);
+  if (!idMatch) {
+    return { error: `The link for ${label} is not a valid Discord message link. Right-click Avrae's \`!sb all\` reply and choose **Copy Message Link**.` };
+  }
+
+  const [, channelId, messageId] = idMatch;
+  let channel;
+  try {
+    channel = await interaction.client.channels.fetch(channelId);
+  } catch (error) {
+    console.error("Could not read /spellbook link: failed to fetch channel", { userId: interaction.user.id, channelId, messageId, error });
+    return { error: `I could not access the channel for ${label}. It may have been deleted, or I may be missing **View Channel** permission.` };
+  }
+  if (!channel?.messages) {
+    return { error: `The link for ${label} does not point to a channel where I can read messages.` };
+  }
+
+  let message;
+  try {
+    message = await channel.messages.fetch(messageId);
+  } catch (error) {
+    console.error("Could not read /spellbook link: failed to fetch message", { userId: interaction.user.id, channelId, messageId, error });
+    return { error: `I could not access ${label}. It may have been deleted, or I may be missing **Read Message History** permission.` };
+  }
+
+  if (message.author?.id !== config.avraeBotUserId || !message.embeds?.length) {
+    return { error: `${label[0].toUpperCase()}${label.slice(1)} isn't an Avrae reply. Run \`!sb all\`, then link Avrae's response.` };
+  }
+
+  return { message };
+}
+
+// Joins names with ", " up to maxLength characters, ending in "and N more"
+// when some had to be left out.
+function formatSpellNameList(names, maxLength) {
+  let list = "";
+  let shown = 0;
+  for (const name of names) {
+    const next = list ? `${list}, ${name}` : name;
+    if (next.length > maxLength) break;
+    list = next;
+    shown += 1;
+  }
+  const remaining = names.length - shown;
+  if (remaining === 0) return `${list}.`;
+  return list ? `${list}, and ${remaining} more.` : `${remaining} spells.`;
+}
+
+function buildSpellbookReply({ characterName, newSpells, totalSpells, skippedSpells }) {
+  const parts = [
+    `Saved **${characterName}**'s spellbook (${totalSpells} spell${totalSpells === 1 ? "" : "s"}).`,
+  ];
+
+  let skippedPart = "";
+  if (skippedSpells.length > 0) {
+    const intro = `${skippedSpells.length} spell${skippedSpells.length === 1 ? "" : "s"} couldn't be added because Avrae doesn't know ${skippedSpells.length === 1 ? "its" : "their"} level: `;
+    skippedPart = intro + formatSpellNameList(skippedSpells, 500 - intro.length);
+  }
+
+  if (newSpells.length === 0) {
+    parts.push(`No new spells, but ${characterName} is now listed as a holder.`);
+  } else {
+    const intro = `${newSpells.length} spell${newSpells.length === 1 ? " was" : "s were"} new to the library: `;
+    const maxLength = 1900 - parts[0].length - skippedPart.length - intro.length;
+    parts.push(intro + formatSpellNameList(newSpells.map((spell) => spell.name), maxLength));
+  }
+
+  if (skippedPart) parts.push(skippedPart);
+  return parts.join("\n\n");
 }
 
 function getBossDamageQuestMultiplier(questLevel) {
@@ -4510,76 +4584,37 @@ async function handleInteraction(interaction) {
 
   if (interaction.commandName === "spellbook") {
     const messageUrl = interaction.options.getString("message-link")?.trim() ?? "";
+    const secondMessageUrl = interaction.options.getString("second-message-link")?.trim() ?? "";
     await interaction.deferReply({ ephemeral: true });
 
-    const idMatch = messageUrl.match(/channels\/\d+\/(\d+)\/(\d+)/);
-    if (!idMatch) {
-      await interaction.editReply("That is not a valid Discord message link. Right-click Avrae's `!sb all` reply and choose **Copy Message Link**.");
-      return;
+    const links = [{ url: messageUrl, label: secondMessageUrl ? "the first message" : "that message" }];
+    if (secondMessageUrl) links.push({ url: secondMessageUrl, label: "the second message" });
+
+    const embeds = [];
+    for (const link of links) {
+      const fetched = await fetchAvraeSpellbookMessage(interaction, link.url, link.label);
+      if (fetched.error) {
+        await interaction.editReply(fetched.error);
+        return;
+      }
+      embeds.push(fetched.message.embeds[0]);
     }
 
-    const [, channelId, messageId] = idMatch;
-    let channel;
-    try {
-      channel = await interaction.client.channels.fetch(channelId);
-    } catch (error) {
-      console.error("Could not read /spellbook link: failed to fetch channel", { userId: interaction.user.id, channelId, messageId, error });
-      await interaction.editReply("I could not access that channel. It may have been deleted, or I may be missing **View Channel** permission.");
-      return;
-    }
-    if (!channel?.messages) {
-      await interaction.editReply("That link does not point to a channel where I can read messages.");
-      return;
-    }
-
-    let message;
-    try {
-      message = await channel.messages.fetch(messageId);
-    } catch (error) {
-      console.error("Could not read /spellbook link: failed to fetch message", { userId: interaction.user.id, channelId, messageId, error });
-      await interaction.editReply("I could not access that message. It may have been deleted, or I may be missing **Read Message History** permission.");
-      return;
-    }
-
-    if (message.author?.id !== config.avraeBotUserId || !message.embeds?.length) {
-      await interaction.editReply("That message isn't an Avrae reply. Run `!sb all`, then link Avrae's response.");
-      return;
-    }
-
-    const parsed = parseAvraeSpellbookEmbed(message.embeds[0]);
+    const parsed = parseAvraeSpellbookEmbeds(embeds);
     if (parsed.error) {
       await interaction.editReply(parsed.error);
       return;
     }
 
     try {
-      const { newSpells, totalSpells } = await saveSpellbook({
+      const result = await saveSpellbook({
         discordUserId: interaction.user.id,
         characterName: parsed.characterName,
         messageUrl,
         spells: parsed.spells,
+        unknownSpells: parsed.unknownSpells,
       });
-
-      const header = `Saved **${parsed.characterName}**'s spellbook (${totalSpells} spell${totalSpells === 1 ? "" : "s"}).`;
-      let reply;
-      if (newSpells.length === 0) {
-        reply = `${header} No new spells, but ${parsed.characterName} is now listed as a holder.`;
-      } else {
-        const intro = `${header} ${newSpells.length} spell${newSpells.length === 1 ? " was" : "s were"} new to the library: `;
-        const names = newSpells.map((spell) => spell.name);
-        const maxLength = 1900 - intro.length;
-        let list = "";
-        let shown = 0;
-        for (const name of names) {
-          const next = list ? `${list}, ${name}` : name;
-          if (next.length > maxLength) break;
-          list = next;
-          shown += 1;
-        }
-        const remaining = names.length - shown;
-        reply = `${intro}${list}${remaining > 0 ? `, and ${remaining} more.` : "."}`;
-      }
-      await interaction.editReply(reply);
+      await interaction.editReply(buildSpellbookReply({ characterName: parsed.characterName, ...result }));
     } catch (error) {
       console.error("Failed to process /spellbook:", error);
       await interaction.editReply("Something went wrong while saving your spellbook. Please try again.");
