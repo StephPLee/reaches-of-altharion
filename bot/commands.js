@@ -388,15 +388,22 @@ const COMMAND_DEFINITIONS = [
   {
     name: "spellbook",
     description: "Add your character's spells to the site's spell library.",
-    help: "Run Avrae's `!sb all`, then pass a link to its reply to save that character's spells to the Library page. Running it again replaces that character's list.",
+    help: "Run Avrae's `!sb all`, then pass a link to its reply to save that character's spells to the Library page. If Avrae split the list over two messages, pass the second one too. Running it again replaces that character's list.",
     buildCommand: (command) =>
-      command.addStringOption((option) =>
-        option
-          .setName("message-link")
-          .setDescription("Discord link to Avrae's !sb all reply.")
-          .setRequired(true)
-          .setMaxLength(500),
-      ),
+      command
+        .addStringOption((option) =>
+          option
+            .setName("message-link")
+            .setDescription("Discord link to Avrae's !sb all reply.")
+            .setRequired(true)
+            .setMaxLength(500),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("second-message-link")
+            .setDescription("Link to Avrae's second message, if the list was split in two.")
+            .setMaxLength(500),
+        ),
   },
   {
     name: "quest-check",
