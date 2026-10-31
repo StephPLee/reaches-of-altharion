@@ -18,10 +18,18 @@
   overflow-x: auto;
 }
 
+/* The extra .levelSection selector outranks the global doc table rule in
+   custom.css, which sizes tables to their content with !important. A fixed
+   layout keeps every level's columns the same width. */
+.levelSection .tableWrap .table {
+  width: 100% !important;
+  min-width: 0;
+  table-layout: fixed !important;
+  margin: 0 !important;
+}
+
 .table {
   display: table;
-  width: 100%;
-  margin: 0;
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid rgba(190, 176, 138, 0.2);
@@ -57,13 +65,20 @@
   border-bottom: none;
 }
 
+.spellColumn {
+  width: 32%;
+}
+
 .spellName {
-  width: 30%;
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.actionColumn {
+  width: 7rem;
 }
 
 .actionCell {
-  width: 1%;
   white-space: nowrap;
 }
 
