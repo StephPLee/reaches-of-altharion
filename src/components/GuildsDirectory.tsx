@@ -6,6 +6,11 @@ import AvraeCommandBlock from "./AvraeCommandBlock";
 import GuildEmblem from "./GuildEmblem";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./GuildsDirectory.module.css";
+import GuildFeatsPanel, {
+  guildFeatsSlug,
+  type GuildFeatEntry,
+} from "./GuildFeatsPanel";
+import useHomebrewDiscordSync from "./useHomebrewDiscordSync";
 
 type AutomationSetupCommand = {
   id: number;
@@ -47,6 +52,7 @@ type Guild = {
   emblemSrc: string | null;
   emblemAlt: string | null;
   summary: string;
+  discordHqChannelId: string | null;
   sortOrder: number;
   upgrades: GuildUpgrade[];
 };
@@ -80,6 +86,7 @@ type GuildFormState = {
   emblemSrc: string;
   emblemAlt: string;
   summary: string;
+  discordHqChannelId: string;
 };
 
 type UpgradeFormState = {
@@ -124,6 +131,7 @@ function createEmptyGuildForm(): GuildFormState {
     emblemSrc: "",
     emblemAlt: "",
     summary: "",
+    discordHqChannelId: "",
   };
 }
 
@@ -225,6 +233,9 @@ export default function GuildsDirectory() {
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState("");
   const [guildRosters, setGuildRosters] = useState<GuildRoster[]>([]);
+  const [guildFeatEntries, setGuildFeatEntries] = useState<GuildFeatEntry[]>(
+    [],
+  );
   const [guildRostersLoading, setGuildRostersLoading] = useState(true);
   const [guildRostersError, setGuildRostersError] = useState("");
   const [guildForm, setGuildForm] = useState<GuildFormState>(
@@ -362,6 +373,12 @@ export default function GuildsDirectory() {
 
   const normalizedQuery = query.trim().toLowerCase();
   const isStaff = Boolean(currentUser?.isStaff);
+  const discordSync = useHomebrewDiscordSync({
+    authApiBaseUrl,
+    isStaff,
+    section: "guild-feats",
+    nounPlural: "guild feats",
+  });
 
   const visibleGuilds = useMemo(() => {
     if (!normalizedQuery) {
@@ -540,6 +557,20 @@ export default function GuildsDirectory() {
     }));
   }
 
+  async function refreshGuildFeats() {
+    const response = await fetch(`${authApiBaseUrl}/api/homebrew/guild-feats`);
+    if (!response.ok) {
+      throw new Error(`Failed to load guild feats (${response.status}).`);
+    }
+    const payload = await response.json();
+    setGuildFeatEntries(Array.isArray(payload.entries) ? payload.entries : []);
+  }
+
+  useEffect(() => {
+    refreshGuildFeats().catch(() => setGuildFeatEntries([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authApiBaseUrl]);
+
   async function refreshGuilds() {
     const response = await fetch(`${authApiBaseUrl}/api/guilds`);
     if (!response.ok) {
@@ -580,6 +611,7 @@ export default function GuildsDirectory() {
             emblemSrc: guildForm.emblemSrc.trim(),
             emblemAlt: guildForm.emblemAlt.trim(),
             summary: guildForm.summary.trim(),
+            discordHqChannelId: guildForm.discordHqChannelId.trim(),
             sortOrder: editingGuildId
               ? guilds.find((guild) => guild.id === editingGuildId)
                   ?.sortOrder || 0
@@ -858,6 +890,7 @@ export default function GuildsDirectory() {
       emblemSrc: guild.emblemSrc || "",
       emblemAlt: guild.emblemAlt || "",
       summary: guild.summary,
+      discordHqChannelId: guild.discordHqChannelId || "",
     });
     setEditingGuildId(guild.id);
     setOpenGuildComposer(true);
@@ -974,6 +1007,17 @@ export default function GuildsDirectory() {
             }
           />
         </label>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>HQ Channel ID</span>
+          <input
+            className={styles.input}
+            value={guildForm.discordHqChannelId}
+            placeholder="Discord channel ID (shown in the guild feats post)"
+            onChange={(event) =>
+              updateGuildField("discordHqChannelId", event.target.value)
+            }
+          />
+        </label>
         <div className={styles.formActions}>
           <button
             className={styles.secondaryButton}
@@ -1027,6 +1071,7 @@ export default function GuildsDirectory() {
             >
               Collapse all
             </button>
+            {discordSync.buttons}
             {isStaff ? (
               <button
                 className={styles.controlButton}
@@ -1052,6 +1097,7 @@ export default function GuildsDirectory() {
         <p className={styles.count}>
           Showing {visibleGuilds.length} of {guilds.length} guilds.
         </p>
+        {discordSync.status}
         {formMessage ? <p className={styles.message}>{formMessage}</p> : null}
         {formError ? <p className={styles.error}>{formError}</p> : null}
         {isStaff && openGuildComposer && editingGuildId === null
@@ -1299,6 +1345,18 @@ export default function GuildsDirectory() {
                           )
                         ) : null}
                       </section>
+                      <GuildFeatsPanel
+                        authApiBaseUrl={authApiBaseUrl}
+                        isStaff={isStaff}
+                        guild={guild}
+                        entry={
+                          guildFeatEntries.find(
+                            (featEntry) =>
+                              featEntry.slug === guildFeatsSlug(guild.slug),
+                          ) ?? null
+                        }
+                        onChanged={refreshGuildFeats}
+                      />
                       <div className={styles.upgradeList}>
                         {guild.upgrades.map((upgrade) => (
                           <section

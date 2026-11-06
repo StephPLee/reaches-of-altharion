@@ -5,6 +5,7 @@ import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./StartingGracesDirectory.module.css";
+import useHomebrewDiscordSync from "./useHomebrewDiscordSync";
 
 type AutomationSetupCommand = {
   id: number;
@@ -557,6 +558,12 @@ export default function StartingGracesDirectory() {
   }, [graces]);
 
   const isStaff = Boolean(currentUser?.isStaff);
+  const discordSync = useHomebrewDiscordSync({
+    authApiBaseUrl,
+    isStaff,
+    section: "starting-graces",
+    nounPlural: "starting graces",
+  });
   const normalizedQuery = query.trim().toLowerCase();
   const visibleGraces = useMemo(() => {
     if (!normalizedQuery) {
@@ -1050,6 +1057,7 @@ export default function StartingGracesDirectory() {
             >
               Collapse all
             </button>
+            {discordSync.buttons}
             {isStaff ? (
               <button
                 className={styles.controlButton}
@@ -1075,6 +1083,7 @@ export default function StartingGracesDirectory() {
         <p className={styles.count}>
           Showing {visibleGraces.length} of {graces.length} starting graces.
         </p>
+        {discordSync.status}
         {formMessage ? <p className={styles.message}>{formMessage}</p> : null}
         {formError ? <p className={styles.error}>{formError}</p> : null}
         {isStaff && openGraceComposer && editingGraceId === null

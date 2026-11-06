@@ -271,9 +271,12 @@ async function syncWikiPageToDiscord(page, channelId) {
 }
 
 module.exports = {
+  DISCORD_MSG_LIMIT,
   deleteErrataFromDiscord,
+  packTokens,
   parseMarkdownH2Sections,
   syncErrataToDiscord,
+  syncMessageParts,
   syncStartingGraceToDiscord,
   syncWikiPageToDiscord,
 };
