@@ -5,6 +5,7 @@ import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./CapstonesDirectory.module.css";
+import useHomebrewDiscordSync from "./useHomebrewDiscordSync";
 
 type AutomationSetupCommand = {
   id: number;
@@ -378,6 +379,12 @@ export default function CapstonesDirectory() {
   }, [capstones]);
 
   const isStaff = Boolean(currentUser?.isStaff);
+  const discordSync = useHomebrewDiscordSync({
+    authApiBaseUrl,
+    isStaff,
+    section: "capstones",
+    nounPlural: "capstones",
+  });
   const normalizedQuery = query.trim().toLowerCase();
   const visibleCapstones = useMemo(() => {
     if (!normalizedQuery) {
@@ -872,6 +879,7 @@ export default function CapstonesDirectory() {
             >
               Collapse all
             </button>
+            {discordSync.buttons}
             {isStaff ? (
               <button
                 className={styles.controlButton}
@@ -897,6 +905,7 @@ export default function CapstonesDirectory() {
         <p className={styles.count}>
           Showing {visibleCapstones.length} of {capstones.length} capstones.
         </p>
+        {discordSync.status}
         {formMessage ? <p className={styles.message}>{formMessage}</p> : null}
         {formError ? <p className={styles.error}>{formError}</p> : null}
         {isStaff && openCapstoneComposer && editingCapstoneId === null

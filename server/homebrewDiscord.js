@@ -18,6 +18,33 @@ const { listHomebrewEntriesBySection } = require("./homebrew");
 // `tag` is matched by name against the forum's available tags.
 const HOMEBREW_FORUM_POSTS = [
   {
+    key: "starting-graces",
+    sections: ["starting-graces"],
+    title: "Homebrew Starting Graces",
+    tag: "Starting Grace",
+    intro:
+      "The following list contains the Homebrew Starting Graces within the realm of Altharion",
+    loadMessages: () => loadWriteUpMessages("starting_graces"),
+  },
+  {
+    key: "boons",
+    sections: ["boons"],
+    title: "Homebrew Boons",
+    tag: "Boon",
+    intro:
+      "The following list contains the Homebrew Boons within the realm of Altharion",
+    loadMessages: () => loadWriteUpMessages("boons"),
+  },
+  {
+    key: "capstones",
+    sections: ["capstones"],
+    title: "Homebrew Capstones",
+    tag: "Capstone",
+    intro:
+      "The following list contains the Homebrew Capstones within the realm of Altharion",
+    loadMessages: () => loadWriteUpMessages("capstones"),
+  },
+  {
     key: "feats",
     sections: ["feats"],
     title: "Homebrew Feats",
@@ -164,7 +191,42 @@ async function loadGuildFeatHeaders(entries) {
   return headers;
 }
 
+// Starting graces, boons and capstones are full write-ups rather than link
+// lists: one message per entry, "## Title" followed by its markdown.
+const WRITE_UP_TABLES = new Set(["starting_graces", "boons", "capstones"]);
+
+async function loadWriteUpMessages(table) {
+  if (!WRITE_UP_TABLES.has(table)) {
+    throw new Error(`Unsupported write-up table: ${table}`);
+  }
+
+  const result = await pool.query(
+    `SELECT id, title, content_markdown FROM ${table}
+     WHERE is_published = true
+     ORDER BY LOWER(title) ASC, id ASC`,
+  );
+
+  return result.rows.map((row) => ({
+    entryId: Number(row.id),
+    parts: packTokens(
+      [
+        `## ${row.title}`,
+        ...String(row.content_markdown || "")
+          .split(/\n{2,}/)
+          .map((paragraph) => paragraph.trim())
+          .filter(Boolean),
+      ],
+      "\n\n",
+      DISCORD_MSG_LIMIT,
+    ),
+  }));
+}
+
 async function buildDesiredMessages(post) {
+  if (post.loadMessages) {
+    return post.loadMessages();
+  }
+
   const desired = [];
 
   for (const section of post.sections) {
@@ -240,16 +302,19 @@ async function ensurePostThread(post, existingThreadId) {
   return { threadId: await createPostThread(post), created: true };
 }
 
-function canEditInPlace(stored, desired) {
-  if (stored.length > desired.length) {
-    return false;
+// Number of leading entries whose messages can stay where they are: same
+// entry in the same position, with the same number of messages.
+function countKeepablePrefix(stored, desired) {
+  let index = 0;
+  while (
+    index < stored.length &&
+    index < desired.length &&
+    stored[index].entryId === desired[index].entryId &&
+    (stored[index].messageIds || []).length === desired[index].parts.length
+  ) {
+    index++;
   }
-
-  return stored.every(
-    (storedEntry, index) =>
-      storedEntry.entryId === desired[index].entryId &&
-      (storedEntry.messageIds || []).length === desired[index].parts.length,
-  );
+  return index;
 }
 
 async function syncHomebrewForumPost(postKey, { repost = false } = {}) {
@@ -267,17 +332,17 @@ async function syncHomebrewForumPost(postKey, { repost = false } = {}) {
   let stored = created ? [] : row?.entry_messages || [];
   const desired = await buildDesiredMessages(post);
 
-  // Forum messages can't be reordered, so anything other than editing or
-  // appending at the end means clearing the post and reposting in order.
-  const fullRepost = repost || !canEditInPlace(stored, desired);
-  if (fullRepost) {
-    for (const storedEntry of stored) {
-      for (const messageId of storedEntry.messageIds || []) {
-        await deleteChannelMessage(threadId, messageId).catch(() => {});
-      }
+  // Forum messages can't be reordered. Everything from the first inserted,
+  // removed or moved entry onward is deleted and reposted in order; entries
+  // before that point are edited in place.
+  const keepCount = repost ? 0 : countKeepablePrefix(stored, desired);
+  const repostedFrom = keepCount < stored.length ? keepCount : null;
+  for (const storedEntry of stored.slice(keepCount)) {
+    for (const messageId of storedEntry.messageIds || []) {
+      await deleteChannelMessage(threadId, messageId).catch(() => {});
     }
-    stored = [];
   }
+  stored = stored.slice(0, keepCount);
 
   const entryMessages = [];
   for (let i = 0; i < desired.length; i++) {
@@ -304,7 +369,7 @@ async function syncHomebrewForumPost(postKey, { repost = false } = {}) {
     postKey,
     threadId,
     createdThread: created,
-    reposted: fullRepost,
+    repostedFromIndex: repostedFrom,
     messageCount: entryMessages.reduce(
       (total, entry) => total + entry.messageIds.length,
       0,

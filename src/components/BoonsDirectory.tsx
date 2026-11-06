@@ -5,6 +5,7 @@ import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
 import styles from "./BoonsDirectory.module.css";
+import useHomebrewDiscordSync from "./useHomebrewDiscordSync";
 
 type AutomationSetupCommand = {
   id: number;
@@ -374,6 +375,12 @@ export default function BoonsDirectory() {
   }, [boons]);
 
   const isStaff = Boolean(currentUser?.isStaff);
+  const discordSync = useHomebrewDiscordSync({
+    authApiBaseUrl,
+    isStaff,
+    section: "boons",
+    nounPlural: "boons",
+  });
   const normalizedQuery = query.trim().toLowerCase();
   const visibleBoons = useMemo(() => {
     if (!normalizedQuery) {
@@ -861,6 +868,7 @@ export default function BoonsDirectory() {
             >
               Collapse all
             </button>
+            {discordSync.buttons}
             {isStaff ? (
               <button
                 className={styles.controlButton}
@@ -886,6 +894,7 @@ export default function BoonsDirectory() {
         <p className={styles.count}>
           Showing {visibleBoons.length} of {boons.length} boons.
         </p>
+        {discordSync.status}
         {formMessage ? <p className={styles.message}>{formMessage}</p> : null}
         {formError ? <p className={styles.error}>{formError}</p> : null}
         {isStaff && openBoonComposer && editingBoonId === null

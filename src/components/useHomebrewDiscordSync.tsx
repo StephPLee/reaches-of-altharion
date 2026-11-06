@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import styles from "./SubclassesDirectory.module.css";
 
 type DiscordSyncStatus = {
@@ -6,7 +6,7 @@ type DiscordSyncStatus = {
   posts: { key: string; sections: string[] }[];
 };
 
-type HomebrewDiscordSyncControlsProps = {
+type UseHomebrewDiscordSyncOptions = {
   authApiBaseUrl: string;
   isStaff: boolean;
   section: string;
@@ -14,14 +14,16 @@ type HomebrewDiscordSyncControlsProps = {
 };
 
 // Staff-only buttons that push a homebrew section to its bot-owned Discord
-// forum post. Renders nothing for sections that aren't mirrored to Discord.
-export default function HomebrewDiscordSyncControls({
+// forum post. `buttons` goes in the page's control row and `status` below it;
+// both are null for non-staff and for sections that aren't mirrored.
+export default function useHomebrewDiscordSync({
   authApiBaseUrl,
   isStaff,
   section,
   nounPlural,
-}: HomebrewDiscordSyncControlsProps) {
+}: UseHomebrewDiscordSyncOptions): { buttons: ReactNode; status: ReactNode } {
   const [postKey, setPostKey] = useState<string | null>(null);
+  const [configured, setConfigured] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -39,13 +41,14 @@ export default function HomebrewDiscordSyncControls({
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((payload: DiscordSyncStatus | null) => {
-        if (cancelled || !payload?.configured) {
+        if (cancelled || !payload) {
           return;
         }
         const post = payload.posts.find((candidate) =>
           candidate.sections.includes(section),
         );
         setPostKey(post?.key ?? null);
+        setConfigured(payload.configured);
       })
       .catch(() => {});
 
@@ -55,7 +58,7 @@ export default function HomebrewDiscordSyncControls({
   }, [authApiBaseUrl, isStaff, section]);
 
   if (!isStaff || !postKey) {
-    return null;
+    return { buttons: null, status: null };
   }
 
   async function syncToDiscord(repost: boolean) {
@@ -102,28 +105,42 @@ export default function HomebrewDiscordSyncControls({
     }
   }
 
-  return (
-    <div>
-      <div className={styles.buttonRow}>
-        <button
-          type="button"
-          className={styles.controlButton}
-          onClick={() => syncToDiscord(false)}
-          disabled={isSyncing}
-        >
-          {isSyncing ? "Syncing..." : "Sync to Discord"}
-        </button>
-        <button
-          type="button"
-          className={styles.controlButton}
-          onClick={() => syncToDiscord(true)}
-          disabled={isSyncing}
-        >
-          Repost to Discord
-        </button>
-      </div>
+  const disabledReason = configured
+    ? ""
+    : "Discord sync is off: set HOMEBREW_FORUM_CHANNEL_ID on the server and restart it.";
+
+  const buttons = (
+    <>
+      <button
+        type="button"
+        className={styles.controlButton}
+        onClick={() => syncToDiscord(false)}
+        disabled={isSyncing || !configured}
+        title={disabledReason || undefined}
+      >
+        {isSyncing ? "Syncing..." : "Sync to Discord"}
+      </button>
+      <button
+        type="button"
+        className={styles.controlButton}
+        onClick={() => syncToDiscord(true)}
+        disabled={isSyncing || !configured}
+        title={disabledReason || undefined}
+      >
+        Repost to Discord
+      </button>
+    </>
+  );
+
+  const status = (
+    <>
+      {disabledReason ? (
+        <p className={styles.status}>{disabledReason}</p>
+      ) : null}
       {message ? <p className={styles.success}>{message}</p> : null}
       {error ? <p className={styles.error}>{error}</p> : null}
-    </div>
+    </>
   );
+
+  return { buttons, status };
 }

@@ -10,7 +10,7 @@ import GuildFeatsPanel, {
   guildFeatsSlug,
   type GuildFeatEntry,
 } from "./GuildFeatsPanel";
-import HomebrewDiscordSyncControls from "./HomebrewDiscordSyncControls";
+import useHomebrewDiscordSync from "./useHomebrewDiscordSync";
 
 type AutomationSetupCommand = {
   id: number;
@@ -373,6 +373,12 @@ export default function GuildsDirectory() {
 
   const normalizedQuery = query.trim().toLowerCase();
   const isStaff = Boolean(currentUser?.isStaff);
+  const discordSync = useHomebrewDiscordSync({
+    authApiBaseUrl,
+    isStaff,
+    section: "guild-feats",
+    nounPlural: "guild feats",
+  });
 
   const visibleGuilds = useMemo(() => {
     if (!normalizedQuery) {
@@ -1065,6 +1071,7 @@ export default function GuildsDirectory() {
             >
               Collapse all
             </button>
+            {discordSync.buttons}
             {isStaff ? (
               <button
                 className={styles.controlButton}
@@ -1090,12 +1097,7 @@ export default function GuildsDirectory() {
         <p className={styles.count}>
           Showing {visibleGuilds.length} of {guilds.length} guilds.
         </p>
-        <HomebrewDiscordSyncControls
-          authApiBaseUrl={authApiBaseUrl}
-          isStaff={isStaff}
-          section="guild-feats"
-          nounPlural="guild feats"
-        />
+        {discordSync.status}
         {formMessage ? <p className={styles.message}>{formMessage}</p> : null}
         {formError ? <p className={styles.error}>{formError}</p> : null}
         {isStaff && openGuildComposer && editingGuildId === null
