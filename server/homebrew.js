@@ -209,9 +209,15 @@ async function listHomebrewEntriesBySection(section) {
     }
   }
 
+  // Items default to sort_order 0 and so list alphabetically; a non-zero
+  // sort_order (e.g. guild feat tiers, set pieces by rarity) takes priority.
   function sortItemsAlphabetically(itemList) {
-    itemList.sort((left, right) =>
-      left.label.localeCompare(right.label, undefined, { sensitivity: "base" }),
+    itemList.sort(
+      (left, right) =>
+        left.sortOrder - right.sortOrder ||
+        left.label.localeCompare(right.label, undefined, {
+          sensitivity: "base",
+        }),
     );
 
     for (const item of itemList) {
@@ -624,12 +630,35 @@ async function deleteHomebrewItemAutomation(automationEntryId) {
   return result.rows[0] || null;
 }
 
+async function getHomebrewEntrySection(entryId) {
+  const result = await pool.query(
+    "SELECT section FROM homebrew_entries WHERE id = $1",
+    [entryId],
+  );
+  return result.rows[0]?.section ?? null;
+}
+
+async function getHomebrewItemSection(itemId) {
+  const result = await pool.query(
+    `
+    SELECT e.section
+    FROM homebrew_section_items i
+    JOIN homebrew_entries e ON e.id = i.homebrew_entry_id
+    WHERE i.id = $1
+    `,
+    [itemId],
+  );
+  return result.rows[0]?.section ?? null;
+}
+
 module.exports = {
   createHomebrewItemAutomation,
   createHomebrewEntry,
   createHomebrewSectionItem,
   deleteHomebrewItemAutomation,
   deleteHomebrewSectionItem,
+  getHomebrewEntrySection,
+  getHomebrewItemSection,
   listHomebrewEntriesBySection,
   updateHomebrewItemAutomation,
   updateHomebrewSectionItem,

@@ -5,6 +5,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import AvraeAliasBlock from "./AvraeAliasBlock";
 import AvraeCommandBlock from "./AvraeCommandBlock";
 import HomebrewAutomationSection from "./HomebrewAutomationSection";
+import HomebrewDiscordSyncControls from "./HomebrewDiscordSyncControls";
 import styles from "./SubclassesDirectory.module.css";
 
 type AutomationSetupCommand = {
@@ -1043,6 +1044,12 @@ export default function SpeciesDirectory({
           </div>
         </div>
         <p className={styles.count}>Showing 1 section.</p>
+        <HomebrewDiscordSyncControls
+          authApiBaseUrl={authApiBaseUrl}
+          isStaff={isStaff}
+          section={section}
+          nounPlural={nounPlural}
+        />
       </div>
 
       {loading ? (

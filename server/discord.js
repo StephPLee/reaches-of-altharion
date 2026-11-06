@@ -8,6 +8,25 @@ const {
   discordOauthRedirectUri,
 } = require("./config");
 
+const MAX_RATE_LIMIT_RETRIES = 3;
+
+// Bot message writes can burst (e.g. syncing a whole homebrew forum post), so
+// wait out Discord's 429 responses instead of failing partway through.
+async function fetchWithRateLimitRetry(url, init) {
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url, init);
+    if (response.status !== 429 || attempt >= MAX_RATE_LIMIT_RETRIES) {
+      return response;
+    }
+
+    const body = await response.json().catch(() => ({}));
+    const retryAfterSeconds = Number(body.retry_after) || 1;
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.ceil(retryAfterSeconds * 1000) + 100),
+    );
+  }
+}
+
 function buildAuthorizationUrl() {
   throw new Error("buildAuthorizationUrl requires a state value.");
 }
@@ -121,7 +140,7 @@ async function removeGuildMemberRole(discordUserId, roleId) {
 }
 
 async function postChannelMessage(channelId, payload) {
-  const response = await fetch(
+  const response = await fetchWithRateLimitRetry(
     `${DISCORD_API_BASE_URL}/channels/${channelId}/messages`,
     {
       method: "POST",
@@ -189,7 +208,7 @@ async function sendDirectMessage(discordUserId, payload) {
 }
 
 async function editChannelMessage(channelId, messageId, payload) {
-  const response = await fetch(
+  const response = await fetchWithRateLimitRetry(
     `${DISCORD_API_BASE_URL}/channels/${channelId}/messages/${messageId}`,
     {
       method: "PATCH",
@@ -234,7 +253,7 @@ function memberHasRole(member, requiredRoleId) {
 }
 
 async function deleteChannelMessage(channelId, messageId) {
-  const response = await fetch(
+  const response = await fetchWithRateLimitRetry(
     `${DISCORD_API_BASE_URL}/channels/${channelId}/messages/${messageId}`,
     {
       method: "DELETE",
@@ -280,12 +299,66 @@ async function fetchDiscordMessage(channelId, messageId) {
   return response.json();
 }
 
+async function discordBotRequest(method, path, body, action) {
+  const response = await fetchWithRateLimitRetry(`${DISCORD_API_BASE_URL}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bot ${discordBotToken}`,
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const error = new Error(
+      `Failed to ${action}: ${response.status} ${errorText}`,
+    );
+    error.statusCode = response.status;
+    throw error;
+  }
+
+  return response.status === 204 ? null : response.json();
+}
+
+function fetchChannel(channelId) {
+  return discordBotRequest(
+    "GET",
+    `/channels/${channelId}`,
+    null,
+    "fetch Discord channel",
+  );
+}
+
+function editChannel(channelId, patch) {
+  return discordBotRequest(
+    "PATCH",
+    `/channels/${channelId}`,
+    patch,
+    "edit Discord channel",
+  );
+}
+
+// Creates a forum post. The returned channel's id is the thread id, and the
+// starter message shares that id.
+function createForumThread(forumChannelId, payload) {
+  return discordBotRequest(
+    "POST",
+    `/channels/${forumChannelId}/threads`,
+    payload,
+    "create Discord forum post",
+  );
+}
+
 module.exports = {
   addGuildMemberRole,
   buildAuthorizationUrl: buildAuthorizationUrlWithState,
+  createForumThread,
   deleteChannelMessage,
+  editChannel,
   editChannelMessage,
   exchangeCodeForToken,
+  fetchChannel,
   fetchDiscordMessage,
   fetchDiscordUser,
   fetchGuildMember,
