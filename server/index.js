@@ -4277,6 +4277,8 @@ app.post(
       });
 
       res.status(201).json({ grace });
+
+      queueHomebrewDiscordSync("starting-graces");
     } catch (graceError) {
       console.error("Failed to create starting grace:", graceError);
       res.status(500).json({ error: "Failed to create starting grace." });
@@ -4339,6 +4341,8 @@ app.patch(
 
       res.json({ grace });
 
+      queueHomebrewDiscordSync("starting-graces");
+
       if (grace.isPublished && startingGracesChannelId) {
         syncStartingGraceToDiscord(grace, startingGracesChannelId).catch((err) =>
           console.error("Failed to sync starting grace to Discord:", err),
@@ -4381,6 +4385,8 @@ app.delete(
       });
 
       res.status(204).end();
+
+      queueHomebrewDiscordSync("starting-graces");
     } catch (graceError) {
       console.error("Failed to delete starting grace:", graceError);
       res.status(500).json({ error: "Failed to delete starting grace." });
@@ -4566,6 +4572,8 @@ app.post(
       });
 
       res.status(201).json({ boon });
+
+      queueHomebrewDiscordSync("boons");
     } catch (boonError) {
       console.error("Failed to create boon:", boonError);
       res.status(500).json({ error: "Failed to create boon." });
@@ -4627,6 +4635,8 @@ app.patch(
       });
 
       res.json({ boon });
+
+      queueHomebrewDiscordSync("boons");
     } catch (boonError) {
       console.error("Failed to update boon:", boonError);
       res.status(500).json({ error: "Failed to update boon." });
@@ -4664,6 +4674,8 @@ app.delete(
       });
 
       res.status(204).end();
+
+      queueHomebrewDiscordSync("boons");
     } catch (boonError) {
       console.error("Failed to delete boon:", boonError);
       res.status(500).json({ error: "Failed to delete boon." });
@@ -4842,6 +4854,8 @@ app.post(
       });
 
       res.status(201).json({ capstone });
+
+      queueHomebrewDiscordSync("capstones");
     } catch (capstoneError) {
       console.error("Failed to create capstone:", capstoneError);
       res.status(500).json({ error: "Failed to create capstone." });
@@ -4904,6 +4918,8 @@ app.patch(
       });
 
       res.json({ capstone });
+
+      queueHomebrewDiscordSync("capstones");
     } catch (capstoneError) {
       console.error("Failed to update capstone:", capstoneError);
       res.status(500).json({ error: "Failed to update capstone." });
@@ -4941,6 +4957,8 @@ app.delete(
       });
 
       res.status(204).end();
+
+      queueHomebrewDiscordSync("capstones");
     } catch (capstoneError) {
       console.error("Failed to delete capstone:", capstoneError);
       res.status(500).json({ error: "Failed to delete capstone." });
