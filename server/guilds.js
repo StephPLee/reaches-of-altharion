@@ -8,6 +8,7 @@ function mapGuildRow(row) {
     emblemSrc: row.emblem_src,
     emblemAlt: row.emblem_alt,
     summary: row.summary,
+    discordHqChannelId: row.discord_hq_channel_id ?? null,
     sortOrder: row.sort_order,
     isPublished: row.is_published,
     createdAt: row.created_at,
@@ -54,6 +55,7 @@ async function listGuilds() {
       emblem_src,
       emblem_alt,
       summary,
+      discord_hq_channel_id,
       sort_order,
       is_published,
       created_at,
@@ -396,6 +398,7 @@ async function createGuild({
   emblemSrc,
   emblemAlt,
   summary,
+  discordHqChannelId = null,
   sortOrder,
   isPublished,
   createdByUserId,
@@ -411,9 +414,10 @@ async function createGuild({
       sort_order,
       is_published,
       created_by_user_id,
-      updated_by_user_id
+      updated_by_user_id,
+      discord_hq_channel_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9)
     RETURNING
       id,
       name,
@@ -421,6 +425,7 @@ async function createGuild({
       emblem_src,
       emblem_alt,
       summary,
+      discord_hq_channel_id,
       sort_order,
       is_published,
       created_at,
@@ -435,6 +440,7 @@ async function createGuild({
       sortOrder,
       isPublished,
       createdByUserId,
+      discordHqChannelId,
     ],
   );
 
@@ -448,10 +454,14 @@ async function updateGuild({
   emblemSrc,
   emblemAlt,
   summary,
+  discordHqChannelId = null,
   sortOrder,
   isPublished,
   updatedByUserId,
 }) {
+  const previous = await pool.query("SELECT slug FROM guilds WHERE id = $1", [
+    guildId,
+  ]);
   const result = await pool.query(
     `
     UPDATE guilds
@@ -464,6 +474,7 @@ async function updateGuild({
       sort_order = $7,
       is_published = $8,
       updated_by_user_id = $9,
+      discord_hq_channel_id = $10,
       updated_at = NOW()
     WHERE id = $1
     RETURNING
@@ -473,6 +484,7 @@ async function updateGuild({
       emblem_src,
       emblem_alt,
       summary,
+      discord_hq_channel_id,
       sort_order,
       is_published,
       created_at,
@@ -488,10 +500,26 @@ async function updateGuild({
       sortOrder,
       isPublished,
       updatedByUserId,
+      discordHqChannelId,
     ],
   );
 
-  return result.rows[0] ? mapGuildRow(result.rows[0]) : null;
+  const guild = result.rows[0] ? mapGuildRow(result.rows[0]) : null;
+  const previousSlug = previous.rows[0]?.slug;
+
+  // Keep the guild's feat list (homebrew entry) pointing at the guild.
+  if (guild && previousSlug) {
+    await pool.query(
+      `
+      UPDATE homebrew_entries
+      SET slug = $2, title = $3, updated_at = NOW()
+      WHERE slug = $1
+      `,
+      [`guild-feats-${previousSlug}`, `guild-feats-${guild.slug}`, guild.name],
+    );
+  }
+
+  return guild;
 }
 
 async function deleteGuild(guildId) {
@@ -499,10 +527,19 @@ async function deleteGuild(guildId) {
     `
     DELETE FROM guilds
     WHERE id = $1
-    RETURNING id
+    RETURNING id, slug
     `,
     [guildId],
   );
+
+  // Hide the guild's feat list rather than deleting it, so the site and the
+  // Discord guild feats post drop it.
+  if (result.rows[0]) {
+    await pool.query(
+      "UPDATE homebrew_entries SET is_published = false, updated_at = NOW() WHERE slug = $1",
+      [`guild-feats-${result.rows[0].slug}`],
+    );
+  }
 
   return result.rows[0] || null;
 }

@@ -18,6 +18,7 @@ const {
   calendarAnnouncementChannelId,
   startingGracesChannelId,
   errataChannelId,
+  homebrewForumChannelId,
   characterCreationChannelId,
   cookieSecure,
   isProduction,
@@ -117,10 +118,17 @@ const {
   createHomebrewSectionItem,
   deleteHomebrewItemAutomation,
   deleteHomebrewSectionItem,
+  getHomebrewEntrySection,
+  getHomebrewItemSection,
   listHomebrewEntriesBySection,
   updateHomebrewItemAutomation,
   updateHomebrewSectionItem,
 } = require("./homebrew");
+const {
+  HOMEBREW_FORUM_POSTS,
+  queueHomebrewDiscordSync,
+  syncHomebrewForumPosts,
+} = require("./homebrewDiscord");
 const {
   createGuild,
   createGuildUpgradeAutomation,
@@ -5077,6 +5085,7 @@ app.post(
       emblemSrc,
       emblemAlt,
       summary,
+      discordHqChannelId,
       sortOrder,
       isPublished,
     } = req.body ?? {};
@@ -5091,6 +5100,12 @@ app.post(
       return;
     }
 
+    const parsedHqChannelId = parseOptionalDiscordId(discordHqChannelId);
+    if (parsedHqChannelId === undefined) {
+      res.status(400).json({ error: "HQ channel must be a Discord channel ID." });
+      return;
+    }
+
     try {
       const guild = await createGuild({
         name: name.trim(),
@@ -5098,6 +5113,7 @@ app.post(
         emblemSrc: typeof emblemSrc === "string" ? emblemSrc.trim() : "",
         emblemAlt: typeof emblemAlt === "string" ? emblemAlt.trim() : "",
         summary: typeof summary === "string" ? summary.trim() : "",
+        discordHqChannelId: parsedHqChannelId,
         sortOrder:
           typeof sortOrder === "number" && Number.isFinite(sortOrder)
             ? Math.trunc(sortOrder)
@@ -5116,6 +5132,8 @@ app.post(
       });
 
       res.status(201).json({ guild });
+
+      queueHomebrewDiscordSync("guild-feats");
     } catch (guildError) {
       console.error("Failed to create guild:", guildError);
       res.status(500).json({ error: "Failed to create guild." });
@@ -5135,6 +5153,7 @@ app.patch(
       emblemSrc,
       emblemAlt,
       summary,
+      discordHqChannelId,
       sortOrder,
       isPublished,
     } = req.body ?? {};
@@ -5153,6 +5172,12 @@ app.patch(
       return;
     }
 
+    const parsedHqChannelId = parseOptionalDiscordId(discordHqChannelId);
+    if (parsedHqChannelId === undefined) {
+      res.status(400).json({ error: "HQ channel must be a Discord channel ID." });
+      return;
+    }
+
     try {
       const guild = await updateGuild({
         guildId,
@@ -5161,6 +5186,7 @@ app.patch(
         emblemSrc: typeof emblemSrc === "string" ? emblemSrc.trim() : "",
         emblemAlt: typeof emblemAlt === "string" ? emblemAlt.trim() : "",
         summary: typeof summary === "string" ? summary.trim() : "",
+        discordHqChannelId: parsedHqChannelId,
         sortOrder:
           typeof sortOrder === "number" && Number.isFinite(sortOrder)
             ? Math.trunc(sortOrder)
@@ -5184,6 +5210,8 @@ app.patch(
       });
 
       res.json({ guild });
+
+      queueHomebrewDiscordSync("guild-feats");
     } catch (guildError) {
       console.error("Failed to update guild:", guildError);
       res.status(500).json({ error: "Failed to update guild." });
@@ -5221,6 +5249,8 @@ app.delete(
       });
 
       res.status(204).end();
+
+      queueHomebrewDiscordSync("guild-feats");
     } catch (guildError) {
       console.error("Failed to delete guild:", guildError);
       res.status(500).json({ error: "Failed to delete guild." });
@@ -5507,6 +5537,95 @@ app.delete(
   },
 );
 
+// Returns null for blank, the trimmed ID if valid, or undefined if invalid.
+// Accepts a raw ID or a pasted channel mention like <#123...>.
+function parseOptionalDiscordId(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim().replace(/^<#(d+)>$/, "$1");
+  if (!trimmed) {
+    return null;
+  }
+  return /^d{17,20}$/.test(trimmed) ? trimmed : undefined;
+}
+
+function queueHomebrewSyncForEntry(homebrewEntryId) {
+  getHomebrewEntrySection(homebrewEntryId)
+    .then((section) => {
+      if (section) {
+        queueHomebrewDiscordSync(section);
+      }
+    })
+    .catch((err) =>
+      console.error("Failed to queue homebrew Discord sync:", err),
+    );
+}
+
+app.get(
+  "/api/admin/homebrew/discord-sync",
+  requireStaffSession,
+  (req, res) => {
+    res.json({
+      configured: Boolean(homebrewForumChannelId),
+      posts: HOMEBREW_FORUM_POSTS.map((post) => ({
+        key: post.key,
+        title: post.title,
+        sections: post.sections,
+      })),
+    });
+  },
+);
+
+app.post(
+  "/api/admin/homebrew/discord-sync",
+  requireTrustedOrigin,
+  requireStaffSession,
+  async (req, res) => {
+    const { postKey, repost } = req.body ?? {};
+
+    if (!homebrewForumChannelId) {
+      res
+        .status(400)
+        .json({ error: "HOMEBREW_FORUM_CHANNEL_ID is not configured." });
+      return;
+    }
+
+    if (
+      postKey !== undefined &&
+      postKey !== null &&
+      !HOMEBREW_FORUM_POSTS.some((post) => post.key === postKey)
+    ) {
+      res.status(400).json({ error: "Unknown homebrew forum post." });
+      return;
+    }
+
+    try {
+      const results = await syncHomebrewForumPosts({
+        postKey: postKey || undefined,
+        repost: repost === true,
+      });
+
+      await recordAuditEvent({
+        action: "homebrew_discord_sync",
+        status: "success",
+        userId: req.staffUser.id,
+        discordUserId: req.staffUser.discordUserId,
+        metadata: { postKey: postKey || null, repost: repost === true },
+        ...getRequestMetadata(req),
+      });
+
+      res.json({ results });
+    } catch (syncError) {
+      console.error("Failed to sync homebrew to Discord:", syncError);
+      res.status(500).json({ error: "Failed to sync homebrew to Discord." });
+    }
+  },
+);
+
 app.post(
   "/api/admin/homebrew/entries",
   requireTrustedOrigin,
@@ -5560,6 +5679,8 @@ app.post(
       });
 
       res.status(201).json({ entry });
+
+      queueHomebrewDiscordSync(entry.section);
     } catch (homebrewError) {
       console.error("Failed to create homebrew entry:", homebrewError);
       res.status(500).json({ error: "Failed to create homebrew entry." });
@@ -5627,6 +5748,8 @@ app.post(
       });
 
       res.status(201).json({ item });
+
+      queueHomebrewSyncForEntry(item.homebrewEntryId);
     } catch (homebrewError) {
       console.error("Failed to create homebrew section item:", homebrewError);
       res
@@ -5688,6 +5811,8 @@ app.patch(
       });
 
       res.json({ item });
+
+      queueHomebrewSyncForEntry(item.homebrewEntryId);
     } catch (homebrewError) {
       console.error("Failed to update homebrew section item:", homebrewError);
       res
@@ -5710,6 +5835,7 @@ app.delete(
     }
 
     try {
+      const section = await getHomebrewItemSection(itemId);
       const deleted = await deleteHomebrewSectionItem(itemId);
 
       if (!deleted) {
@@ -5727,6 +5853,10 @@ app.delete(
       });
 
       res.status(204).end();
+
+      if (section) {
+        queueHomebrewDiscordSync(section);
+      }
     } catch (homebrewError) {
       console.error("Failed to delete homebrew section item:", homebrewError);
       res

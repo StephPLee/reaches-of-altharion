@@ -90,10 +90,12 @@ const MOBILE_NAV_GROUPS: NavGroup[] = [
       { label: "Guilds", to: "/docs/homebrew/guilds" },
       { label: "Weapons", to: "/docs/homebrew/weapons" },
       { label: "Wondrous Items", to: "/docs/homebrew/wondrous-items" },
+      { label: "Item Sets", to: "/docs/homebrew/item-sets" },
       { label: "Species", to: "/docs/homebrew/species" },
       { label: "Feats", to: "/docs/homebrew/feats" },
       { label: "Subclasses", to: "/docs/homebrew/subclasses" },
       { label: "Spells", to: "/docs/homebrew/spells" },
+      { label: "Familiars & Monsters", to: "/docs/homebrew/familiars" },
     ],
   },
   {
