@@ -245,6 +245,10 @@ const config: Config = {
               label: "Wondrous Items",
             },
             {
+              to: "/docs/homebrew/item-sets",
+              label: "Item Sets",
+            },
+            {
               to: "/docs/homebrew/species",
               label: "Species",
             },
@@ -259,6 +263,10 @@ const config: Config = {
             {
               to: "/docs/homebrew/spells",
               label: "Spells",
+            },
+            {
+              to: "/docs/homebrew/familiars",
+              label: "Familiars & Monsters",
             },
           ],
         },

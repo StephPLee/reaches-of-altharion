@@ -61,12 +61,10 @@ const sidebars: SidebarsConfig = {
         "homebrew/guilds",
         "homebrew/weapons",
         "homebrew/wondrous-items",
-        "homebrew/item-sets",
         "homebrew/species",
         "homebrew/feats",
         "homebrew/subclasses",
         "homebrew/spells",
-        "homebrew/familiars",
       ],
     },
     {
